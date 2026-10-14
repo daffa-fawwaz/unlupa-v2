@@ -1,0 +1,6 @@
+{
+  "name": "Unlupa | Ilmu yang tidak lupa",
+  "description": "Platform pengunci hafalan mutqin adaptif yang dirancang untuk hafalan Al-Qur'an, santri pesantren, dan penuntut ilmu syar'i.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

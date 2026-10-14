@@ -1,0 +1,140 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile and subscription data",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "email": { "type": "string" },
+        "fullName": { "type": "string", "maxLength": 100 },
+        "avatarUrl": { "type": "string" },
+        "role": { "type": "string", "enum": ["student", "teacher", "admin"] },
+        "plan": { "type": "string", "enum": ["free", "premium", "institutional"] },
+        "emailVerified": { "type": "boolean" },
+        "lastLoginAt": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "email", "plan", "createdAt"]
+    },
+    "Book": {
+      "title": "Book",
+      "description": "Book containing chapters and flashcards",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "classId": { "type": "string" },
+        "title": { "type": "string", "maxLength": 200 },
+        "description": { "type": "string", "maxLength": 2000 },
+        "isPublic": { "type": "boolean" },
+        "isReadonly": { "type": "boolean" },
+        "authorName": { "type": "string" },
+        "price": { "type": "number" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "title", "isPublic", "createdAt"]
+    },
+    "ClassGroup": {
+      "title": "ClassGroup",
+      "description": "A teaching class containing students",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "teacherId": { "type": "string" },
+        "name": { "type": "string", "maxLength": 100 },
+        "code": { "type": "string", "maxLength": 10 },
+        "type": { "type": "string", "enum": ["quran", "non-quran"] },
+        "status": { "type": "string", "enum": ["active", "closed"] },
+        "closedAt": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "teacherId", "name", "code", "type", "createdAt"]
+    },
+    "CardReview": {
+      "title": "CardReview",
+      "description": "FSRS progress for a specific card/item",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "stability": { "type": "number" },
+        "difficulty": { "type": "number" },
+        "reps": { "type": "number" },
+        "lapses": { "type": "number" },
+        "state": { "type": "string", "enum": ["new", "learning", "review", "mastered"] },
+        "lastReview": { "type": "string" },
+        "nextReview": { "type": "string" }
+      },
+      "required": ["userId", "stability", "difficulty", "reps", "lapses", "state"]
+    },
+    "PageDocument": {
+      "title": "PageDocument",
+      "description": "Structured rich learning material with modular blocks (Text, Arabic, Image, Quiz, Ordering)",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "bookId": { "type": "string" },
+        "chapterId": { "type": "string" },
+        "title": { "type": "string" },
+        "blocks": { "type": "array" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "bookId", "title", "blocks", "createdAt"]
+    },
+    "SystemMeta": {
+      "title": "SystemMeta",
+      "description": "System metadata including initial Super Admin bootstrap record",
+      "type": "object",
+      "properties": {
+        "superAdminUid": { "type": "string" },
+        "superAdminEmail": { "type": "string" },
+        "setupSource": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["superAdminUid", "superAdminEmail", "createdAt"]
+    },
+    "AdminUser": {
+      "title": "AdminUser",
+      "description": "Registered administrator document in admins collection",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "superadmin"] },
+        "note": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["uid", "email", "role"]
+    }
+  },
+  "firestore": {
+    "users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "User profiles"
+    },
+    "books/{bookId}": {
+      "schema": { "$ref": "#/entities/Book" },
+      "description": "Books (private, class, or public)"
+    },
+    "classes/{classId}": {
+      "schema": { "$ref": "#/entities/ClassGroup" },
+      "description": "Teaching classes"
+    },
+    "user_progress/{userId}/card_reviews/{cardId}": {
+      "schema": { "$ref": "#/entities/CardReview" },
+      "description": "FSRS review state, stored separately to reduce write costs on books"
+    },
+    "system_meta/{docId}": {
+      "schema": { "$ref": "#/entities/SystemMeta" },
+      "description": "System bootstrap and configuration metadata"
+    },
+    "admins/{adminId}": {
+      "schema": { "$ref": "#/entities/AdminUser" },
+      "description": "Admin and Super Admin user registry"
+    }
+  }
+}

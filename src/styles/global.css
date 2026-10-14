@@ -1,0 +1,167 @@
+/* Global Styles for Unlupa.id Immersive Scrollytelling Experience */
+
+:root {
+  --font-hanken: 'Hanken Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-amiri: 'Amiri', serif;
+  --color-bg-0: #05070f;
+  --color-bg-1: #0b1020;
+  --color-ice-1: #b6bac5;
+  --color-ice-2: #383e4e;
+  --color-ice-glow: #9fc4ff;
+  --color-white: #e8ecf5;
+  --color-gold: #d4b06a;
+}
+
+/* Scrollytelling Virtual Track */
+.unlupa-scroll-container {
+  position: relative;
+  width: 100%;
+  height: 600vh;
+  pointer-events: none;
+}
+
+/* Fixed WebGL Canvas Container */
+.unlupa-canvas-container {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  z-index: 1;
+  background-color: var(--color-bg-0);
+  pointer-events: none;
+}
+
+.unlupa-canvas-container canvas {
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
+}
+
+/* HTML Overlay Root */
+.unlupa-overlay-root {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 10;
+  pointer-events: none;
+  font-family: var(--font-hanken);
+  color: var(--color-white);
+  overflow: hidden;
+}
+
+/* Interactive elements in overlay re-enable pointer events */
+.unlupa-interactive {
+  pointer-events: auto;
+}
+
+/* Typography styles */
+.font-hanken {
+  font-family: var(--font-hanken);
+}
+
+.font-amiri {
+  font-family: var(--font-amiri);
+}
+
+/* Magnetic CTA Button with gold sheen */
+.unlupa-btn-magnetic {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 0.875rem 2rem;
+  border-radius: 9999px;
+  border: 1px solid rgba(182, 186, 197, 0.35);
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  color: var(--color-white);
+  font-family: var(--font-hanken);
+  font-size: 0.8125rem;
+  font-weight: 400;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  text-decoration: none;
+  cursor: pointer;
+  transition: border-color 0.4s ease, box-shadow 0.4s ease, transform 0.15s ease-out;
+  overflow: hidden;
+}
+
+.unlupa-btn-magnetic::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(212, 176, 106, 0.25),
+    transparent
+  );
+  transition: transform 0.6s ease;
+}
+
+.unlupa-btn-magnetic:hover {
+  border-color: rgba(212, 176, 106, 0.6);
+  box-shadow: 0 0 25px rgba(212, 176, 106, 0.25);
+}
+
+.unlupa-btn-magnetic:hover::before {
+  transform: translateX(200%);
+}
+
+/* Scroll indicator vertical line animation */
+.unlupa-scroll-indicator {
+  position: relative;
+  width: 1px;
+  height: 56px;
+  background: rgba(182, 186, 197, 0.2);
+  overflow: hidden;
+}
+
+.unlupa-scroll-indicator::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 16px;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    var(--color-ice-glow),
+    var(--color-white)
+  );
+  animation: scrollDrop 2s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+}
+
+@keyframes scrollDrop {
+  0% {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  30% {
+    opacity: 1;
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(350%);
+    opacity: 0;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .unlupa-btn-magnetic::before,
+  .unlupa-scroll-indicator::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

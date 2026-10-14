@@ -1,0 +1,112 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper functions for robust, tamper-proof security
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function isEmailVerified() {
+      return isAuthenticated() && (request.auth.token.email_verified == true || request.auth.provider == 'anonymous');
+    }
+
+    // User Profile Document Security
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isOwner(userId) && request.resource.data.id == userId;
+      allow update: if isOwner(userId) && 
+        // Prevent unauthorized role privilege escalation
+        (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'plan']) || resource.data.role == request.resource.data.role);
+      allow delete: if isOwner(userId);
+      
+      // User Private Storage (Quran data, Book items, Study logs, Attendance)
+      match /{allSubcollections=**} {
+        allow read, write: if isOwner(userId);
+      }
+    }
+
+    // Books Collection Security
+    match /books/{bookId} {
+      allow read: if resource.data.isPublic == true || (isAuthenticated() && resource.data.userId == request.auth.uid);
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isAuthenticated() && (
+        resource.data.userId == request.auth.uid ||
+        (resource.data.classId != null && exists(/databases/$(database)/documents/classes/$(resource.data.classId)) && get(/databases/$(database)/documents/classes/$(resource.data.classId)).data.teacherId == request.auth.uid)
+      );
+      
+      match /chapters/{chapterId} {
+        allow read: if isAuthenticated();
+        allow write: if isAuthenticated() && (
+          get(/databases/$(database)/documents/books/$(bookId)).data.userId == request.auth.uid ||
+          (get(/databases/$(database)/documents/books/$(bookId)).data.classId != null && exists(/databases/$(database)/documents/classes/$(get(/databases/$(database)/documents/books/$(bookId)).data.classId)) && get(/databases/$(database)/documents/classes/$(get(/databases/$(database)/documents/books/$(bookId)).data.classId)).data.teacherId == request.auth.uid)
+        );
+      }
+      
+      match /items/{itemId} {
+        allow read: if isAuthenticated();
+        allow write: if isAuthenticated() && (
+          get(/databases/$(database)/documents/books/$(bookId)).data.userId == request.auth.uid ||
+          (get(/databases/$(database)/documents/books/$(bookId)).data.classId != null && exists(/databases/$(database)/documents/classes/$(get(/databases/$(database)/documents/books/$(bookId)).data.classId)) && get(/databases/$(database)/documents/classes/$(get(/databases/$(database)/documents/books/$(bookId)).data.classId)).data.teacherId == request.auth.uid)
+        );
+      }
+    }
+
+    // Classes / Halaqah Groups
+    match /classes/{classId} {
+      allow read: if true;
+      allow create, update: if isAuthenticated();
+      allow delete: if isAuthenticated() && (
+        resource.data.teacherId == request.auth.uid ||
+        request.auth.token.email in ['admin@anlupa.id', 'ulilalbabhsibs@gmail.com']
+      );
+      
+      match /students/{studentId} {
+        allow read: if true;
+        allow write: if isAuthenticated();
+      }
+    }
+
+
+    // Hybrid App State
+    match /user_data/{userId} {
+      allow read, write: if isAuthenticated();
+    }
+    match /user_data/{userId}/app_state/{document=**} {
+      allow read, write: if isAuthenticated();
+    }
+
+    // System Meta (First User Super Admin Bootstrap Setup)
+    match /system_meta/{docId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update, delete: if isAuthenticated() && (
+        (exists(/databases/$(database)/documents/admins/$(request.auth.uid)) && get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role == 'superadmin') ||
+        request.auth.token.email in ['admin@anlupa.id', 'ulilalbabhsibs@gmail.com']
+      );
+    }
+
+    // Admins Registry
+    match /admins/{adminId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && (
+        request.auth.uid == adminId ||
+        (exists(/databases/$(database)/documents/admins/$(request.auth.uid)) && get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role == 'superadmin') ||
+        request.auth.token.email in ['admin@anlupa.id', 'ulilalbabhsibs@gmail.com']
+      );
+      allow update, delete: if isAuthenticated() && (
+        (exists(/databases/$(database)/documents/admins/$(request.auth.uid)) && get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role == 'superadmin') ||
+        request.auth.token.email in ['admin@anlupa.id', 'ulilalbabhsibs@gmail.com']
+      );
+    }
+
+    // Deny all other unmapped paths
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

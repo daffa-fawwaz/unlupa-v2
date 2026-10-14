@@ -1,0 +1,471 @@
+// Prisma Schema for Unlupa.id
+// Database: PostgreSQL
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ==============================================================================
+// Enums
+// ==============================================================================
+
+enum Role {
+  USER
+  ADMIN
+  SUPERADMIN
+}
+
+enum Plan {
+  FREE
+  PREMIUM
+  INSTITUTIONAL
+}
+
+enum FSRSStateEnum {
+  NEW
+  LEARNING
+  REVIEW
+  MASTERED
+}
+
+enum QuranPageStatus {
+  INACTIVE
+  ACTIVE
+  MASTERED_FOR_NOW
+}
+
+enum MapanScheduleMode {
+  FSRS
+  WEEKLY
+  MONTHLY
+}
+
+enum ClassType {
+  QURAN
+  NON_QURAN
+}
+
+enum ClassStatus {
+  ACTIVE
+  CLOSED
+}
+
+enum AttendanceStatus {
+  HADIR
+  IZIN
+  SAKIT
+  ALFA
+}
+
+enum TransactionStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  REFUNDED
+}
+
+enum TransactionType {
+  BOOK_PURCHASE
+  SUBSCRIPTION_PRO_MONTHLY
+  SUBSCRIPTION_PRO_YEARLY
+}
+
+enum PaymentMethod {
+  QRIS
+  BCA_VA
+  MANDIRI_VA
+  BRI_VA
+  GOPAY
+  SHOPEEPAY
+  CREDIT_CARD
+}
+
+// ==============================================================================
+// User & Identity
+// ==============================================================================
+
+model User {
+  id                    String                 @id @default(uuid()) @db.Uuid
+  firebaseUid           String?                @unique
+  email                 String                 @unique
+  passwordHash          String?
+  fullName              String
+  avatarUrl             String?
+  quranSpaceCode        String                 @unique
+  plan                  Plan                   @default(FREE)
+  role                  Role                   @default(USER)
+  onboardingPreferences Json?
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+
+  // Relationships
+  books                 Book[]                 @relation("UserBooks")
+  bookProgresses        UserBookItemProgress[]
+  userQuranPages        UserQuranPage[]
+  userQuranIssues       UserQuranIssue[]
+  teachingClasses       Class[]                @relation("TeacherClasses")
+  classMemberships      ClassMember[]
+  teacherFeedbacksSent  TeacherFeedback[]      @relation("TeacherFeedbackSent")
+  teacherFeedbacksReceived TeacherFeedback[]   @relation("StudentFeedbackReceived")
+  pageDocuments         PageDocument[]
+  transactions          Transaction[]
+
+  @@map("users")
+}
+
+// ==============================================================================
+// Books, Chapters, & Items (Learning Materials)
+// ==============================================================================
+
+model Book {
+  id                    String                 @id @default(uuid()) @db.Uuid
+  userId                String?                @db.Uuid
+  user                  User?                  @relation("UserBooks", fields: [userId], references: [id], onDelete: Cascade)
+  masterBookId          String?                @db.Uuid
+  masterBook            Book?                  @relation("BookClones", fields: [masterBookId], references: [id], onDelete: SetNull)
+  clones                Book[]                 @relation("BookClones")
+  
+  title                 String
+  description           String                 @default("")
+  coverUrl              String?
+  isPublic              Boolean                @default(false)
+  isReadonly            Boolean                @default(false)
+  authorName            String?
+  category              String                 @default("Umum")
+  price                 Int                    @default(0)
+  downloads             Int                    @default(0)
+  rating                Float                  @default(5.0)
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+
+  chapters              Chapter[]
+  items                 BookItem[]
+  pageDocuments         PageDocument[]
+  classAssignments      ClassBookAssignment[]
+  transactions          Transaction[]
+
+  @@index([userId])
+  @@index([isPublic])
+  @@map("books")
+}
+
+model Chapter {
+  id              String         @id @default(uuid()) @db.Uuid
+  bookId          String         @db.Uuid
+  book            Book           @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  parentId        String?        @db.Uuid
+  parent          Chapter?       @relation("ChapterHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
+  subChapters     Chapter[]      @relation("ChapterHierarchy")
+  masterChapterId String?        @db.Uuid
+  title           String
+  description     String?
+  material        String?
+  order           Int            @default(1)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  items           BookItem[]
+  pageDocuments   PageDocument[]
+
+  @@index([bookId])
+  @@index([parentId])
+  @@map("chapters")
+}
+
+model BookItem {
+  id              String                 @id @default(uuid()) @db.Uuid
+  bookId          String                 @db.Uuid
+  book            Book                   @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  chapterId       String?                @db.Uuid
+  chapter         Chapter?               @relation(fields: [chapterId], references: [id], onDelete: SetNull)
+  masterItemId    String?                @db.Uuid
+  question        String
+  answer          String
+  explanation     String?
+  imageQ          String?
+  imageA          String?
+  tags            String[]               @default([])
+  order           Int                    @default(1)
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+
+  // Personal user FSRS progress is separated from material definition!
+  userProgresses  UserBookItemProgress[]
+
+  @@index([bookId])
+  @@index([chapterId])
+  @@map("book_items")
+}
+
+// Personal FSRS state per user for book flashcards
+model UserBookItemProgress {
+  id              String                 @id @default(uuid()) @db.Uuid
+  userId          String                 @db.Uuid
+  user            User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bookItemId      String                 @db.Uuid
+  bookItem        BookItem               @relation(fields: [bookItemId], references: [id], onDelete: Cascade)
+  
+  isActive        Boolean                @default(false)
+  status          String                 @default("inactive") // inactive, active, mastered
+  stability       Float                  @default(0)
+  difficulty      Float                  @default(5.0)
+  reps            Int                    @default(0)
+  lapses          Int                    @default(0)
+  lastReview      DateTime?
+  nextReview      DateTime?
+  state           FSRSStateEnum          @default(NEW)
+
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+
+  reviewLogs      BookItemReviewLog[]
+
+  @@unique([userId, bookItemId])
+  @@index([userId, isActive])
+  @@index([userId, nextReview])
+  @@map("user_book_item_progresses")
+}
+
+model BookItemReviewLog {
+  id                     String               @id @default(uuid()) @db.Uuid
+  userBookItemProgressId String               @db.Uuid
+  progress               UserBookItemProgress @relation(fields: [userBookItemProgressId], references: [id], onDelete: Cascade)
+  date                   DateTime             @default(now())
+  rating                 Int                  // 1, 2, 3, 4
+  previousInterval       Float?
+  newInterval            Float?
+  wasDue                 Boolean              @default(false)
+
+  @@index([userBookItemProgressId])
+  @@map("book_item_review_logs")
+}
+
+// ==============================================================================
+// Al-Qur'an (Sparse Progress Storage & Mistakes Tracker)
+// ==============================================================================
+
+model UserQuranPage {
+  id                String               @id @default(uuid()) @db.Uuid
+  userId            String               @db.Uuid
+  user              User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pageNumber        Int                  // 1 to 604
+  isActive          Boolean              @default(false)
+  activatedAt       DateTime?
+  status            QuranPageStatus      @default(INACTIVE)
+  mapanCelebrated   Boolean              @default(false)
+  
+  // FSRS state
+  stability         Float                @default(0)
+  difficulty        Float                @default(10.0)
+  reps              Int                  @default(0)
+  lapses            Int                  @default(0)
+  lastReview        DateTime?
+  nextReview        DateTime?
+  state             FSRSStateEnum        @default(NEW)
+
+  // Mapan schedule options
+  mapanScheduleMode MapanScheduleMode?
+  mapanWeeklyDay    Int?
+  mapanMonthlyDate  Int?
+
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+
+  reviewLogs        QuranPageReviewLog[]
+
+  @@unique([userId, pageNumber])
+  @@index([userId, isActive])
+  @@index([userId, nextReview])
+  @@map("user_quran_pages")
+}
+
+model QuranPageReviewLog {
+  id               String               @id @default(uuid()) @db.Uuid
+  userQuranPageId  String               @db.Uuid
+  userQuranPage    UserQuranPage        @relation(fields: [userQuranPageId], references: [id], onDelete: Cascade)
+  date             DateTime             @default(now())
+  rating           Int                  // 1, 2, 3
+  previousInterval Float?
+  newInterval      Float?
+  wasDue           Boolean              @default(false)
+  notes            String?
+  issueTypes       String[]             @default([]) // 'kelancaran', 'tajwid', 'makharijul', 'konsentrasi'
+  problemAyahs     String?
+  reviewerName     String?
+
+  @@index([userQuranPageId])
+  @@map("quran_page_review_logs")
+}
+
+model UserQuranIssue {
+  id         String                     @id @default(uuid()) @db.Uuid
+  userId     String                     @db.Uuid
+  user       User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pageNumber Int
+  ayah       String
+  type       String                     // 'kelancaran', 'lupa', 'tajwid', 'makharijul'
+  detail     String?
+  note       String?
+  isResolved Boolean                    @default(false)
+  createdAt  DateTime                   @default(now())
+  resolvedAt DateTime?
+
+  @@index([userId, pageNumber])
+  @@map("user_quran_issues")
+}
+
+// ==============================================================================
+// Classes, Halaqah, Assignments, & Attendance
+// ==============================================================================
+
+model Class {
+  id              String                 @id @default(uuid()) @db.Uuid
+  teacherId       String                 @db.Uuid
+  teacher         User                   @relation("TeacherClasses", fields: [teacherId], references: [id], onDelete: Cascade)
+  name            String
+  code            String                 @unique // e.g. "QRN-8192" or "CLS-4912"
+  type            ClassType
+  description     String                 @default("")
+  coverUrl        String?
+  requiredJuzList Int[]                  @default([])
+  assignedBookIds String[]               @default([])
+  metadata        Json?
+  status          ClassStatus            @default(ACTIVE)
+  closedAt        DateTime?
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+
+  members         ClassMember[]
+  assignedBooks   ClassBookAssignment[]
+  feedbacks       TeacherFeedback[]
+
+  @@index([teacherId])
+  @@index([code])
+  @@map("classes")
+}
+
+model ClassMember {
+  id                String               @id @default(uuid()) @db.Uuid
+  classId           String               @db.Uuid
+  class             Class                @relation(fields: [classId], references: [id], onDelete: Cascade)
+  studentId         String               @db.Uuid
+  student           User                 @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  joinedAt          DateTime             @default(now())
+
+  attendanceRecords AttendanceRecord[]
+
+  @@unique([classId, studentId])
+  @@index([classId])
+  @@index([studentId])
+  @@map("class_members")
+}
+
+model ClassBookAssignment {
+  id        String                       @id @default(uuid()) @db.Uuid
+  classId   String                       @db.Uuid
+  class     Class                        @relation(fields: [classId], references: [id], onDelete: Cascade)
+  bookId    String                       @db.Uuid
+  book      Book                         @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  createdAt DateTime                     @default(now())
+
+  @@unique([classId, bookId])
+  @@map("class_book_assignments")
+}
+
+model AttendanceRecord {
+  id            String                   @id @default(uuid()) @db.Uuid
+  classMemberId String                   @db.Uuid
+  classMember   ClassMember              @relation(fields: [classMemberId], references: [id], onDelete: Cascade)
+  date          String                   // YYYY-MM-DD
+  status        AttendanceStatus
+  note          String?
+  createdAt     DateTime                 @default(now())
+  updatedAt     DateTime                 @updatedAt
+
+  @@unique([classMemberId, date])
+  @@index([date])
+  @@map("attendance_records")
+}
+
+model TeacherFeedback {
+  id          String                     @id @default(uuid()) @db.Uuid
+  classId     String?                    @db.Uuid
+  class       Class?                     @relation(fields: [classId], references: [id], onDelete: SetNull)
+  teacherId   String                     @db.Uuid
+  teacher     User                       @relation("TeacherFeedbackSent", fields: [teacherId], references: [id], onDelete: Cascade)
+  studentId   String                     @db.Uuid
+  student     User                       @relation("StudentFeedbackReceived", fields: [studentId], references: [id], onDelete: Cascade)
+  pageNumber  Int?
+  rating      Int?                       // 1, 2, 3
+  note        String
+  date        DateTime                   @default(now())
+
+  @@index([studentId])
+  @@index([classId])
+  @@map("teacher_feedbacks")
+}
+
+// ==============================================================================
+// Documents / Material Pages
+// ==============================================================================
+
+model PageDocument {
+  id        String                       @id @default(uuid()) @db.Uuid
+  userId    String                       @db.Uuid
+  user      User                         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bookId    String                       @db.Uuid
+  book      Book                         @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  chapterId String?                      @db.Uuid
+  chapter   Chapter?                     @relation(fields: [chapterId], references: [id], onDelete: SetNull)
+  title     String
+  blocks    Json                         @default("[]") // ContentBlock[]
+  createdAt DateTime                     @default(now())
+  updatedAt DateTime                     @updatedAt
+
+  @@index([bookId])
+  @@index([chapterId])
+  @@map("page_documents")
+}
+
+// ==============================================================================
+// System Config & Inactive Transactions
+// ==============================================================================
+
+model SystemTierConfig {
+  id        String                       @id @default("default")
+  config    Json                         // { freeTier, premiumTier, pricing }
+  updatedAt DateTime                     @updatedAt
+  updatedBy String?
+
+  @@map("system_tier_configs")
+}
+
+model Transaction {
+  id            String                   @id // e.g. "INV-20261010-8392"
+  userId        String                   @db.Uuid
+  user          User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type          TransactionType
+  bookId        String?                  @db.Uuid
+  book          Book?                    @relation(fields: [bookId], references: [id], onDelete: SetNull)
+  bookTitle     String
+  bookCoverUrl  String?
+  authorName    String
+  authorId      String?                  @db.Uuid
+  amount        Int
+  platformFee   Int
+  authorRoyalty Int
+  paymentMethod PaymentMethod
+  status        TransactionStatus        @default(PENDING)
+  paidAt        DateTime?
+  createdAt     DateTime                 @default(now())
+
+  @@index([userId])
+  @@index([status])
+  @@map("transactions")
+}
+
