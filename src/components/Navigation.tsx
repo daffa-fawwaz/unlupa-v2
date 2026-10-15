@@ -234,25 +234,13 @@ export const Navigation: React.FC = () => {
                   language === "en" ? "Back to Home" : "Kembali ke Beranda"
                 }
               >
-                {/* Tactile Soft-Clay Brand Icon Pod */}
-                <div className="w-9 h-9 sm:w-9.5 sm:h-9.5 rounded-2xl bg-gradient-to-br from-[#FF7E4A] to-[#E65320] text-white flex items-center justify-center group-hover:scale-105 active:scale-95 transition-transform shrink-0 shadow-[0_4px_12px_rgba(255,111,61,0.35),inset_0_1.5px_2px_rgba(255,255,255,0.7)] relative">
-                  <svg
-                    className="w-4.5 h-4.5 text-white shrink-0"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.3"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <path
-                      d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"
-                      fill="rgba(255,255,255,0.25)"
-                    />
-                    <path d="M7 6h8" />
-                    <path d="M7 10h8" />
-                    <path d="M7 14h5" />
-                  </svg>
+                {/* Official Unlupa brandmark */}
+                <div className="w-9 h-9 sm:w-9.5 sm:h-9.5 rounded-2xl bg-[#EEF3FA] dark:bg-[#172238] border border-white/70 dark:border-white/10 flex items-center justify-center group-hover:scale-105 active:scale-95 transition-transform shrink-0 shadow-[0_4px_10px_rgba(24,35,74,0.12),inset_0_1px_1px_rgba(255,255,255,0.8)] relative">
+                  <img
+                    src="/unlupa.logo.png"
+                    alt=""
+                    className="w-5 h-5 object-contain shrink-0"
+                  />
                 </div>
 
                 {/* Modern Professional Typography for unlupa.id */}

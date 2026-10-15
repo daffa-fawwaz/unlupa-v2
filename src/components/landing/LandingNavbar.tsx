@@ -16,6 +16,7 @@ const DEFAULT_ITEMS: LandingNavItem[] = [
   { label: 'Fitur', href: '#fitur' },
   { label: 'Cara Kerja', href: '#cara-kerja' },
   { label: 'Harga', href: '#harga' },
+  { label: 'FAQ', href: '#faq' },
   { label: 'Tentang', href: '#tentang' },
 ];
 

@@ -1,0 +1,60 @@
+/* Keep the landing page tactile without heavy floating shadows. */
+.landing-page :is(
+  .landing-hero,
+  .landing-feature-card,
+  .landing-features-showcase,
+  .analytics-card,
+  .pricing-card,
+  .landing-faq-cta
+) {
+  box-shadow:
+    0 10px 28px rgba(24, 35, 74, 0.08),
+    inset 0 1px 1px rgba(255, 255, 255, 0.82);
+}
+
+.landing-page .pricing-card--highlighted {
+  box-shadow:
+    0 0 0 1px rgba(255, 111, 61, 0.22),
+    0 10px 28px rgba(24, 35, 74, 0.09),
+    inset 0 1px 1px rgba(255, 255, 255, 0.84);
+}
+
+.landing-page :is(
+  .landing-feature-card:hover,
+  .pricing-card:hover
+) {
+  box-shadow:
+    0 13px 30px rgba(24, 35, 74, 0.1),
+    inset 0 1px 1px rgba(255, 255, 255, 0.84);
+}
+
+.landing-page :is(
+  .review-chart,
+  .fsrs-simulator,
+  .landing-mockup-note
+) {
+  box-shadow:
+    0 6px 18px rgba(24, 35, 74, 0.07),
+    inset 0 1px 1px rgba(255, 255, 255, 0.84);
+}
+
+.landing-page :is(
+  .landing-brand__mark,
+  .landing-button,
+  .landing-feature-card__icon,
+  .analytics-card__icon,
+  .landing-mockup-note__icon,
+  .landing-features__cta,
+  .pricing-card > button,
+  .landing-faq-cta button
+) {
+  box-shadow:
+    0 5px 14px rgba(24, 35, 74, 0.1),
+    inset 0 1px 1px rgba(255, 255, 255, 0.38);
+}
+
+.landing-page .landing-navbar--scrolled {
+  box-shadow:
+    0 8px 22px rgba(24, 35, 74, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.82);
+}

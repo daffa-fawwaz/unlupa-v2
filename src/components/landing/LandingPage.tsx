@@ -5,7 +5,10 @@ import { LandingNavbar } from './LandingNavbar';
 import { FeaturesSection } from './features';
 import { AnalyticsSection } from './analytics';
 import { PricingSection } from './pricing';
+import { FAQSection } from './faq';
+import { LandingFooter } from './footer';
 import './landing.css';
+import './landing-polish.css';
 
 export const LandingPage: React.FC = () => {
   const { openLoginModal, openRegisterModal } = useApp();
@@ -17,6 +20,8 @@ export const LandingPage: React.FC = () => {
       <FeaturesSection />
       <AnalyticsSection />
       <PricingSection onGetStarted={openRegisterModal} />
+      <FAQSection onGetStarted={openRegisterModal} onLogin={openLoginModal} />
+      <LandingFooter />
     </main>
   );
 };

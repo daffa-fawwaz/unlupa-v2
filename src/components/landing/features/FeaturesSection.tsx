@@ -65,7 +65,7 @@ export const FeaturesSection: React.FC = () => (
             <span>Retensi terjaga</span>
             <strong>Daily Review</strong>
           </div>
-          <img src="/mockups/mockup-main.png" alt="Dashboard murajaah harian Unlupa" />
+          <img src="/mockups/mocup-hafalan.png" alt="Tampilan ruang hafalan Al-Qur'an Unlupa" />
         </div>
       </div>
       <FeatureCard {...FEATURES[1]} />
