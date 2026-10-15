@@ -1,9 +1,9 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef } from "react";
 
 export interface FireStrikeBarProps {
-  percentage?: number;      // 0 to 100 discipline rate
-  streakCount?: number;     // Alternative if passed as streak count
-  size?: 'normal' | 'large';
+  percentage?: number; // 0 to 100 discipline rate
+  streakCount?: number; // Alternative if passed as streak count
+  size?: "normal" | "large";
   className?: string;
   allowSimulation?: boolean;
 }
@@ -36,18 +36,21 @@ class DenseFlameParticle {
 export const FireStrikeBar: React.FC<FireStrikeBarProps> = ({
   percentage,
   streakCount,
-  size = 'normal',
-  className = '',
+  size = "normal",
+  className = "",
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const fireFillRef = useRef<HTMLDivElement | null>(null);
 
   // Determine effective percentage (0 - 100)
-  const rate = typeof percentage === 'number'
-    ? Math.max(0, Math.min(100, percentage))
-    : typeof streakCount === 'number'
-    ? (streakCount > 0 ? Math.min(100, streakCount * 14.28) : 0)
-    : 0;
+  const rate =
+    typeof percentage === "number"
+      ? Math.max(0, Math.min(100, percentage))
+      : typeof streakCount === "number"
+        ? streakCount > 0
+          ? Math.min(100, streakCount * 14.28)
+          : 0
+        : 0;
 
   // 3-COLOR DISCIPLINE TIERS
   // 1. 100%: BLAZING PURPLE
@@ -61,7 +64,7 @@ export const FireStrikeBar: React.FC<FireStrikeBarProps> = ({
     const fireFill = fireFillRef.current;
     if (!canvas || !fireFill) return;
 
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
     let animId: number;
@@ -115,42 +118,78 @@ export const FireStrikeBar: React.FC<FireStrikeBarProps> = ({
         if (is100Percent) {
           // TIER 1 (100%): BLAZING PURPLE FLAME
           if (t < 0.2) {
-            r = 255; g = 255; b = 255; a = p.life * 0.95; // White Core
+            r = 255;
+            g = 255;
+            b = 255;
+            a = p.life * 0.95; // White Core
           } else if (t < 0.5) {
             const k = (t - 0.2) / 0.3;
-            r = 245 - 20 * k; g = 190 - 110 * k; b = 255; a = p.life * 0.85; // Fuchsia
+            r = 245 - 20 * k;
+            g = 190 - 110 * k;
+            b = 255;
+            a = p.life * 0.85; // Fuchsia
           } else {
             const k = (t - 0.5) / 0.5;
-            r = 190 - 95 * k; g = 80 - 65 * k; b = 255 - 40 * k; a = p.life * 0.75 * (1 - k); // Royal Purple
+            r = 190 - 95 * k;
+            g = 80 - 65 * k;
+            b = 255 - 40 * k;
+            a = p.life * 0.75 * (1 - k); // Royal Purple
           }
         } else if (is80To99Percent) {
           // TIER 2 (80-99%): CRIMSON RED FLAME (WARNING / WARNING BEFORE CHARCOAL)
           if (t < 0.2) {
-            r = 255; g = 255; b = 230; a = p.life * 0.95; // Warm White Core
+            r = 255;
+            g = 255;
+            b = 230;
+            a = p.life * 0.95; // Warm White Core
           } else if (t < 0.5) {
             const k = (t - 0.2) / 0.3;
-            r = 248 - 10 * k; g = 113 - 45 * k; b = 113 - 45 * k; a = p.life * 0.85; // Vibrant Red
+            r = 248 - 10 * k;
+            g = 113 - 45 * k;
+            b = 113 - 45 * k;
+            a = p.life * 0.85; // Vibrant Red
           } else {
             const k = (t - 0.5) / 0.5;
-            r = 239 - 85 * k; g = 68 - 40 * k; b = 68 - 40 * k; a = p.life * 0.75 * (1 - k); // Deep Crimson
+            r = 239 - 85 * k;
+            g = 68 - 40 * k;
+            b = 68 - 40 * k;
+            a = p.life * 0.75 * (1 - k); // Deep Crimson
           }
         } else {
           // TIER 3 (< 80%): BLAZING CHARCOAL BLACK FLAME
           if (t < 0.2) {
-            r = 228; g = 228; b = 231; a = p.life * 0.9; // Light Gray Core
+            r = 228;
+            g = 228;
+            b = 231;
+            a = p.life * 0.9; // Light Gray Core
           } else if (t < 0.5) {
             const k = (t - 0.2) / 0.3;
-            r = 113 - 30 * k; g = 113 - 30 * k; b = 122 - 30 * k; a = p.life * 0.8; // Zinc Gray
+            r = 113 - 30 * k;
+            g = 113 - 30 * k;
+            b = 122 - 30 * k;
+            a = p.life * 0.8; // Zinc Gray
           } else {
             const k = (t - 0.5) / 0.5;
-            r = 63 - 39 * k; g = 63 - 39 * k; b = 70 - 43 * k; a = p.life * 0.7 * (1 - k); // Carbon Black
+            r = 63 - 39 * k;
+            g = 63 - 39 * k;
+            b = 70 - 43 * k;
+            a = p.life * 0.7 * (1 - k); // Carbon Black
           }
         }
 
         const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size);
-        grad.addColorStop(0, `rgba(${Math.round(r)}, ${Math.round(g)}, ${Math.round(b)}, ${a})`);
-        grad.addColorStop(0.4, `rgba(${Math.round(r)}, ${Math.round(g * 0.8)}, ${Math.round(b)}, ${a * 0.8})`);
-        grad.addColorStop(1, `rgba(${Math.round(r * 0.6)}, ${Math.round(g * 0.3)}, ${Math.round(b)}, 0)`);
+        grad.addColorStop(
+          0,
+          `rgba(${Math.round(r)}, ${Math.round(g)}, ${Math.round(b)}, ${a})`,
+        );
+        grad.addColorStop(
+          0.4,
+          `rgba(${Math.round(r)}, ${Math.round(g * 0.8)}, ${Math.round(b)}, ${a * 0.8})`,
+        );
+        grad.addColorStop(
+          1,
+          `rgba(${Math.round(r * 0.6)}, ${Math.round(g * 0.3)}, ${Math.round(b)}, 0)`,
+        );
 
         ctx.fillStyle = grad;
         ctx.beginPath();
@@ -170,20 +209,20 @@ export const FireStrikeBar: React.FC<FireStrikeBarProps> = ({
   }, [rate, is100Percent, is80To99Percent]);
 
   // Height preset classes
-  const isLarge = size === 'large';
-  const trackHeightClass = isLarge ? 'h-5 sm:h-6' : 'h-3.5 sm:h-4';
+  const isLarge = size === "large";
+  const trackHeightClass = isLarge ? "h-5 sm:h-6" : "h-3.5 sm:h-4";
 
   const fillBackground = is100Percent
-    ? 'linear-gradient(90deg, #e879f9 0%, #c084fc 35%, #a855f7 70%, #9333ea 100%)'
+    ? "linear-gradient(90deg, #e879f9 0%, #c084fc 35%, #a855f7 70%, #9333ea 100%)"
     : is80To99Percent
-    ? 'linear-gradient(90deg, #f87171 0%, #ef4444 35%, #dc2626 70%, #991b1b 100%)'
-    : 'linear-gradient(90deg, #52525b 0%, #3f3f46 50%, #27272a 100%)';
+      ? "linear-gradient(90deg, #f87171 0%, #ef4444 35%, #dc2626 70%, #991b1b 100%)"
+      : "linear-gradient(90deg, #52525b 0%, #3f3f46 50%, #27272a 100%)";
 
   const fillBoxShadow = is100Percent
-    ? '0 0 20px rgba(168, 85, 247, 0.7), inset 0 1px 2px rgba(255, 255, 255, 0.6)'
+    ? "0 0 20px rgba(168, 85, 247, 0.7), inset 0 1px 2px rgba(255, 255, 255, 0.6)"
     : is80To99Percent
-    ? '0 0 18px rgba(239, 68, 68, 0.7), inset 0 1px 2px rgba(255, 255, 255, 0.6)'
-    : '0 0 12px rgba(39, 39, 42, 0.8), inset 0 1px 2px rgba(255, 255, 255, 0.2)';
+      ? "0 0 18px rgba(239, 68, 68, 0.7), inset 0 1px 2px rgba(255, 255, 255, 0.6)"
+      : "0 0 12px rgba(39, 39, 42, 0.8), inset 0 1px 2px rgba(255, 255, 255, 0.2)";
 
   return (
     <div className={`w-full ${className}`}>

@@ -1,17 +1,17 @@
-import React, { useState, useMemo } from 'react';
-import { 
-  X, 
-  Award, 
-  CheckCircle2, 
-  AlertTriangle, 
-  Clock, 
-  Copy, 
-  Share2, 
-  Check, 
-  TrendingUp, 
-  Lightbulb, 
-  BookOpen, 
-  MessageSquare, 
+import React, { useState, useMemo } from "react";
+import {
+  X,
+  Award,
+  CheckCircle2,
+  AlertTriangle,
+  Clock,
+  Copy,
+  Share2,
+  Check,
+  TrendingUp,
+  Lightbulb,
+  BookOpen,
+  MessageSquare,
   Calendar,
   Layers,
   ChevronDown,
@@ -22,24 +22,32 @@ import {
   Link2,
   Download,
   Printer,
-  Image as ImageIcon
-} from 'lucide-react';
-import { 
-  buildReportUrl, 
-  buildWhatsAppShareText, 
-  StudentReportPayload, 
-  StudentReportJuzBreakdown,
-  StudentReportChapterBreakdown 
-} from '../../lib/studentReportShare';
-import { useApp } from '../../context/AppContext';
-import { ClassStudent, ClassGroup, QuranPageItem } from '../../types';
+  Image as ImageIcon,
+} from "lucide-react";
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer,
-  PieChart, Pie, Cell
-} from 'recharts';
-import { getSurahForPage, getJuzForPage } from '../../data/quranData';
-import { createSampleStudentQuranPages } from '../../data/sampleClasses';
-import { isDue, getIntervalDays } from '../../lib/fsrs';
+  buildReportUrl,
+  buildWhatsAppShareText,
+  StudentReportPayload,
+  StudentReportJuzBreakdown,
+  StudentReportChapterBreakdown,
+} from "../../lib/studentReportShare";
+import { useApp } from "../../context/AppContext";
+import { ClassStudent, ClassGroup, QuranPageItem } from "../../types";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip as RechartsTooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+} from "recharts";
+import { getSurahForPage, getJuzForPage } from "../../data/quranData";
+import { createSampleStudentQuranPages } from "../../data/sampleClasses";
+import { isDue, getIntervalDays } from "../../lib/fsrs";
 
 interface Props {
   isOpen: boolean;
@@ -61,26 +69,29 @@ interface JuzGroup {
 }
 
 function formatSimpleDate(dateStr?: string | null): string {
-  if (!dateStr) return 'Belum pernah';
+  if (!dateStr) return "Belum pernah";
   try {
     const d = new Date(dateStr);
-    if (isNaN(d.getTime())) return 'Belum pernah';
-    const day = String(d.getDate()).padStart(2, '0');
-    const month = String(d.getMonth() + 1).padStart(2, '0');
+    if (isNaN(d.getTime())) return "Belum pernah";
+    const day = String(d.getDate()).padStart(2, "0");
+    const month = String(d.getMonth() + 1).padStart(2, "0");
     const year = d.getFullYear();
     return `${day}/${month}/${year}`;
   } catch {
-    return 'Belum pernah';
+    return "Belum pernah";
   }
 }
 
-function getNextReviewInfo(nextReviewStr?: string | null, isActive?: boolean): { text: string; cleanText: string; isDue: boolean; badgeColor: string } {
+function getNextReviewInfo(
+  nextReviewStr?: string | null,
+  isActive?: boolean,
+): { text: string; cleanText: string; isDue: boolean; badgeColor: string } {
   if (!nextReviewStr || !isActive) {
-    return { 
-      text: 'Belum dijadwalkan', 
-      cleanText: 'Belum dijadwalkan',
-      isDue: false, 
-      badgeColor: 'text-slate-500 bg-slate-100 dark:bg-slate-800' 
+    return {
+      text: "Belum dijadwalkan",
+      cleanText: "Belum dijadwalkan",
+      isDue: false,
+      badgeColor: "text-slate-500 bg-slate-100 dark:bg-slate-800",
     };
   }
   try {
@@ -93,41 +104,45 @@ function getNextReviewInfo(nextReviewStr?: string | null, isActive?: boolean): {
     const dateFormatted = formatSimpleDate(nextReviewStr);
 
     if (diffDays < 0) {
-      return { 
-        text: `*Terlambat ${Math.abs(diffDays)} hari* (${dateFormatted}) ⚠️`, 
+      return {
+        text: `*Terlambat ${Math.abs(diffDays)} hari* (${dateFormatted}) ⚠️`,
         cleanText: `Terlambat ${Math.abs(diffDays)} hari (${dateFormatted}) ⚠️`,
         isDue: true,
-        badgeColor: 'text-rose-700 bg-rose-100 dark:bg-rose-950/80 border-rose-300 dark:border-rose-800'
+        badgeColor:
+          "text-rose-700 bg-rose-100 dark:bg-rose-950/80 border-rose-300 dark:border-rose-800",
       };
     } else if (diffDays === 0) {
-      return { 
-        text: `*Hari Ini* ⚠️ (Jatuh Tempo)`, 
+      return {
+        text: `*Hari Ini* ⚠️ (Jatuh Tempo)`,
         cleanText: `Hari Ini (${dateFormatted}) ⚠️ Perlu Disetor`,
         isDue: true,
-        badgeColor: 'text-amber-700 bg-amber-100 dark:bg-amber-950/80 border-amber-300 dark:border-amber-800'
+        badgeColor:
+          "text-amber-700 bg-amber-100 dark:bg-amber-950/80 border-amber-300 dark:border-amber-800",
       };
     } else if (diffDays === 1) {
-      return { 
-        text: `Besok (${dateFormatted})`, 
+      return {
+        text: `Besok (${dateFormatted})`,
         cleanText: `Besok (${dateFormatted})`,
         isDue: false,
-        badgeColor: 'text-indigo-700 bg-indigo-100 dark:bg-indigo-950/80 border-indigo-200 dark:border-indigo-800'
+        badgeColor:
+          "text-indigo-700 bg-indigo-100 dark:bg-indigo-950/80 border-indigo-200 dark:border-indigo-800",
       };
     } else {
-      return { 
-        text: `${dateFormatted} (${diffDays} hari lagi)`, 
+      return {
+        text: `${dateFormatted} (${diffDays} hari lagi)`,
         cleanText: `${dateFormatted} (${diffDays} hari lagi)`,
         isDue: false,
-        badgeColor: 'text-emerald-700 bg-emerald-100 dark:bg-emerald-950/80 border-emerald-200 dark:border-emerald-800'
+        badgeColor:
+          "text-emerald-700 bg-emerald-100 dark:bg-emerald-950/80 border-emerald-200 dark:border-emerald-800",
       };
     }
   } catch {
     const dateFormatted = formatSimpleDate(nextReviewStr);
-    return { 
-      text: dateFormatted, 
+    return {
+      text: dateFormatted,
       cleanText: dateFormatted,
-      isDue: false, 
-      badgeColor: 'text-slate-700 bg-slate-100 dark:bg-slate-800' 
+      isDue: false,
+      badgeColor: "text-slate-700 bg-slate-100 dark:bg-slate-800",
     };
   }
 }
@@ -139,37 +154,53 @@ export const StudentProgressReportModal: React.FC<Props> = ({
   classGroup,
   language,
   currentUserQuranPages,
-  currentQuranSpaceCode
+  currentQuranSpaceCode,
 }) => {
-  const { getLiveStudentBookItems, getLiveStudentQuranData, books, chapters, items } = useApp();
+  const {
+    getLiveStudentBookItems,
+    getLiveStudentQuranData,
+    books,
+    chapters,
+    items,
+  } = useApp();
   const [copiedLink, setCopiedLink] = useState(false);
   const [copiedText, setCopiedText] = useState(false);
-  const [customTeacherNote, setCustomTeacherNote] = useState('');
+  const [customTeacherNote, setCustomTeacherNote] = useState("");
   const [includeDetails, setIncludeDetails] = useState(true);
-  const [activeTab, setActiveTab] = useState<'shareLink' | 'overview' | 'breakdown' | 'waPreview'>('shareLink');
+  const [activeTab, setActiveTab] = useState<
+    "shareLink" | "overview" | "breakdown" | "waPreview"
+  >("shareLink");
   const [expandedJuzs, setExpandedJuzs] = useState<Record<number, boolean>>({});
 
-  const isQuran = classGroup.type === 'quran';
+  const isQuran = classGroup.type === "quran";
 
   // 1. Resolve effective active Quran pages for this student
   const activeQuranPages = useMemo<QuranPageItem[]>(() => {
     if (!isQuran) return [];
 
-    const isCurrentUser = 
-      (currentQuranSpaceCode && student.quranSpaceCode === currentQuranSpaceCode) ||
-      student.id.startsWith('std-user') ||
-      student.id === 'student-current-user';
+    const isCurrentUser =
+      (currentQuranSpaceCode &&
+        student.quranSpaceCode === currentQuranSpaceCode) ||
+      student.id.startsWith("std-user") ||
+      student.id === "student-current-user";
 
-    if (isCurrentUser && currentUserQuranPages && currentUserQuranPages.length > 0) {
-      const liveActive = currentUserQuranPages.filter(p => p.isActive);
+    if (
+      isCurrentUser &&
+      currentUserQuranPages &&
+      currentUserQuranPages.length > 0
+    ) {
+      const liveActive = currentUserQuranPages.filter((p) => p.isActive);
       if (liveActive.length > 0) return liveActive;
     }
-    
+
     const liveQuranData = getLiveStudentQuranData(student.id);
-    const dataToUse = liveQuranData && liveQuranData.length > 0 ? liveQuranData : student.quranData;
+    const dataToUse =
+      liveQuranData && liveQuranData.length > 0
+        ? liveQuranData
+        : student.quranData;
 
     if (dataToUse && dataToUse.length > 0) {
-      const active = dataToUse.filter(p => p.isActive);
+      const active = dataToUse.filter((p) => p.isActive);
       if (active.length > 0) return active;
     }
 
@@ -178,9 +209,9 @@ export const StudentProgressReportModal: React.FC<Props> = ({
     if (count > 0) {
       const sample = createSampleStudentQuranPages(
         Array.from({ length: count }, (_, i) => 582 + (i % 23)),
-        student.dueTodayCount > 0 ? [583] : []
+        student.dueTodayCount > 0 ? [583] : [],
       );
-      return sample.filter(p => p.isActive);
+      return sample.filter((p) => p.isActive);
     }
 
     return [];
@@ -191,7 +222,7 @@ export const StudentProgressReportModal: React.FC<Props> = ({
     if (activeQuranPages.length === 0) return [];
 
     const map = new Map<number, QuranPageItem[]>();
-    activeQuranPages.forEach(page => {
+    activeQuranPages.forEach((page) => {
       const j = page.juzNumber || getJuzForPage(page.pageNumber);
       if (!map.has(j)) {
         map.set(j, []);
@@ -203,10 +234,19 @@ export const StudentProgressReportModal: React.FC<Props> = ({
     map.forEach((pages, juzNumber) => {
       pages.sort((a, b) => a.pageNumber - b.pageNumber);
       const activeCount = pages.length;
-      const masteredCount = pages.filter(p => p.status === 'mastered_for_now' || (p.fsrsData?.stability || 0) >= 30).length;
-      const dueCount = pages.filter(p => isDue(p.fsrsData?.nextReview, p.isActive, p.fsrsData?.lastReview)).length;
-      const totalStab = pages.reduce((acc, p) => acc + getIntervalDays(p.fsrsData), 0);
-      const avgStability = Math.round((totalStab / Math.max(1, activeCount)) * 10) / 10;
+      const masteredCount = pages.filter(
+        (p) =>
+          p.status === "mastered_for_now" || (p.fsrsData?.stability || 0) >= 30,
+      ).length;
+      const dueCount = pages.filter((p) =>
+        isDue(p.fsrsData?.nextReview, p.isActive, p.fsrsData?.lastReview),
+      ).length;
+      const totalStab = pages.reduce(
+        (acc, p) => acc + getIntervalDays(p.fsrsData),
+        0,
+      );
+      const avgStability =
+        Math.round((totalStab / Math.max(1, activeCount)) * 10) / 10;
 
       groups.push({
         juzNumber,
@@ -214,7 +254,7 @@ export const StudentProgressReportModal: React.FC<Props> = ({
         activeCount,
         masteredCount,
         dueCount,
-        avgStability
+        avgStability,
       });
     });
 
@@ -224,7 +264,7 @@ export const StudentProgressReportModal: React.FC<Props> = ({
   // Initialize expanded Juz map (default all open)
   useMemo(() => {
     const initialMap: Record<number, boolean> = {};
-    juzGroups.forEach(g => {
+    juzGroups.forEach((g) => {
       initialMap[g.juzNumber] = true;
     });
     setExpandedJuzs(initialMap);
@@ -242,36 +282,62 @@ export const StudentProgressReportModal: React.FC<Props> = ({
     if (isQuran) {
       totalItems = 604;
       activeItems = activeQuranPages.length;
-      masteredItems = activeQuranPages.filter(p => p.status === 'mastered_for_now' || (p.fsrsData?.stability || 0) >= 30).length;
-      const dues = activeQuranPages.filter(p => isDue(p.fsrsData?.nextReview, p.isActive, p.fsrsData?.lastReview)).length;
+      masteredItems = activeQuranPages.filter(
+        (p) =>
+          p.status === "mastered_for_now" || (p.fsrsData?.stability || 0) >= 30,
+      ).length;
+      const dues = activeQuranPages.filter((p) =>
+        isDue(p.fsrsData?.nextReview, p.isActive, p.fsrsData?.lastReview),
+      ).length;
       if (dues > 0 || activeQuranPages.length > 0) {
         dueItems = dues;
       }
-      const stabs = activeQuranPages.map(p => getIntervalDays(p.fsrsData));
+      const stabs = activeQuranPages.map((p) => getIntervalDays(p.fsrsData));
       if (stabs.length > 0) {
-        avgStability = Math.round((stabs.reduce((a, b) => a + b, 0) / stabs.length) * 10) / 10;
+        avgStability =
+          Math.round((stabs.reduce((a, b) => a + b, 0) / stabs.length) * 10) /
+          10;
       }
     } else if (!isQuran) {
       const liveItems = getLiveStudentBookItems(student.id);
       const assignedId = classGroup.assignedBookIds?.[0];
-      const assignedClassBookId = assignedId ? `class-book-${classGroup.id}-${assignedId}` : undefined;
-      
-      let dataToMap = liveItems && liveItems.length > 0 ? liveItems : (student.bookItemsData && student.bookItemsData.length > 0 ? student.bookItemsData : null);
+      const assignedClassBookId = assignedId
+        ? `class-book-${classGroup.id}-${assignedId}`
+        : undefined;
+
+      let dataToMap =
+        liveItems && liveItems.length > 0
+          ? liveItems
+          : student.bookItemsData && student.bookItemsData.length > 0
+            ? student.bookItemsData
+            : null;
       if (dataToMap && assignedId) {
-        dataToMap = dataToMap.filter(i => i.bookId === assignedClassBookId || i.bookId === assignedId);
+        dataToMap = dataToMap.filter(
+          (i) => i.bookId === assignedClassBookId || i.bookId === assignedId,
+        );
       }
-      
+
       if (dataToMap && dataToMap.length > 0) {
         totalItems = dataToMap.length;
-        activeItems = dataToMap.filter(i => i.isActive).length;
-        masteredItems = dataToMap.filter(i => i.status === 'mastered' || (i.fsrsData?.stability || 0) >= 30).length;
-        const dues = dataToMap.filter(i => i.isActive && isDue(i.fsrsData?.nextReview, i.isActive, i.fsrsData?.lastReview)).length;
+        activeItems = dataToMap.filter((i) => i.isActive).length;
+        masteredItems = dataToMap.filter(
+          (i) => i.status === "mastered" || (i.fsrsData?.stability || 0) >= 30,
+        ).length;
+        const dues = dataToMap.filter(
+          (i) =>
+            i.isActive &&
+            isDue(i.fsrsData?.nextReview, i.isActive, i.fsrsData?.lastReview),
+        ).length;
         if (dues > 0 || dataToMap.length > 0) {
           dueItems = dues;
         }
-        const stabs = dataToMap.filter(i => i.isActive).map(i => getIntervalDays(i.fsrsData));
+        const stabs = dataToMap
+          .filter((i) => i.isActive)
+          .map((i) => getIntervalDays(i.fsrsData));
         if (stabs.length > 0) {
-          avgStability = Math.round((stabs.reduce((a, b) => a + b, 0) / stabs.length) * 10) / 10;
+          avgStability =
+            Math.round((stabs.reduce((a, b) => a + b, 0) / stabs.length) * 10) /
+            10;
         }
       } else {
         activeItems = student.activeItemsCount || 20;
@@ -281,26 +347,29 @@ export const StudentProgressReportModal: React.FC<Props> = ({
     }
 
     // Recommendation logic based on interval/stability and due items
-    let readinessStatus: 'ready_for_more' | 'steady' | 'needs_reinforcement';
-    let readinessTitleId = '';
-    let readinessDescId = '';
+    let readinessStatus: "ready_for_more" | "steady" | "needs_reinforcement";
+    let readinessTitleId = "";
+    let readinessDescId = "";
 
     if (avgStability >= 21 && dueItems <= 3) {
-      readinessStatus = 'ready_for_more';
-      readinessTitleId = '🌟 Siap Aktivasi Materi/Hafalan Baru (Ziyadah)';
-      readinessDescId = 'Daya ingat dan interval retensi santri sangat kuat (rata-rata di atas 21 hari). Beban review harian sangat terkendali, santri sangat direkomendasikan untuk menambah hafalan atau mengaktifkan materi baru.';
+      readinessStatus = "ready_for_more";
+      readinessTitleId = "🌟 Siap Aktivasi Materi/Hafalan Baru (Ziyadah)";
+      readinessDescId =
+        "Daya ingat dan interval retensi santri sangat kuat (rata-rata di atas 21 hari). Beban review harian sangat terkendali, santri sangat direkomendasikan untuk menambah hafalan atau mengaktifkan materi baru.";
     } else if (dueItems > 8 || avgStability < 5) {
-      readinessStatus = 'needs_reinforcement';
-      readinessTitleId = '⚠️ Perlu Penguatan Murajaah & Tasmi\' Intensif';
-      readinessDescId = 'Terdapat beban review yang menumpuk atau interval retensi masih pendek. Disarankan memfokuskan waktu pada pelancaran materi yang sudah ada sebelum menambah materi baru.';
+      readinessStatus = "needs_reinforcement";
+      readinessTitleId = "⚠️ Perlu Penguatan Murajaah & Tasmi' Intensif";
+      readinessDescId =
+        "Terdapat beban review yang menumpuk atau interval retensi masih pendek. Disarankan memfokuskan waktu pada pelancaran materi yang sudah ada sebelum menambah materi baru.";
     } else {
-      readinessStatus = 'steady';
-      readinessTitleId = '✨ Ritme Belajar Stabil & Teratur';
-      readinessDescId = 'Santri menjaga konsistensi murajaah dengan baik. Pertahankan jadwal harian agar seluruh materi bertransformasi menuju status Mapan.';
+      readinessStatus = "steady";
+      readinessTitleId = "✨ Ritme Belajar Stabil & Teratur";
+      readinessDescId =
+        "Santri menjaga konsistensi murajaah dengan baik. Pertahankan jadwal harian agar seluruh materi bertransformasi menuju status Mapan.";
     }
 
-    const todayDateFormatted = new Intl.DateTimeFormat('id-ID', {
-      dateStyle: 'full'
+    const todayDateFormatted = new Intl.DateTimeFormat("id-ID", {
+      dateStyle: "full",
     }).format(new Date());
 
     return {
@@ -313,19 +382,19 @@ export const StudentProgressReportModal: React.FC<Props> = ({
       readinessStatus,
       readinessTitleId,
       readinessDescId,
-      todayDateFormatted
+      todayDateFormatted,
     };
   }, [student, isQuran, activeQuranPages]);
 
   // 4. Construct Public Report Payload for Shareable Link
   const reportPayload = useMemo<StudentReportPayload>(() => {
     const juzSummary: StudentReportJuzBreakdown[] = isQuran
-      ? juzGroups.slice(0, 10).map(g => ({
+      ? juzGroups.slice(0, 10).map((g) => ({
           juzNumber: g.juzNumber,
           activeCount: g.activeCount,
           masteredCount: g.masteredCount,
           dueCount: g.dueCount,
-          avgStability: g.avgStability
+          avgStability: g.avgStability,
         }))
       : [];
 
@@ -334,25 +403,59 @@ export const StudentProgressReportModal: React.FC<Props> = ({
 
     if (!isQuran) {
       const assignedId = classGroup.assignedBookIds?.[0];
-      const assignedClassBookId = assignedId ? `class-book-${classGroup.id}-${assignedId}` : undefined;
-      const targetBook = books?.find(b => b.id === assignedId || b.id === assignedClassBookId) || books?.[0];
+      const assignedClassBookId = assignedId
+        ? `class-book-${classGroup.id}-${assignedId}`
+        : undefined;
+      const targetBook =
+        books?.find(
+          (b) => b.id === assignedId || b.id === assignedClassBookId,
+        ) || books?.[0];
       if (targetBook) {
         assignedBookTitle = targetBook.title;
-        const bChapters = chapters?.filter(c => c.bookId === targetBook.id) || [];
-        const bItems = items?.filter(i => i.bookId === targetBook.id) || [];
+        const bChapters =
+          chapters?.filter((c) => c.bookId === targetBook.id) || [];
+        const bItems = items?.filter((i) => i.bookId === targetBook.id) || [];
         const liveItems = getLiveStudentBookItems(student.id);
-        const sItems = (liveItems && liveItems.length > 0) ? liveItems : (student.bookItemsData && student.bookItemsData.length > 0 ? student.bookItemsData : bItems);
+        const sItems =
+          liveItems && liveItems.length > 0
+            ? liveItems
+            : student.bookItemsData && student.bookItemsData.length > 0
+              ? student.bookItemsData
+              : bItems;
 
         if (bChapters.length > 0) {
-          chaptersSummary = bChapters.map(chap => {
-            const chapItems = sItems.filter(i => i.chapterId === chap.id);
-            const activeCount = chapItems.filter(i => i.isActive).length;
-            const masteredCount = chapItems.filter(i => i.status === 'mastered' || (i.fsrsData?.stability || 0) >= 30).length;
-            const dueCount = chapItems.filter(i => i.isActive && isDue(i.fsrsData?.nextReview, i.isActive, i.fsrsData?.lastReview)).length;
-            const stabList = chapItems.filter(i => i.isActive).map(i => getIntervalDays(i.fsrsData));
-            const avgStab = stabList.length > 0 ? Math.round((stabList.reduce((a, b) => a + b, 0) / stabList.length) * 10) / 10 : 25;
-            const effectiveActive = activeCount > 0 ? activeCount : Math.min(chapItems.length, 3);
-            const effectiveMastered = masteredCount > 0 ? masteredCount : Math.round(effectiveActive * 0.7);
+          chaptersSummary = bChapters.map((chap) => {
+            const chapItems = sItems.filter((i) => i.chapterId === chap.id);
+            const activeCount = chapItems.filter((i) => i.isActive).length;
+            const masteredCount = chapItems.filter(
+              (i) =>
+                i.status === "mastered" || (i.fsrsData?.stability || 0) >= 30,
+            ).length;
+            const dueCount = chapItems.filter(
+              (i) =>
+                i.isActive &&
+                isDue(
+                  i.fsrsData?.nextReview,
+                  i.isActive,
+                  i.fsrsData?.lastReview,
+                ),
+            ).length;
+            const stabList = chapItems
+              .filter((i) => i.isActive)
+              .map((i) => getIntervalDays(i.fsrsData));
+            const avgStab =
+              stabList.length > 0
+                ? Math.round(
+                    (stabList.reduce((a, b) => a + b, 0) / stabList.length) *
+                      10,
+                  ) / 10
+                : 25;
+            const effectiveActive =
+              activeCount > 0 ? activeCount : Math.min(chapItems.length, 3);
+            const effectiveMastered =
+              masteredCount > 0
+                ? masteredCount
+                : Math.round(effectiveActive * 0.7);
             return {
               chapterId: chap.id,
               title: chap.title,
@@ -360,45 +463,53 @@ export const StudentProgressReportModal: React.FC<Props> = ({
               masteredCount: effectiveMastered,
               dueCount,
               avgStability: avgStab,
-              progressPercent: chapItems.length > 0 ? Math.round((effectiveMastered / chapItems.length) * 100) : 75
+              progressPercent:
+                chapItems.length > 0
+                  ? Math.round((effectiveMastered / chapItems.length) * 100)
+                  : 75,
             };
           });
         }
       }
     }
 
-    let awardTitle = 'Hafidz Istiqomah Berprestasi';
-    let awardDescription = 'Diberikan atas ketekunan, kedisiplinan murajaah, dan ketahanan memori hafalan yang sangat memuaskan.';
-    let awardLevel: 'Gold' | 'Emerald' | 'Ruby' | 'Diamond' = 'Gold';
+    let awardTitle = "Hafidz Istiqomah Berprestasi";
+    let awardDescription =
+      "Diberikan atas ketekunan, kedisiplinan murajaah, dan ketahanan memori hafalan yang sangat memuaskan.";
+    let awardLevel: "Gold" | "Emerald" | "Ruby" | "Diamond" = "Gold";
 
     if (metrics.retentionRate >= 95 && metrics.avgStability >= 25) {
-      awardTitle = 'Bintang Mutqin Mumtaz';
-      awardLevel = 'Diamond';
-      awardDescription = 'Pencapaian istimewa dengan retensi prima, hafalan stabil, dan kedisiplinan murajaah konsisten.';
+      awardTitle = "Bintang Mutqin Mumtaz";
+      awardLevel = "Diamond";
+      awardDescription =
+        "Pencapaian istimewa dengan retensi prima, hafalan stabil, dan kedisiplinan murajaah konsisten.";
     } else if (metrics.retentionRate >= 90) {
-      awardTitle = 'Hafidz Berprestasi & Disiplin';
-      awardLevel = 'Emerald';
-      awardDescription = 'Dianugerahkan atas konsistensi murajaah terjadwal dan perkembangan hafalan yang mapan.';
+      awardTitle = "Hafidz Berprestasi & Disiplin";
+      awardLevel = "Emerald";
+      awardDescription =
+        "Dianugerahkan atas konsistensi murajaah terjadwal dan perkembangan hafalan yang mapan.";
     } else {
-      awardTitle = 'Santri Berbakat & Terbina';
-      awardLevel = 'Ruby';
-      awardDescription = 'Dianugerahkan atas keikutsertaan aktif dan semangat menjaga hafalan secara berkala.';
+      awardTitle = "Santri Berbakat & Terbina";
+      awardLevel = "Ruby";
+      awardDescription =
+        "Dianugerahkan atas keikutsertaan aktif dan semangat menjaga hafalan secara berkala.";
     }
 
     return {
-      reportId: `UNLUPA-${(student.id || 'STD').slice(0, 6).toUpperCase()}-${Date.now().toString(36).toUpperCase()}`,
+      reportId: `UNLUPA-${(student.id || "STD").slice(0, 6).toUpperCase()}-${Date.now().toString(36).toUpperCase()}`,
       studentName: student.name,
       studentId: student.id,
       className: classGroup.name,
-      classType: isQuran ? 'quran' : 'books',
-      teacherName: classGroup.teacherName || 'Pengajar',
-      institutionName: 'unlupa.id Learning Center',
+      classType: isQuran ? "quran" : "books",
+      teacherName: classGroup.teacherName || "Pengajar",
+      institutionName: "unlupa.id Learning Center",
       date: new Date().toISOString(),
       totalActive: metrics.activeItems,
       totalMastered: metrics.masteredItems,
       totalDueToday: metrics.dueItems,
       retentionRate: metrics.retentionRate,
-      totalReviews: (student as any).totalReviewsCount || metrics.activeItems * 4,
+      totalReviews:
+        (student as any).totalReviewsCount || metrics.activeItems * 4,
       avgStability: metrics.avgStability,
       readinessTitle: metrics.readinessTitleId,
       readinessDesc: metrics.readinessDescId,
@@ -408,9 +519,20 @@ export const StudentProgressReportModal: React.FC<Props> = ({
       chaptersBreakdown: chaptersSummary,
       awardTitle,
       awardLevel,
-      awardDescription
+      awardDescription,
     };
-  }, [student, classGroup, isQuran, metrics, juzGroups, customTeacherNote, books, chapters, items, getLiveStudentBookItems]);
+  }, [
+    student,
+    classGroup,
+    isQuran,
+    metrics,
+    juzGroups,
+    customTeacherNote,
+    books,
+    chapters,
+    items,
+    getLiveStudentBookItems,
+  ]);
 
   // Shareable URL for parents
   const shareableUrl = useMemo(() => {
@@ -437,15 +559,17 @@ export const StudentProgressReportModal: React.FC<Props> = ({
   };
 
   const handleOpenPreview = () => {
-    window.open(shareableUrl, '_blank', 'noopener,noreferrer');
+    window.open(shareableUrl, "_blank", "noopener,noreferrer");
   };
 
   const handleShareWhatsAppModal = () => {
     try {
       navigator.clipboard.writeText(whatsAppMessageText);
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
     const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(whatsAppMessageText)}`;
-    window.open(waUrl, '_blank', 'noopener,noreferrer');
+    window.open(waUrl, "_blank", "noopener,noreferrer");
   };
 
   // 4. Generate WhatsApp Report Text (Strictly NO "FSRS", Branded unlupa.id, Includes Juz & Page Details)
@@ -461,29 +585,33 @@ export const StudentProgressReportModal: React.FC<Props> = ({
 📊 *RINGKASAN KEDISIPLINAN & RETENSI:*
 • Tingkat Ketepatan Review: *${metrics.retentionRate}%*
 • Rata-rata Ketahanan Memori: *${metrics.avgStability} hari*
-• Materi Aktif: *${metrics.activeItems}* ${isQuran ? 'halaman' : 'kartu'}
+• Materi Aktif: *${metrics.activeItems}* ${isQuran ? "halaman" : "kartu"}
 • Status Mapan (Kuat): *${metrics.masteredItems}* (${Math.round((metrics.masteredItems / Math.max(1, metrics.activeItems)) * 100)}%)
-• Beban Belum Review Hari Ini: *${metrics.dueItems}* ${isQuran ? 'halaman' : 'kartu'}
+• Beban Belum Review Hari Ini: *${metrics.dueItems}* ${isQuran ? "halaman" : "kartu"}
 
 🎯 *REKOMENDASI KEMAJUAN DARI PENGAJAR:*
 ${metrics.readinessTitleId}
 ${metrics.readinessDescId}
-${customTeacherNote.trim() ? `\n📝 *Catatan Khusus Ustadz:*\n"${customTeacherNote.trim()}"` : ''}`;
+${customTeacherNote.trim() ? `\n📝 *Catatan Khusus Ustadz:*\n"${customTeacherNote.trim()}"` : ""}`;
 
     if (includeDetails) {
       if (isQuran && juzGroups.length > 0) {
         text += `\n\n━━━━━━━━━━━━━━━━━━━━━\n📖 *RINCIAN STATUS HAFALAN PER JUZ:*\n━━━━━━━━━━━━━━━━━━━━━`;
-        
-        juzGroups.forEach(juz => {
-          const mapanTag = juz.masteredCount > 0 ? ` | ${juz.masteredCount} Mapan` : '';
+
+        juzGroups.forEach((juz) => {
+          const mapanTag =
+            juz.masteredCount > 0 ? ` | ${juz.masteredCount} Mapan` : "";
           text += `\n\n📌 *JUZ ${juz.juzNumber}* (${juz.activeCount} Halaman Aktif${mapanTag}):`;
-          
-          juz.pages.forEach(p => {
+
+          juz.pages.forEach((p) => {
             const surahInfo = getSurahForPage(p.pageNumber);
             const surahName = p.surahNameEn || surahInfo.nameEn;
             const stab = getIntervalDays(p.fsrsData);
             const reps = p.fsrsData?.reps || 0;
-            const nextInfo = getNextReviewInfo(p.fsrsData?.nextReview, p.isActive);
+            const nextInfo = getNextReviewInfo(
+              p.fsrsData?.nextReview,
+              p.isActive,
+            );
 
             text += `\n• *Hal. ${p.pageNumber}* (QS. ${surahName})
   ├ Total Review: *${reps} kali*
@@ -494,21 +622,33 @@ ${customTeacherNote.trim() ? `\n📝 *Catatan Khusus Ustadz:*\n"${customTeacherN
       } else if (!isQuran) {
         const liveItems = getLiveStudentBookItems(student.id);
         const assignedId = classGroup.assignedBookIds?.[0];
-        const assignedClassBookId = assignedId ? `class-book-${classGroup.id}-${assignedId}` : undefined;
-        
-        let dataToMap = liveItems && liveItems.length > 0 ? liveItems : (student.bookItemsData && student.bookItemsData.length > 0 ? student.bookItemsData : null);
+        const assignedClassBookId = assignedId
+          ? `class-book-${classGroup.id}-${assignedId}`
+          : undefined;
+
+        let dataToMap =
+          liveItems && liveItems.length > 0
+            ? liveItems
+            : student.bookItemsData && student.bookItemsData.length > 0
+              ? student.bookItemsData
+              : null;
         if (dataToMap && assignedId) {
-          dataToMap = dataToMap.filter(i => i.bookId === assignedClassBookId || i.bookId === assignedId);
+          dataToMap = dataToMap.filter(
+            (i) => i.bookId === assignedClassBookId || i.bookId === assignedId,
+          );
         }
-        
+
         if (dataToMap && dataToMap.length > 0) {
-          const activeItems = dataToMap.filter(i => i.isActive);
+          const activeItems = dataToMap.filter((i) => i.isActive);
           if (activeItems.length > 0) {
             text += `\n\n━━━━━━━━━━━━━━━━━━━━━\n📚 *RINCIAN MATERI KITAB AKTIF:*\n━━━━━━━━━━━━━━━━━━━━━`;
             activeItems.forEach((item, idx) => {
               const stab = getIntervalDays(item.fsrsData);
               const reps = item.fsrsData?.reps || 0;
-              const nextInfo = getNextReviewInfo(item.fsrsData?.nextReview, item.isActive);
+              const nextInfo = getNextReviewInfo(
+                item.fsrsData?.nextReview,
+                item.isActive,
+              );
 
               text += `\n• *#${idx + 1}* ${item.question.slice(0, 45)}
     ├ Total Review: *${reps} kali*
@@ -545,20 +685,19 @@ _Platform Manajemen Retensi & Mutqin Santri_`;
       // ignore
     }
     const waUrl = `https://wa.me/?text=${encodeURIComponent(text)}`;
-    window.open(waUrl, '_blank', 'noopener,noreferrer');
+    window.open(waUrl, "_blank", "noopener,noreferrer");
   };
 
   const toggleJuz = (juzNumber: number) => {
-    setExpandedJuzs(prev => ({
+    setExpandedJuzs((prev) => ({
       ...prev,
-      [juzNumber]: !prev[juzNumber]
+      [juzNumber]: !prev[juzNumber],
     }));
   };
 
   return (
     <div className="fixed inset-0 z-[110] flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in">
       <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 w-full max-w-2xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden animate-in zoom-in-95">
-        
         {/* TOP BAR */}
         <div className="p-4 sm:p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-900/50">
           <div className="flex items-center gap-3 min-w-0">
@@ -593,11 +732,11 @@ _Platform Manajemen Retensi & Mutqin Santri_`;
         <div className="px-4 sm:px-6 pt-3 border-b border-slate-200/70 dark:border-slate-800 flex items-center gap-1.5 overflow-x-auto bg-white dark:bg-slate-900">
           <button
             type="button"
-            onClick={() => setActiveTab('shareLink')}
+            onClick={() => setActiveTab("shareLink")}
             className={`px-3.5 py-2 text-xs font-bold rounded-t-xl border-b-2 transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
-              activeTab === 'shareLink'
-                ? 'border-amber-500 text-amber-600 dark:text-amber-400 bg-amber-50/70 dark:bg-amber-950/30'
-                : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+              activeTab === "shareLink"
+                ? "border-amber-500 text-amber-600 dark:text-amber-400 bg-amber-50/70 dark:bg-amber-950/30"
+                : "border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
             }`}
           >
             <Share2 className="w-3.5 h-3.5 text-amber-500" />
@@ -606,11 +745,11 @@ _Platform Manajemen Retensi & Mutqin Santri_`;
 
           <button
             type="button"
-            onClick={() => setActiveTab('overview')}
+            onClick={() => setActiveTab("overview")}
             className={`px-3.5 py-2 text-xs font-bold rounded-t-xl border-b-2 transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
-              activeTab === 'overview'
-                ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400 bg-indigo-50/50 dark:bg-indigo-950/30'
-                : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+              activeTab === "overview"
+                ? "border-indigo-600 text-indigo-600 dark:text-indigo-400 bg-indigo-50/50 dark:bg-indigo-950/30"
+                : "border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
             }`}
           >
             <Award className="w-3.5 h-3.5" />
@@ -620,11 +759,11 @@ _Platform Manajemen Retensi & Mutqin Santri_`;
           {isQuran && juzGroups.length > 0 && (
             <button
               type="button"
-              onClick={() => setActiveTab('breakdown')}
+              onClick={() => setActiveTab("breakdown")}
               className={`px-3.5 py-2 text-xs font-bold rounded-t-xl border-b-2 transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
-                activeTab === 'breakdown'
-                  ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400 bg-indigo-50/50 dark:bg-indigo-950/30'
-                  : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                activeTab === "breakdown"
+                  ? "border-indigo-600 text-indigo-600 dark:text-indigo-400 bg-indigo-50/50 dark:bg-indigo-950/30"
+                  : "border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
               }`}
             >
               <BookOpen className="w-3.5 h-3.5" />
@@ -634,11 +773,11 @@ _Platform Manajemen Retensi & Mutqin Santri_`;
 
           <button
             type="button"
-            onClick={() => setActiveTab('waPreview')}
+            onClick={() => setActiveTab("waPreview")}
             className={`px-3.5 py-2 text-xs font-bold rounded-t-xl border-b-2 transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
-              activeTab === 'waPreview'
-                ? 'border-emerald-600 text-emerald-600 dark:text-emerald-400 bg-emerald-50/50 dark:bg-emerald-950/30'
-                : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+              activeTab === "waPreview"
+                ? "border-emerald-600 text-emerald-600 dark:text-emerald-400 bg-emerald-50/50 dark:bg-emerald-950/30"
+                : "border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
             }`}
           >
             <MessageSquare className="w-3.5 h-3.5" />
@@ -648,9 +787,8 @@ _Platform Manajemen Retensi & Mutqin Santri_`;
 
         {/* MODAL BODY */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 text-slate-800 dark:text-slate-200">
-          
           {/* TAB 0: SHARE LINK & EXPORT */}
-          {activeTab === 'shareLink' && (
+          {activeTab === "shareLink" && (
             <div className="space-y-4 animate-in fade-in duration-150">
               {/* Feature Explainer Banner */}
               <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-amber-500/5 border border-amber-300/60 dark:border-amber-700/40 space-y-2">
@@ -661,7 +799,12 @@ _Platform Manajemen Retensi & Mutqin Santri_`;
                   </h4>
                 </div>
                 <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-                  Cukup kirimkan tautan di bawah kepada santri atau wali santri. Saat tautan dibuka di browser HP/laptop (tanpa login), mereka dapat melihat Rapor Retensi dan Kartu Prestasi Resmi, serta langsung <strong>mengunduh PDF, Gambar (PNG), atau Mencetak</strong> dokumen secara mandiri.
+                  Cukup kirimkan tautan di bawah kepada santri atau wali santri.
+                  Saat tautan dibuka di browser HP/laptop (tanpa login), mereka
+                  dapat melihat Rapor Retensi dan Kartu Prestasi Resmi, serta
+                  langsung{" "}
+                  <strong>mengunduh PDF, Gambar (PNG), atau Mencetak</strong>{" "}
+                  dokumen secara mandiri.
                 </p>
               </div>
 
@@ -669,9 +812,11 @@ _Platform Manajemen Retensi & Mutqin Santri_`;
               <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 space-y-3">
                 <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center justify-between">
                   <span>Tautan Publik (Siap Bagikan):</span>
-                  <span className="text-[11px] text-amber-600 dark:text-amber-400 font-semibold">Berisi Rapor & Sertifikat</span>
+                  <span className="text-[11px] text-amber-600 dark:text-amber-400 font-semibold">
+                    Berisi Rapor & Sertifikat
+                  </span>
                 </label>
-                
+
                 <div className="flex items-center gap-2">
                   <input
                     type="text"
@@ -723,7 +868,9 @@ _Platform Manajemen Retensi & Mutqin Santri_`;
               <div className="p-4 rounded-2xl bg-white dark:bg-slate-850 border border-slate-200 dark:border-slate-700 space-y-2">
                 <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center justify-between">
                   <span>Catatan Khusus Ustadz / Pengajar (Opsional):</span>
-                  <span className="text-[11px] text-slate-400">Otomatis disematkan ke tautan</span>
+                  <span className="text-[11px] text-slate-400">
+                    Otomatis disematkan ke tautan
+                  </span>
                 </label>
                 <textarea
                   rows={2}
@@ -741,9 +888,12 @@ _Platform Manajemen Retensi & Mutqin Santri_`;
                     <Award className="w-4 h-4" />
                   </div>
                   <div>
-                    <h5 className="text-xs font-bold text-slate-900 dark:text-white">Rapor Retensi</h5>
+                    <h5 className="text-xs font-bold text-slate-900 dark:text-white">
+                      Rapor Retensi
+                    </h5>
                     <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                      Statistik mutqin, rata-rata ketahanan, kedisiplinan, dan rincian halaman santri.
+                      Statistik mutqin, rata-rata ketahanan, kedisiplinan, dan
+                      rincian halaman santri.
                     </p>
                   </div>
                 </div>
@@ -753,29 +903,36 @@ _Platform Manajemen Retensi & Mutqin Santri_`;
                     <Award className="w-4 h-4" />
                   </div>
                   <div>
-                    <h5 className="text-xs font-bold text-slate-900 dark:text-white">Kartu Prestasi Santri</h5>
+                    <h5 className="text-xs font-bold text-slate-900 dark:text-white">
+                      Kartu Prestasi Santri
+                    </h5>
                     <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                      Piagam penghargaan resmi dengan medali emas dan predikat mutqin siap cetak/simpan.
+                      Piagam penghargaan resmi dengan medali emas dan predikat
+                      mutqin siap cetak/simpan.
                     </p>
                   </div>
                 </div>
               </div>
             </div>
           )}
-          
+
           {/* TAB 1: OVERVIEW */}
-          {activeTab === 'overview' && (
+          {activeTab === "overview" && (
             <div className="space-y-4 animate-in fade-in duration-150">
               {/* Official Header Card */}
               <div className="p-4 rounded-2xl bg-gradient-to-br from-indigo-50/80 via-white to-amber-50/40 dark:from-slate-800/80 dark:via-slate-900 dark:to-slate-800 border border-indigo-100 dark:border-slate-700/80 shadow-2xs space-y-2">
                 <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 border-b border-slate-200/60 dark:border-slate-800 pb-2">
-                  <span className="font-semibold">{metrics.todayDateFormatted}</span>
-                  <span className="font-mono text-indigo-600 dark:text-indigo-400 font-bold">KODE KELAS: {classGroup.code}</span>
+                  <span className="font-semibold">
+                    {metrics.todayDateFormatted}
+                  </span>
+                  <span className="font-mono text-indigo-600 dark:text-indigo-400 font-bold">
+                    KODE KELAS: {classGroup.code}
+                  </span>
                 </div>
 
                 <div className="flex items-center gap-3 pt-1">
-                  <img 
-                    src={student.avatarUrl} 
+                  <img
+                    src={student.avatarUrl}
                     alt={student.name}
                     className="w-12 h-12 rounded-2xl object-cover border-2 border-indigo-500/20 shadow-xs shrink-0"
                   />
@@ -784,7 +941,8 @@ _Platform Manajemen Retensi & Mutqin Santri_`;
                       {student.name}
                     </h4>
                     <p className="text-xs text-slate-500 dark:text-slate-400">
-                      Pengajar: <strong>{classGroup.teacherName}</strong> • {isQuran ? "Halaqah Al-Qur'an" : 'Kelas Kitab'}
+                      Pengajar: <strong>{classGroup.teacherName}</strong> •{" "}
+                      {isQuran ? "Halaqah Al-Qur'an" : "Kelas Kitab"}
                     </p>
                   </div>
                 </div>
@@ -799,7 +957,9 @@ _Platform Manajemen Retensi & Mutqin Santri_`;
                   <div className="text-lg font-extrabold text-slate-900 dark:text-white">
                     {metrics.retentionRate}%
                   </div>
-                  <span className="text-[10px] text-emerald-600 dark:text-emerald-400">Tepat Waktu</span>
+                  <span className="text-[10px] text-emerald-600 dark:text-emerald-400">
+                    Tepat Waktu
+                  </span>
                 </div>
 
                 <div className="p-3 rounded-2xl bg-indigo-50/70 dark:bg-indigo-950/20 border border-indigo-200/80 dark:border-indigo-900/40">
@@ -807,9 +967,12 @@ _Platform Manajemen Retensi & Mutqin Santri_`;
                     Rata-rata Ketahanan
                   </span>
                   <div className="text-lg font-extrabold text-slate-900 dark:text-white">
-                    {metrics.avgStability} <span className="text-xs font-normal">hari</span>
+                    {metrics.avgStability}{" "}
+                    <span className="text-xs font-normal">hari</span>
                   </div>
-                  <span className="text-[10px] text-indigo-600 dark:text-indigo-400">Interval Memori</span>
+                  <span className="text-[10px] text-indigo-600 dark:text-indigo-400">
+                    Interval Memori
+                  </span>
                 </div>
 
                 <div className="p-3 rounded-2xl bg-purple-50/70 dark:bg-purple-950/20 border border-purple-200/80 dark:border-purple-900/40">
@@ -819,7 +982,9 @@ _Platform Manajemen Retensi & Mutqin Santri_`;
                   <div className="text-lg font-extrabold text-slate-900 dark:text-white">
                     {metrics.masteredItems}
                   </div>
-                  <span className="text-[10px] text-purple-600 dark:text-purple-400">Dari {metrics.activeItems} aktif</span>
+                  <span className="text-[10px] text-purple-600 dark:text-purple-400">
+                    Dari {metrics.activeItems} aktif
+                  </span>
                 </div>
 
                 <div className="p-3 rounded-2xl bg-amber-50/70 dark:bg-amber-950/20 border border-amber-200/80 dark:border-amber-900/40">
@@ -830,27 +995,33 @@ _Platform Manajemen Retensi & Mutqin Santri_`;
                     {metrics.dueItems}
                   </div>
                   <span className="text-[10px] text-amber-600 dark:text-amber-400">
-                    {metrics.dueItems === 0 ? 'Tuntas hari ini' : 'Perlu disetor'}
+                    {metrics.dueItems === 0
+                      ? "Tuntas hari ini"
+                      : "Perlu disetor"}
                   </span>
                 </div>
               </div>
 
               {/* Smart Pedagogical Recommendation */}
-              <div className={`p-4 rounded-2xl border space-y-1.5 ${
-                metrics.readinessStatus === 'ready_for_more'
-                  ? 'bg-emerald-50/60 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800'
-                  : metrics.readinessStatus === 'needs_reinforcement'
-                  ? 'bg-amber-50/60 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800'
-                  : 'bg-indigo-50/60 dark:bg-indigo-950/20 border-indigo-200 dark:border-indigo-800'
-              }`}>
+              <div
+                className={`p-4 rounded-2xl border space-y-1.5 ${
+                  metrics.readinessStatus === "ready_for_more"
+                    ? "bg-emerald-50/60 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800"
+                    : metrics.readinessStatus === "needs_reinforcement"
+                      ? "bg-amber-50/60 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800"
+                      : "bg-indigo-50/60 dark:bg-indigo-950/20 border-indigo-200 dark:border-indigo-800"
+                }`}
+              >
                 <div className="flex items-center gap-2">
-                  <Lightbulb className={`w-4 h-4 shrink-0 ${
-                    metrics.readinessStatus === 'ready_for_more'
-                      ? 'text-emerald-600'
-                      : metrics.readinessStatus === 'needs_reinforcement'
-                      ? 'text-amber-600'
-                      : 'text-indigo-600'
-                  }`} />
+                  <Lightbulb
+                    className={`w-4 h-4 shrink-0 ${
+                      metrics.readinessStatus === "ready_for_more"
+                        ? "text-emerald-600"
+                        : metrics.readinessStatus === "needs_reinforcement"
+                          ? "text-amber-600"
+                          : "text-indigo-600"
+                    }`}
+                  />
                   <h5 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
                     {metrics.readinessTitleId}
                   </h5>
@@ -883,7 +1054,8 @@ _Platform Manajemen Retensi & Mutqin Santri_`;
                       Sertakan Rincian Halaman Per Juz di Pesan WA
                     </span>
                     <span className="text-[11px] text-slate-500 dark:text-slate-400 block">
-                      Menampilkan 3 informasi utama per halaman: Total Review, Kekuatan Interval, dan Jadwal Mendatang.
+                      Menampilkan 3 informasi utama per halaman: Total Review,
+                      Kekuatan Interval, dan Jadwal Mendatang.
                     </span>
                   </div>
                 </div>
@@ -898,9 +1070,8 @@ _Platform Manajemen Retensi & Mutqin Santri_`;
           )}
 
           {/* TAB 2: BREAKDOWN PER JUZ */}
-          {activeTab === 'breakdown' && isQuran && (
+          {activeTab === "breakdown" && isQuran && (
             <div className="p-4 sm:p-5 space-y-6 overflow-y-auto max-h-[calc(90vh-140px)]">
-              
               <div className="bg-white dark:bg-slate-850 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
                 <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200 mb-4 flex items-center gap-2">
                   <TrendingUp className="w-4 h-4 text-indigo-500" />
@@ -912,16 +1083,47 @@ _Platform Manajemen Retensi & Mutqin Santri_`;
                       data={juzGroups}
                       margin={{ top: 5, right: 10, left: -20, bottom: 5 }}
                     >
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#334155" opacity={0.2} />
-                      <XAxis dataKey="juzNumber" tickFormatter={(v) => `Juz ${v}`} axisLine={false} tickLine={false} />
-                      <YAxis axisLine={false} tickLine={false} />
-                      <RechartsTooltip 
-                        cursor={{ fill: 'transparent' }}
-                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}
+                      <CartesianGrid
+                        strokeDasharray="3 3"
+                        vertical={false}
+                        stroke="#334155"
+                        opacity={0.2}
                       />
-                      <Bar dataKey="masteredCount" name="Kuat (Mutqin)" stackId="a" fill="#10b981" radius={[0, 0, 4, 4]} />
-                      <Bar dataKey="activeCount" name="Aktif" stackId="a" fill="#3b82f6" />
-                      <Bar dataKey="dueCount" name="Perlu Muraja'ah" stackId="a" fill="#f59e0b" radius={[4, 4, 0, 0]} />
+                      <XAxis
+                        dataKey="juzNumber"
+                        tickFormatter={(v) => `Juz ${v}`}
+                        axisLine={false}
+                        tickLine={false}
+                      />
+                      <YAxis axisLine={false} tickLine={false} />
+                      <RechartsTooltip
+                        cursor={{ fill: "transparent" }}
+                        contentStyle={{
+                          borderRadius: "12px",
+                          border: "none",
+                          boxShadow: "0 4px 20px rgba(0,0,0,0.1)",
+                        }}
+                      />
+                      <Bar
+                        dataKey="masteredCount"
+                        name="Kuat (Mutqin)"
+                        stackId="a"
+                        fill="#10b981"
+                        radius={[0, 0, 4, 4]}
+                      />
+                      <Bar
+                        dataKey="activeCount"
+                        name="Aktif"
+                        stackId="a"
+                        fill="#3b82f6"
+                      />
+                      <Bar
+                        dataKey="dueCount"
+                        name="Perlu Muraja'ah"
+                        stackId="a"
+                        fill="#f59e0b"
+                        radius={[4, 4, 0, 0]}
+                      />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
@@ -929,16 +1131,38 @@ _Platform Manajemen Retensi & Mutqin Santri_`;
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="bg-white dark:bg-slate-850 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col items-center justify-center">
-                  <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200 w-full mb-2">Komposisi Kualitas Hafalan</h4>
+                  <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200 w-full mb-2">
+                    Komposisi Kualitas Hafalan
+                  </h4>
                   <div className="h-48 w-full flex items-center justify-center">
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
                         <Pie
                           data={[
-                            { name: 'Sangat Kuat', value: activeQuranPages.filter(p => (p.fsrsData?.stability || 0) > 21).length, color: '#10b981' },
-                            { name: 'Cukup Baik', value: activeQuranPages.filter(p => (p.fsrsData?.stability || 0) > 7 && (p.fsrsData?.stability || 0) <= 21).length, color: '#3b82f6' },
-                            { name: 'Perlu Penguatan', value: activeQuranPages.filter(p => (p.fsrsData?.stability || 0) <= 7).length, color: '#f59e0b' }
-                          ].filter(d => d.value > 0)}
+                            {
+                              name: "Sangat Kuat",
+                              value: activeQuranPages.filter(
+                                (p) => (p.fsrsData?.stability || 0) > 21,
+                              ).length,
+                              color: "#10b981",
+                            },
+                            {
+                              name: "Cukup Baik",
+                              value: activeQuranPages.filter(
+                                (p) =>
+                                  (p.fsrsData?.stability || 0) > 7 &&
+                                  (p.fsrsData?.stability || 0) <= 21,
+                              ).length,
+                              color: "#3b82f6",
+                            },
+                            {
+                              name: "Perlu Penguatan",
+                              value: activeQuranPages.filter(
+                                (p) => (p.fsrsData?.stability || 0) <= 7,
+                              ).length,
+                              color: "#f59e0b",
+                            },
+                          ].filter((d) => d.value > 0)}
                           cx="50%"
                           cy="50%"
                           innerRadius={50}
@@ -946,68 +1170,116 @@ _Platform Manajemen Retensi & Mutqin Santri_`;
                           paddingAngle={2}
                           dataKey="value"
                         >
-                          {
-                            [
-                              { name: 'Sangat Kuat', value: activeQuranPages.filter(p => (p.fsrsData?.stability || 0) > 21).length, color: '#10b981' },
-                              { name: 'Cukup Baik', value: activeQuranPages.filter(p => (p.fsrsData?.stability || 0) > 7 && (p.fsrsData?.stability || 0) <= 21).length, color: '#3b82f6' },
-                              { name: 'Perlu Penguatan', value: activeQuranPages.filter(p => (p.fsrsData?.stability || 0) <= 7).length, color: '#f59e0b' }
-                            ].filter(d => d.value > 0).map((entry, index) => (
+                          {[
+                            {
+                              name: "Sangat Kuat",
+                              value: activeQuranPages.filter(
+                                (p) => (p.fsrsData?.stability || 0) > 21,
+                              ).length,
+                              color: "#10b981",
+                            },
+                            {
+                              name: "Cukup Baik",
+                              value: activeQuranPages.filter(
+                                (p) =>
+                                  (p.fsrsData?.stability || 0) > 7 &&
+                                  (p.fsrsData?.stability || 0) <= 21,
+                              ).length,
+                              color: "#3b82f6",
+                            },
+                            {
+                              name: "Perlu Penguatan",
+                              value: activeQuranPages.filter(
+                                (p) => (p.fsrsData?.stability || 0) <= 7,
+                              ).length,
+                              color: "#f59e0b",
+                            },
+                          ]
+                            .filter((d) => d.value > 0)
+                            .map((entry, index) => (
                               <Cell key={`cell-${index}`} fill={entry.color} />
-                            ))
-                          }
+                            ))}
                         </Pie>
                         <RechartsTooltip />
                       </PieChart>
                     </ResponsiveContainer>
                   </div>
                   <div className="flex gap-4 text-[10px] mt-2">
-                    <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-emerald-500"></div> Kuat</div>
-                    <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-blue-500"></div> Cukup</div>
-                    <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-amber-500"></div> Perlu Penguatan</div>
+                    <div className="flex items-center gap-1">
+                      <div className="w-2 h-2 rounded-full bg-emerald-500"></div>{" "}
+                      Kuat
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <div className="w-2 h-2 rounded-full bg-blue-500"></div>{" "}
+                      Cukup
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <div className="w-2 h-2 rounded-full bg-amber-500"></div>{" "}
+                      Perlu Penguatan
+                    </div>
                   </div>
                 </div>
 
                 <div className="bg-slate-50 dark:bg-slate-850 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col justify-center">
-                   <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200 mb-4">Statistik Lanjut</h4>
-                   <div className="space-y-3">
-                     <div className="flex justify-between items-center pb-2 border-b border-slate-200 dark:border-slate-700">
-                       <span className="text-xs text-slate-500 dark:text-slate-400">Total Interaksi (Review)</span>
-                       <span className="font-mono font-bold text-slate-800 dark:text-slate-200">{activeQuranPages.reduce((acc, p) => acc + (p.fsrsData?.reps || 0), 0)}x</span>
-                     </div>
-                     <div className="flex justify-between items-center pb-2 border-b border-slate-200 dark:border-slate-700">
-                       <span className="text-xs text-slate-500 dark:text-slate-400">Rata-rata Retensi</span>
-                       <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
-                         {metrics.retentionRate}%
-                       </span>
-                     </div>
-                     <div className="flex justify-between items-center pb-2 border-b border-slate-200 dark:border-slate-700">
-                       <span className="text-xs text-slate-500 dark:text-slate-400">Halaman Paling Sering Diulang</span>
-                       <span className="font-mono font-bold text-indigo-600 dark:text-indigo-400">
-                         Hal {[...activeQuranPages].sort((a,b) => (b.fsrsData?.reps||0) - (a.fsrsData?.reps||0))[0]?.pageNumber || '-'}
-                       </span>
-                     </div>
-                   </div>
+                  <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200 mb-4">
+                    Statistik Lanjut
+                  </h4>
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center pb-2 border-b border-slate-200 dark:border-slate-700">
+                      <span className="text-xs text-slate-500 dark:text-slate-400">
+                        Total Interaksi (Review)
+                      </span>
+                      <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
+                        {activeQuranPages.reduce(
+                          (acc, p) => acc + (p.fsrsData?.reps || 0),
+                          0,
+                        )}
+                        x
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center pb-2 border-b border-slate-200 dark:border-slate-700">
+                      <span className="text-xs text-slate-500 dark:text-slate-400">
+                        Rata-rata Retensi
+                      </span>
+                      <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
+                        {metrics.retentionRate}%
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center pb-2 border-b border-slate-200 dark:border-slate-700">
+                      <span className="text-xs text-slate-500 dark:text-slate-400">
+                        Halaman Paling Sering Diulang
+                      </span>
+                      <span className="font-mono font-bold text-indigo-600 dark:text-indigo-400">
+                        Hal{" "}
+                        {[...activeQuranPages].sort(
+                          (a, b) =>
+                            (b.fsrsData?.reps || 0) - (a.fsrsData?.reps || 0),
+                        )[0]?.pageNumber || "-"}
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
           )}
 
-          {activeTab === 'breakdown' && isQuran && (
+          {activeTab === "breakdown" && isQuran && (
             <div className="space-y-3 animate-in fade-in duration-150">
               <div className="flex items-center justify-between pb-1">
                 <p className="text-xs text-slate-600 dark:text-slate-300">
-                  Rincian <strong>{activeQuranPages.length}</strong> halaman aktif yang dipantau sistem adaptif:
+                  Rincian <strong>{activeQuranPages.length}</strong> halaman
+                  aktif yang dipantau sistem adaptif:
                 </p>
                 <span className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400">
                   {juzGroups.length} Juz Aktif
                 </span>
               </div>
 
-              {juzGroups.map(juz => {
+              {juzGroups.map((juz) => {
                 const isExpanded = expandedJuzs[juz.juzNumber] ?? true;
 
                 return (
-                  <div 
+                  <div
                     key={juz.juzNumber}
                     className="rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden bg-white dark:bg-slate-850 shadow-2xs"
                   >
@@ -1026,7 +1298,11 @@ _Platform Manajemen Retensi & Mutqin Santri_`;
                             Juz {juz.juzNumber}
                           </span>
                           <span className="text-[11px] text-slate-500 dark:text-slate-400 ml-2">
-                            ({juz.activeCount} Halaman Aktif{juz.masteredCount > 0 ? ` • ${juz.masteredCount} Mapan` : ''})
+                            ({juz.activeCount} Halaman Aktif
+                            {juz.masteredCount > 0
+                              ? ` • ${juz.masteredCount} Mapan`
+                              : ""}
+                            )
                           </span>
                         </div>
                       </div>
@@ -1048,16 +1324,22 @@ _Platform Manajemen Retensi & Mutqin Santri_`;
                     {/* Pages List */}
                     {isExpanded && (
                       <div className="p-2 sm:p-3 divide-y divide-slate-100 dark:divide-slate-800">
-                        {juz.pages.map(page => {
+                        {juz.pages.map((page) => {
                           const surahInfo = getSurahForPage(page.pageNumber);
-                          const surahName = page.surahNameEn || surahInfo.nameEn;
+                          const surahName =
+                            page.surahNameEn || surahInfo.nameEn;
                           const stab = getIntervalDays(page.fsrsData);
                           const reps = page.fsrsData?.reps || 0;
-                          const nextInfo = getNextReviewInfo(page.fsrsData?.nextReview, page.isActive);
-                          const isMastered = page.status === 'mastered_for_now' || (page.fsrsData?.stability || 0) >= 30;
+                          const nextInfo = getNextReviewInfo(
+                            page.fsrsData?.nextReview,
+                            page.isActive,
+                          );
+                          const isMastered =
+                            page.status === "mastered_for_now" ||
+                            (page.fsrsData?.stability || 0) >= 30;
 
                           return (
-                            <div 
+                            <div
                               key={page.pageNumber}
                               className="py-2.5 px-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2 hover:bg-slate-50/60 dark:hover:bg-slate-800/40 rounded-xl transition-colors"
                             >
@@ -1076,14 +1358,26 @@ _Platform Manajemen Retensi & Mutqin Santri_`;
                                   )}
                                 </div>
                                 <div className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-2 flex-wrap">
-                                  <span>Total Review: <strong className="text-slate-700 dark:text-slate-200">{reps} kali</strong></span>
+                                  <span>
+                                    Total Review:{" "}
+                                    <strong className="text-slate-700 dark:text-slate-200">
+                                      {reps} kali
+                                    </strong>
+                                  </span>
                                   <span>•</span>
-                                  <span>Kekuatan Interval: <strong className="text-slate-700 dark:text-slate-200">{stab} hari</strong></span>
+                                  <span>
+                                    Kekuatan Interval:{" "}
+                                    <strong className="text-slate-700 dark:text-slate-200">
+                                      {stab} hari
+                                    </strong>
+                                  </span>
                                 </div>
                               </div>
 
                               <div className="shrink-0 flex items-center gap-2">
-                                <span className={`text-[10px] sm:text-[11px] font-bold px-2.5 py-1 rounded-xl border ${nextInfo.badgeColor}`}>
+                                <span
+                                  className={`text-[10px] sm:text-[11px] font-bold px-2.5 py-1 rounded-xl border ${nextInfo.badgeColor}`}
+                                >
                                   Jadwal Mendatang: {nextInfo.cleanText}
                                 </span>
                               </div>
@@ -1099,7 +1393,7 @@ _Platform Manajemen Retensi & Mutqin Santri_`;
           )}
 
           {/* TAB 3: WHATSAPP TEXT PREVIEW */}
-          {activeTab === 'waPreview' && (
+          {activeTab === "waPreview" && (
             <div className="space-y-3 animate-in fade-in duration-150">
               <div className="flex items-center justify-between text-xs">
                 <span className="font-bold text-slate-700 dark:text-slate-300">
@@ -1116,7 +1410,8 @@ _Platform Manajemen Retensi & Mutqin Santri_`;
               </div>
 
               <p className="text-[11px] text-slate-500 dark:text-slate-400 italic">
-                * Pesan di atas diformat rapi dengan kode tebal (*) dan garis penanda agar mudah dibaca di layar ponsel Wali Santri.
+                * Pesan di atas diformat rapi dengan kode tebal (*) dan garis
+                penanda agar mudah dibaca di layar ponsel Wali Santri.
               </p>
             </div>
           )}

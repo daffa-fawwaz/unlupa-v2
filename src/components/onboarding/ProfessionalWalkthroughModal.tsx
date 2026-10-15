@@ -1,19 +1,19 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  X, 
-  ChevronRight, 
-  ChevronLeft, 
-  Check, 
+import React, { useState, useEffect } from "react";
+import {
+  X,
+  ChevronRight,
+  ChevronLeft,
+  Check,
   HelpCircle,
   Layers,
   Lightbulb,
   MousePointerClick,
   CheckCircle2,
-  Sliders
-} from 'lucide-react';
-import { OnboardingPageKey } from '../../types';
-import { ONBOARDING_PAGES_DATA } from '../../data/onboardingData';
-import { useApp } from '../../context/AppContext';
+  Sliders,
+} from "lucide-react";
+import { OnboardingPageKey } from "../../types";
+import { ONBOARDING_PAGES_DATA } from "../../data/onboardingData";
+import { useApp } from "../../context/AppContext";
 
 interface Props {
   isOpen: boolean;
@@ -24,17 +24,18 @@ interface Props {
 export const ProfessionalWalkthroughModal: React.FC<Props> = ({
   isOpen,
   onClose,
-  initialPageKey = 'home'
+  initialPageKey = "home",
 }) => {
-  const { 
-    language, 
-    userProfile, 
+  const {
+    language,
+    userProfile,
     togglePageOnboarding,
     setIsOnboardingEnabled,
-    isOnboardingEnabled
+    isOnboardingEnabled,
   } = useApp();
 
-  const [activePageKey, setActivePageKey] = useState<OnboardingPageKey>(initialPageKey);
+  const [activePageKey, setActivePageKey] =
+    useState<OnboardingPageKey>(initialPageKey);
   const [currentStepIndex, setCurrentStepIndex] = useState<number>(0);
 
   // Sync active page when modal opens
@@ -49,7 +50,10 @@ export const ProfessionalWalkthroughModal: React.FC<Props> = ({
   useEffect(() => {
     if (isOpen) {
       try {
-        localStorage.setItem(`unlupa_walkthrough_seen_${activePageKey}`, 'true');
+        localStorage.setItem(
+          `unlupa_walkthrough_seen_${activePageKey}`,
+          "true",
+        );
       } catch (e) {
         /* ignore */
       }
@@ -59,24 +63,31 @@ export const ProfessionalWalkthroughModal: React.FC<Props> = ({
   // Support ESC key to close
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen) {
+      if (e.key === "Escape" && isOpen) {
         handleClose();
       }
     };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, activePageKey]);
 
   if (!isOpen) return null;
 
-  const currentPageData = ONBOARDING_PAGES_DATA[activePageKey] || ONBOARDING_PAGES_DATA.home;
-  if (!currentPageData || !currentPageData.items || currentPageData.items.length === 0) return null;
+  const currentPageData =
+    ONBOARDING_PAGES_DATA[activePageKey] || ONBOARDING_PAGES_DATA.home;
+  if (
+    !currentPageData ||
+    !currentPageData.items ||
+    currentPageData.items.length === 0
+  )
+    return null;
 
   const items = currentPageData.items;
   const currentItem = items[currentStepIndex] || items[0];
   if (!currentItem) return null;
 
-  const isCurrentPageAutoEnabled = userProfile?.onboardingPreferences?.[activePageKey] ?? true;
+  const isCurrentPageAutoEnabled =
+    userProfile?.onboardingPreferences?.[activePageKey] ?? true;
 
   const handleToggleAuto = (checked: boolean) => {
     togglePageOnboarding(activePageKey, checked);
@@ -84,7 +95,7 @@ export const ProfessionalWalkthroughModal: React.FC<Props> = ({
 
   const handleDisableAll = () => {
     try {
-      localStorage.setItem(`unlupa_walkthrough_seen_${activePageKey}`, 'true');
+      localStorage.setItem(`unlupa_walkthrough_seen_${activePageKey}`, "true");
     } catch (e) {
       /* ignore */
     }
@@ -94,7 +105,7 @@ export const ProfessionalWalkthroughModal: React.FC<Props> = ({
 
   const handleClose = () => {
     try {
-      localStorage.setItem(`unlupa_walkthrough_seen_${activePageKey}`, 'true');
+      localStorage.setItem(`unlupa_walkthrough_seen_${activePageKey}`, "true");
     } catch (e) {
       /* ignore */
     }
@@ -103,7 +114,7 @@ export const ProfessionalWalkthroughModal: React.FC<Props> = ({
 
   const handleNext = () => {
     if (currentStepIndex < items.length - 1) {
-      setCurrentStepIndex(prev => prev + 1);
+      setCurrentStepIndex((prev) => prev + 1);
     } else {
       handleComplete();
     }
@@ -111,32 +122,38 @@ export const ProfessionalWalkthroughModal: React.FC<Props> = ({
 
   const handlePrev = () => {
     if (currentStepIndex > 0) {
-      setCurrentStepIndex(prev => prev - 1);
+      setCurrentStepIndex((prev) => prev - 1);
     }
   };
 
   const handleComplete = () => {
     try {
-      localStorage.setItem(`unlupa_walkthrough_seen_${activePageKey}`, 'true');
+      localStorage.setItem(`unlupa_walkthrough_seen_${activePageKey}`, "true");
     } catch (e) {
       /* ignore */
     }
     onClose();
   };
 
-  const pagesNav: { key: OnboardingPageKey; labelEn: string; labelId: string }[] = [
-    { key: 'home', labelEn: 'Home', labelId: 'Beranda' },
-    { key: 'quran', labelEn: 'Quran', labelId: 'Al-Qur\'an' },
-    { key: 'personal', labelEn: 'Personal', labelId: 'Pribadi' },
-    { key: 'teaching', labelEn: 'Teaching', labelId: 'Mengajar' },
+  const pagesNav: {
+    key: OnboardingPageKey;
+    labelEn: string;
+    labelId: string;
+  }[] = [
+    { key: "home", labelEn: "Home", labelId: "Beranda" },
+    { key: "quran", labelEn: "Quran", labelId: "Al-Qur'an" },
+    { key: "personal", labelEn: "Personal", labelId: "Pribadi" },
+    { key: "teaching", labelEn: "Teaching", labelId: "Mengajar" },
   ];
 
   return (
-    <div 
-      onClick={(e) => { if (e.target === e.currentTarget) handleClose(); }}
+    <div
+      onClick={(e) => {
+        if (e.target === e.currentTarget) handleClose();
+      }}
       className="fixed inset-0 z-[110] flex items-center justify-center p-3 sm:p-4 bg-slate-950/75 backdrop-blur-md animate-in fade-in select-none"
     >
-      <div 
+      <div
         role="dialog"
         aria-modal="true"
         aria-labelledby="walkthrough-title"
@@ -151,17 +168,26 @@ export const ProfessionalWalkthroughModal: React.FC<Props> = ({
               </div>
               <div>
                 <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-950/70 text-blue-700 dark:text-blue-300">
-                  {language === 'en' ? currentPageData.badgeEn : currentPageData.badgeId}
+                  {language === "en"
+                    ? currentPageData.badgeEn
+                    : currentPageData.badgeId}
                 </span>
-                <h2 id="walkthrough-title" className="text-base sm:text-lg font-bold text-slate-900 dark:text-white leading-tight mt-0.5">
-                  {language === 'en' ? currentPageData.titleEn : currentPageData.titleId}
+                <h2
+                  id="walkthrough-title"
+                  className="text-base sm:text-lg font-bold text-slate-900 dark:text-white leading-tight mt-0.5"
+                >
+                  {language === "en"
+                    ? currentPageData.titleEn
+                    : currentPageData.titleId}
                 </h2>
               </div>
             </div>
 
             <button
               onClick={handleClose}
-              aria-label={language === 'en' ? 'Close walkthrough' : 'Tutup panduan'}
+              aria-label={
+                language === "en" ? "Close walkthrough" : "Tutup panduan"
+              }
               className="p-1.5 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-200/60 dark:hover:bg-slate-800 transition-colors cursor-pointer"
             >
               <X className="w-5 h-5" />
@@ -170,7 +196,7 @@ export const ProfessionalWalkthroughModal: React.FC<Props> = ({
 
           {/* Quick Page Tabs */}
           <div className="flex items-center gap-1 overflow-x-auto pb-1 scrollbar-none">
-            {pagesNav.map(p => {
+            {pagesNav.map((p) => {
               const isActive = activePageKey === p.key;
               return (
                 <button
@@ -181,11 +207,11 @@ export const ProfessionalWalkthroughModal: React.FC<Props> = ({
                   }}
                   className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer shrink-0 ${
                     isActive
-                      ? 'bg-blue-600 text-white shadow-xs'
-                      : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/60 border border-slate-200/60 dark:border-slate-700/60'
+                      ? "bg-blue-600 text-white shadow-xs"
+                      : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/60 border border-slate-200/60 dark:border-slate-700/60"
                   }`}
                 >
-                  {language === 'en' ? p.labelEn : p.labelId}
+                  {language === "en" ? p.labelEn : p.labelId}
                 </button>
               );
             })}
@@ -198,13 +224,15 @@ export const ProfessionalWalkthroughModal: React.FC<Props> = ({
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span className="text-[11px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
-                {language === 'en' ? `Step ${currentStepIndex + 1} of ${items.length}` : `Fitur ${currentStepIndex + 1} dari ${items.length}`}
+                {language === "en"
+                  ? `Step ${currentStepIndex + 1} of ${items.length}`
+                  : `Fitur ${currentStepIndex + 1} dari ${items.length}`}
               </span>
               <span className="text-[11px] font-bold text-blue-600 dark:text-blue-400">
-                {language === 'en' ? currentItem.badgeEn : currentItem.badgeId}
+                {language === "en" ? currentItem.badgeEn : currentItem.badgeId}
               </span>
             </div>
-            
+
             {/* Step Dots indicator */}
             <div className="flex items-center gap-1.5">
               {items.map((_, idx) => (
@@ -213,8 +241,8 @@ export const ProfessionalWalkthroughModal: React.FC<Props> = ({
                   onClick={() => setCurrentStepIndex(idx)}
                   className={`h-2 rounded-full transition-all cursor-pointer ${
                     idx === currentStepIndex
-                      ? 'w-6 bg-blue-600'
-                      : 'w-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300'
+                      ? "w-6 bg-blue-600"
+                      : "w-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300"
                   }`}
                   title={`Ke fitur ${idx + 1}`}
                 />
@@ -224,15 +252,17 @@ export const ProfessionalWalkthroughModal: React.FC<Props> = ({
 
           {/* Item Header & Visual Representation */}
           <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/70 dark:border-slate-800">
-            <div className={`p-3 rounded-2xl border shrink-0 ${currentItem.iconBg}`}>
+            <div
+              className={`p-3 rounded-2xl border shrink-0 ${currentItem.iconBg}`}
+            >
               {currentItem.icon}
             </div>
             <div className="min-w-0">
               <h3 className="font-black text-sm sm:text-base text-slate-900 dark:text-white">
-                {language === 'en' ? currentItem.nameEn : currentItem.nameId}
+                {language === "en" ? currentItem.nameEn : currentItem.nameId}
               </h3>
               <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">
-                {language === 'en' ? currentItem.descEn : currentItem.descId}
+                {language === "en" ? currentItem.descEn : currentItem.descId}
               </p>
             </div>
           </div>
@@ -241,7 +271,11 @@ export const ProfessionalWalkthroughModal: React.FC<Props> = ({
           <div className="space-y-1.5">
             <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-500 dark:text-slate-400">
               <Layers className="w-3.5 h-3.5 text-blue-500" />
-              <span>{language === 'en' ? 'Live Element Preview on Screen:' : 'Wujud Elemen Asli di Layar:'}</span>
+              <span>
+                {language === "en"
+                  ? "Live Element Preview on Screen:"
+                  : "Wujud Elemen Asli di Layar:"}
+              </span>
             </div>
             <div className="p-3 bg-slate-100/70 dark:bg-slate-950/50 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-inner">
               {currentItem.mockup}
@@ -253,20 +287,28 @@ export const ProfessionalWalkthroughModal: React.FC<Props> = ({
             <div className="p-3 rounded-2xl bg-blue-50/70 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900/40">
               <div className="flex items-center gap-1.5 text-xs font-bold text-blue-800 dark:text-blue-300 mb-1">
                 <MousePointerClick className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                <span>{language === 'en' ? 'Function & Action' : 'Fungsi & Cara Pakai'}</span>
+                <span>
+                  {language === "en"
+                    ? "Function & Action"
+                    : "Fungsi & Cara Pakai"}
+                </span>
               </div>
               <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
-                {language === 'en' ? currentItem.functionEn : currentItem.functionId}
+                {language === "en"
+                  ? currentItem.functionEn
+                  : currentItem.functionId}
               </p>
             </div>
 
             <div className="p-3 rounded-2xl bg-amber-50/70 dark:bg-amber-950/30 border border-amber-100 dark:border-amber-900/40">
               <div className="flex items-center gap-1.5 text-xs font-bold text-amber-800 dark:text-amber-300 mb-1">
                 <Lightbulb className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-                <span>{language === 'en' ? 'Best Practice Tip' : 'Tips Profesional'}</span>
+                <span>
+                  {language === "en" ? "Best Practice Tip" : "Tips Profesional"}
+                </span>
               </div>
               <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
-                {language === 'en' ? currentItem.tipEn : currentItem.tipId}
+                {language === "en" ? currentItem.tipEn : currentItem.tipId}
               </p>
             </div>
           </div>
@@ -284,21 +326,29 @@ export const ProfessionalWalkthroughModal: React.FC<Props> = ({
                 className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
               />
               <span className="text-[11px] sm:text-xs">
-                {language === 'en' 
-                  ? 'Auto-show guide on this page' 
-                  : 'Muncul otomatis di halaman ini'}
+                {language === "en"
+                  ? "Auto-show guide on this page"
+                  : "Muncul otomatis di halaman ini"}
               </span>
             </label>
 
-            <span className="text-slate-300 dark:text-slate-700 hidden sm:inline">•</span>
+            <span className="text-slate-300 dark:text-slate-700 hidden sm:inline">
+              •
+            </span>
 
             <button
               type="button"
               onClick={handleDisableAll}
               className="text-[11px] text-rose-600 dark:text-rose-400 hover:text-rose-700 dark:hover:text-rose-300 hover:underline cursor-pointer font-medium"
-              title={language === 'en' ? 'Never show onboarding guides again automatically' : 'Jangan pernah tampilkan panduan onboarding lagi secara otomatis'}
+              title={
+                language === "en"
+                  ? "Never show onboarding guides again automatically"
+                  : "Jangan pernah tampilkan panduan onboarding lagi secara otomatis"
+              }
             >
-              {language === 'en' ? 'Turn off all guides' : 'Nonaktifkan semua panduan'}
+              {language === "en"
+                ? "Turn off all guides"
+                : "Nonaktifkan semua panduan"}
             </button>
           </div>
 
@@ -310,7 +360,7 @@ export const ProfessionalWalkthroughModal: React.FC<Props> = ({
               className="px-3.5 py-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-200/60 dark:hover:bg-slate-800 disabled:opacity-30 disabled:pointer-events-none flex items-center gap-1 cursor-pointer"
             >
               <ChevronLeft className="w-4 h-4" />
-              <span>{language === 'en' ? 'Previous' : 'Sebelumnya'}</span>
+              <span>{language === "en" ? "Previous" : "Sebelumnya"}</span>
             </button>
 
             {currentStepIndex < items.length - 1 ? (
@@ -318,7 +368,9 @@ export const ProfessionalWalkthroughModal: React.FC<Props> = ({
                 onClick={handleNext}
                 className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-sm flex items-center gap-1.5 cursor-pointer active:scale-95"
               >
-                <span>{language === 'en' ? 'Next Feature' : 'Fitur Berikutnya'}</span>
+                <span>
+                  {language === "en" ? "Next Feature" : "Fitur Berikutnya"}
+                </span>
                 <ChevronRight className="w-4 h-4" />
               </button>
             ) : (
@@ -327,7 +379,11 @@ export const ProfessionalWalkthroughModal: React.FC<Props> = ({
                 className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md shadow-emerald-600/20 flex items-center gap-1.5 cursor-pointer active:scale-95"
               >
                 <Check className="w-4 h-4" />
-                <span>{language === 'en' ? 'Understand & Finish' : 'Paham & Selesai'}</span>
+                <span>
+                  {language === "en"
+                    ? "Understand & Finish"
+                    : "Paham & Selesai"}
+                </span>
               </button>
             )}
           </div>

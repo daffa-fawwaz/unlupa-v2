@@ -6,7 +6,11 @@
 export const HapticFeedback = {
   light: () => {
     try {
-      if (typeof window !== 'undefined' && 'navigator' in window && 'vibrate' in navigator) {
+      if (
+        typeof window !== "undefined" &&
+        "navigator" in window &&
+        "vibrate" in navigator
+      ) {
         navigator.vibrate(20);
       }
     } catch {
@@ -16,7 +20,11 @@ export const HapticFeedback = {
 
   medium: () => {
     try {
-      if (typeof window !== 'undefined' && 'navigator' in window && 'vibrate' in navigator) {
+      if (
+        typeof window !== "undefined" &&
+        "navigator" in window &&
+        "vibrate" in navigator
+      ) {
         navigator.vibrate(40);
       }
     } catch {}
@@ -24,7 +32,11 @@ export const HapticFeedback = {
 
   success: () => {
     try {
-      if (typeof window !== 'undefined' && 'navigator' in window && 'vibrate' in navigator) {
+      if (
+        typeof window !== "undefined" &&
+        "navigator" in window &&
+        "vibrate" in navigator
+      ) {
         navigator.vibrate([30, 40, 60]);
       }
     } catch {}
@@ -32,7 +44,11 @@ export const HapticFeedback = {
 
   recordStart: () => {
     try {
-      if (typeof window !== 'undefined' && 'navigator' in window && 'vibrate' in navigator) {
+      if (
+        typeof window !== "undefined" &&
+        "navigator" in window &&
+        "vibrate" in navigator
+      ) {
         navigator.vibrate([50, 40, 60]);
       }
     } catch {}
@@ -40,7 +56,11 @@ export const HapticFeedback = {
 
   recordStop: () => {
     try {
-      if (typeof window !== 'undefined' && 'navigator' in window && 'vibrate' in navigator) {
+      if (
+        typeof window !== "undefined" &&
+        "navigator" in window &&
+        "vibrate" in navigator
+      ) {
         navigator.vibrate([40, 50, 70]);
       }
     } catch {}
@@ -48,7 +68,11 @@ export const HapticFeedback = {
 
   playToggle: (isPlaying: boolean) => {
     try {
-      if (typeof window !== 'undefined' && 'navigator' in window && 'vibrate' in navigator) {
+      if (
+        typeof window !== "undefined" &&
+        "navigator" in window &&
+        "vibrate" in navigator
+      ) {
         navigator.vibrate(isPlaying ? 35 : 25);
       }
     } catch {}
@@ -56,9 +80,13 @@ export const HapticFeedback = {
 
   pulseBeat: () => {
     try {
-      if (typeof window !== 'undefined' && 'navigator' in window && 'vibrate' in navigator) {
+      if (
+        typeof window !== "undefined" &&
+        "navigator" in window &&
+        "vibrate" in navigator
+      ) {
         navigator.vibrate(15);
       }
     } catch {}
-  }
+  },
 };

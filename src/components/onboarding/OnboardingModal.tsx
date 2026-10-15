@@ -1,15 +1,15 @@
-import React, { useState } from 'react';
-import { useApp } from '../../context/AppContext';
-import { 
-  Compass, 
-  BookOpen, 
-  Library, 
-  GraduationCap, 
-  Users, 
-  ChevronRight, 
-  ChevronLeft, 
-  X 
-} from 'lucide-react';
+import React, { useState } from "react";
+import { useApp } from "../../context/AppContext";
+import {
+  Compass,
+  BookOpen,
+  Library,
+  GraduationCap,
+  Users,
+  ChevronRight,
+  ChevronLeft,
+  X,
+} from "lucide-react";
 
 interface Props {
   isOpen: boolean;
@@ -29,8 +29,10 @@ export const OnboardingModal: React.FC<Props> = ({ isOpen, onClose }) => {
       titleId: "Selamat Datang di Unlupa.id",
       subtitleEn: "Four spaces. One unified memory system.",
       subtitleId: "Empat ruang. Satu sistem memori terpadu.",
-      descEn: "Forget the cycle of 'I used to know this, now it's gone'. Unlupa schedules your reviews right before memory fades using an advanced adaptive engine.",
-      descId: "Hilangkan siklus 'dulu hafal sekarang lupa'. Unlupa menjadwalkan murajaah tepat waktu agar hafalan tetap melekat kuat.",
+      descEn:
+        "Forget the cycle of 'I used to know this, now it's gone'. Unlupa schedules your reviews right before memory fades using an advanced adaptive engine.",
+      descId:
+        "Hilangkan siklus 'dulu hafal sekarang lupa'. Unlupa menjadwalkan murajaah tepat waktu agar hafalan tetap melekat kuat.",
       badge: "Sistem Murajaah Cerdas",
     },
     {
@@ -39,8 +41,10 @@ export const OnboardingModal: React.FC<Props> = ({ isOpen, onClose }) => {
       titleId: "Ruang Al-Qur'an",
       subtitleEn: "Page by page. Always mutqin.",
       subtitleId: "Per halaman. Selalu terjaga mutqin.",
-      descEn: "All 604 pages mapped with Juz and Surahs. Optimized 2-button review ('I know' / 'Need review') with a strict 30-day maximum review interval.",
-      descId: "604 halaman mushaf madinah dengan 2 tombol review ('Saya Lancar' / 'Perlu Murajaah') dan siklus maksimal 30 hari agar hafalan mutqin.",
+      descEn:
+        "All 604 pages mapped with Juz and Surahs. Optimized 2-button review ('I know' / 'Need review') with a strict 30-day maximum review interval.",
+      descId:
+        "604 halaman mushaf madinah dengan 2 tombol review ('Saya Lancar' / 'Perlu Murajaah') dan siklus maksimal 30 hari agar hafalan mutqin.",
       badge: "604 Pages • 30 Juz",
     },
     {
@@ -49,8 +53,10 @@ export const OnboardingModal: React.FC<Props> = ({ isOpen, onClose }) => {
       titleId: "Ruang Pribadi",
       subtitleEn: "Structured like real books: Book → Chapter → Item.",
       subtitleId: "Struktur buku nyata: Buku → Bab → Kartu.",
-      descEn: "Items stay inactive until you activate them with 1-click. Includes pre-review preview, Anki/JSON import, and curated public library.",
-      descId: "Kartu tidak langsung masuk antrean sampai Anda klik Aktivasi. Dilengkapi pratinjau soal-jawaban, impor JSON, dan katalog kurasi.",
+      descEn:
+        "Items stay inactive until you activate them with 1-click. Includes pre-review preview, Anki/JSON import, and curated public library.",
+      descId:
+        "Kartu tidak langsung masuk antrean sampai Anda klik Aktivasi. Dilengkapi pratinjau soal-jawaban, impor JSON, dan katalog kurasi.",
       badge: "1-Click Activation",
     },
     {
@@ -59,8 +65,10 @@ export const OnboardingModal: React.FC<Props> = ({ isOpen, onClose }) => {
       titleId: "Ruang Kelas Saya",
       subtitleEn: "Join halaqahs and cohorts with a code.",
       subtitleId: "Gabung halaqah dan kelas belajar dengan kode.",
-      descEn: "Enter your instructor's invite code (e.g. QRN-2026) to receive assigned syllabi, practice daily reviews, and sync progress automatically.",
-      descId: "Cukup masukkan kode kelas dari guru Anda untuk mendapatkan materi tugas dan sinkronisasi laporan murajaah harian.",
+      descEn:
+        "Enter your instructor's invite code (e.g. QRN-2026) to receive assigned syllabi, practice daily reviews, and sync progress automatically.",
+      descId:
+        "Cukup masukkan kode kelas dari guru Anda untuk mendapatkan materi tugas dan sinkronisasi laporan murajaah harian.",
       badge: "Instant Enrollment",
     },
     {
@@ -69,8 +77,10 @@ export const OnboardingModal: React.FC<Props> = ({ isOpen, onClose }) => {
       titleId: "Ruang Mengajar",
       subtitleEn: "Create classes & monitor retention telemetry.",
       subtitleId: "Buat kelas & pantau retensi murid secara live.",
-      descEn: "Track student review consistency, spot cards needing review, and verify memory stability without tedious manual record keeping.",
-      descId: "Pantau kestabilan memori murid, deteksi halaman yang sering lupa, dan bimbing santri dengan data analitik ilmiah.",
+      descEn:
+        "Track student review consistency, spot cards needing review, and verify memory stability without tedious manual record keeping.",
+      descId:
+        "Pantau kestabilan memori murid, deteksi halaman yang sering lupa, dan bimbing santri dengan data analitik ilmiah.",
       badge: "Real-time Telemetry",
     },
   ];
@@ -88,7 +98,7 @@ export const OnboardingModal: React.FC<Props> = ({ isOpen, onClose }) => {
                 key={idx}
                 onClick={() => setSlide(idx)}
                 className={`h-2 rounded-full transition-all ${
-                  idx === slide ? 'w-6 bg-blue-600' : 'w-2 bg-slate-200'
+                  idx === slide ? "w-6 bg-blue-600" : "w-2 bg-slate-200"
                 }`}
               />
             ))}
@@ -112,15 +122,15 @@ export const OnboardingModal: React.FC<Props> = ({ isOpen, onClose }) => {
               {current.badge}
             </span>
             <h3 className="text-2xl font-bold text-slate-900 mt-2">
-              {language === 'en' ? current.titleEn : current.titleId}
+              {language === "en" ? current.titleEn : current.titleId}
             </h3>
             <p className="text-sm font-semibold text-blue-700 mt-0.5">
-              {language === 'en' ? current.subtitleEn : current.subtitleId}
+              {language === "en" ? current.subtitleEn : current.subtitleId}
             </p>
           </div>
 
           <p className="text-sm text-slate-600 max-w-sm mx-auto leading-relaxed">
-            {language === 'en' ? current.descEn : current.descId}
+            {language === "en" ? current.descEn : current.descId}
           </p>
         </div>
 
@@ -132,7 +142,7 @@ export const OnboardingModal: React.FC<Props> = ({ isOpen, onClose }) => {
             className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 disabled:opacity-30 disabled:hover:bg-transparent flex items-center gap-1"
           >
             <ChevronLeft className="w-4 h-4" />
-            <span>{language === 'en' ? 'Previous' : 'Sebelumnya'}</span>
+            <span>{language === "en" ? "Previous" : "Sebelumnya"}</span>
           </button>
 
           {slide < slides.length - 1 ? (
@@ -140,7 +150,7 @@ export const OnboardingModal: React.FC<Props> = ({ isOpen, onClose }) => {
               onClick={() => setSlide(slide + 1)}
               className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-sm flex items-center gap-1.5"
             >
-              <span>{language === 'en' ? 'Next' : 'Lanjut'}</span>
+              <span>{language === "en" ? "Next" : "Lanjut"}</span>
               <ChevronRight className="w-4 h-4" />
             </button>
           ) : (
@@ -148,7 +158,7 @@ export const OnboardingModal: React.FC<Props> = ({ isOpen, onClose }) => {
               onClick={onClose}
               className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md shadow-blue-600/20"
             >
-              {language === 'en' ? 'Get Started' : 'Mulai Sekarang'}
+              {language === "en" ? "Get Started" : "Mulai Sekarang"}
             </button>
           )}
         </div>

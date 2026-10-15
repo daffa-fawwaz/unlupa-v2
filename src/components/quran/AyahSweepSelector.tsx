@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Layers, Check } from 'lucide-react';
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import { Layers, Check } from "lucide-react";
 
 interface AyahSweepSelectorProps {
   startAyah: number;
@@ -18,7 +18,7 @@ export const AyahSweepSelector: React.FC<AyahSweepSelectorProps> = ({
   toAyah,
   onChange,
   surahName,
-  language = 'id',
+  language = "id",
 }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState<number | null>(null);
@@ -45,20 +45,26 @@ export const AyahSweepSelector: React.FC<AyahSweepSelectorProps> = ({
       const cMax = Math.min(endAyah, Math.max(startAyah, Math.max(start, end)));
       onChange(cMin, cMax);
     },
-    [startAyah, endAyah, onChange]
+    [startAyah, endAyah, onChange],
   );
 
   // Helper to extract ayah number from coordinates
-  const getAyahFromCoords = (clientX: number, clientY: number): number | null => {
+  const getAyahFromCoords = (
+    clientX: number,
+    clientY: number,
+  ): number | null => {
     const el = document.elementFromPoint(clientX, clientY);
-    const item = el?.closest<HTMLElement>('[data-ayah]');
+    const item = el?.closest<HTMLElement>("[data-ayah]");
     if (!item) return null;
     const num = Number(item.dataset.ayah);
     return !isNaN(num) && num >= startAyah && num <= endAyah ? num : null;
   };
 
   // Pointer Down
-  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>, ayah: number) => {
+  const handlePointerDown = (
+    e: React.PointerEvent<HTMLDivElement>,
+    ayah: number,
+  ) => {
     e.preventDefault();
     try {
       e.currentTarget.setPointerCapture(e.pointerId);
@@ -115,16 +121,16 @@ export const AyahSweepSelector: React.FC<AyahSweepSelectorProps> = ({
       }
     };
 
-    window.addEventListener('pointerup', handleGlobalEnd);
-    window.addEventListener('pointercancel', handleGlobalEnd);
-    window.addEventListener('touchend', handleGlobalEnd);
-    window.addEventListener('touchcancel', handleGlobalEnd);
+    window.addEventListener("pointerup", handleGlobalEnd);
+    window.addEventListener("pointercancel", handleGlobalEnd);
+    window.addEventListener("touchend", handleGlobalEnd);
+    window.addEventListener("touchcancel", handleGlobalEnd);
 
     return () => {
-      window.removeEventListener('pointerup', handleGlobalEnd);
-      window.removeEventListener('pointercancel', handleGlobalEnd);
-      window.removeEventListener('touchend', handleGlobalEnd);
-      window.removeEventListener('touchcancel', handleGlobalEnd);
+      window.removeEventListener("pointerup", handleGlobalEnd);
+      window.removeEventListener("pointercancel", handleGlobalEnd);
+      window.removeEventListener("touchend", handleGlobalEnd);
+      window.removeEventListener("touchcancel", handleGlobalEnd);
     };
   }, []);
 
@@ -138,10 +144,11 @@ export const AyahSweepSelector: React.FC<AyahSweepSelectorProps> = ({
           </div>
           <div className="min-w-0">
             <span className="font-extrabold text-xs text-[#18234A] dark:text-[#F8FAFC]">
-              {language === 'en' ? 'Ayah' : 'Ayat'} {isSingle ? min : `${min} - ${max}`}
+              {language === "en" ? "Ayah" : "Ayat"}{" "}
+              {isSingle ? min : `${min} - ${max}`}
             </span>
             <span className="text-[10px] text-[#5E6D88] dark:text-[#94A3B8] font-bold ml-1.5">
-              ({selectedCount} {language === 'en' ? 'Ayah' : 'Ayat'})
+              ({selectedCount} {language === "en" ? "Ayah" : "Ayat"})
             </span>
           </div>
         </div>
@@ -153,17 +160,17 @@ export const AyahSweepSelector: React.FC<AyahSweepSelectorProps> = ({
             onClick={() => commitRange(startAyah, endAyah)}
             className={`px-2.5 py-1 rounded-xl text-[10px] font-extrabold transition-all cursor-pointer ${
               selectedCount === totalAyahs
-                ? 'bg-gradient-to-r from-[#FF7E4A] to-[#E65320] text-white shadow-2xs'
-                : 'neumorph-card text-[#5E6D88] dark:text-[#94A3B8] hover:text-[#FF6F3D]'
+                ? "bg-gradient-to-r from-[#FF7E4A] to-[#E65320] text-white shadow-2xs"
+                : "neumorph-card text-[#5E6D88] dark:text-[#94A3B8] hover:text-[#FF6F3D]"
             }`}
           >
-            {language === 'en' ? 'All' : 'Semua'}
+            {language === "en" ? "All" : "Semua"}
           </button>
         </div>
       </div>
 
       {/* Sweep / Tap Interactive Ayah Pill Matrix */}
-      <div 
+      <div
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onTouchMove={handleTouchMove}
@@ -183,8 +190,8 @@ export const AyahSweepSelector: React.FC<AyahSweepSelectorProps> = ({
               onPointerDown={(e) => handlePointerDown(e, ayah)}
               className={`w-10 h-10 rounded-2xl flex flex-col items-center justify-center font-mono font-black text-xs transition-all cursor-pointer select-none active:scale-90 ${
                 isSelected
-                  ? 'bg-gradient-to-br from-[#FF7E4A] to-[#E65320] text-white shadow-[0_2px_8px_rgba(255,111,61,0.4),inset_0_1px_1.5px_rgba(255,255,255,0.7)] scale-105 z-10'
-                  : 'neumorph-card text-[#18234A] dark:text-[#F8FAFC] hover:text-[#FF6F3D] hover:scale-102 shadow-2xs'
+                  ? "bg-gradient-to-br from-[#FF7E4A] to-[#E65320] text-white shadow-[0_2px_8px_rgba(255,111,61,0.4),inset_0_1px_1.5px_rgba(255,255,255,0.7)] scale-105 z-10"
+                  : "neumorph-card text-[#18234A] dark:text-[#F8FAFC] hover:text-[#FF6F3D] hover:scale-102 shadow-2xs"
               }`}
               title={`Ayat ${ayah}`}
             >
@@ -196,9 +203,9 @@ export const AyahSweepSelector: React.FC<AyahSweepSelectorProps> = ({
 
       {/* Instruction Caption */}
       <p className="text-[10px] text-center text-[#8493AB] font-medium">
-        {language === 'en' 
-          ? 'Tap or drag fingers/mouse across numbers to select an ayah range.' 
-          : 'Ketuk nomor ayat atau sapukan jari/mouse untuk memilih rentang ayat bermasalah.'}
+        {language === "en"
+          ? "Tap or drag fingers/mouse across numbers to select an ayah range."
+          : "Ketuk nomor ayat atau sapukan jari/mouse untuk memilih rentang ayat bermasalah."}
       </p>
     </div>
   );

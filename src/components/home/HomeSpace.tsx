@@ -1,41 +1,48 @@
-import React, { useState } from 'react';
-import { useApp } from '../../context/AppContext';
-import { useSwipeGesture } from '../../hooks/useSwipeGesture';
-import { soundEffects } from '../../lib/soundFeedback';
-import { HomeHeroProgressRings } from './HomeHeroProgressRings';
-import { WorkloadForecastWaveWidget } from './WorkloadForecastWaveWidget';
-import { VisualReviewCalendar } from './VisualReviewCalendar';
-import { MemoryStabilityPyramidWidget } from './MemoryStabilityPyramidWidget';
-import { AccuracyRetentionDialWidget } from './AccuracyRetentionDialWidget';
-import { QuranReviewModal } from '../quran/QuranReviewModal';
-import { MushafPageViewerModal } from '../quran/MushafPageViewerModal';
-import { PersonalReviewModal } from '../personal/PersonalReviewModal';
+import React, { useState } from "react";
+import { useApp } from "../../context/AppContext";
+import { useSwipeGesture } from "../../hooks/useSwipeGesture";
+import { soundEffects } from "../../lib/soundFeedback";
+import { HomeHeroProgressRings } from "./HomeHeroProgressRings";
+import { WorkloadForecastWaveWidget } from "./WorkloadForecastWaveWidget";
+import { VisualReviewCalendar } from "./VisualReviewCalendar";
+import { MemoryStabilityPyramidWidget } from "./MemoryStabilityPyramidWidget";
+import { AccuracyRetentionDialWidget } from "./AccuracyRetentionDialWidget";
+import { QuranReviewModal } from "../quran/QuranReviewModal";
+import { MushafPageViewerModal } from "../quran/MushafPageViewerModal";
+import { PersonalReviewModal } from "../personal/PersonalReviewModal";
 
 export const HomeSpace: React.FC = () => {
-  const {
-    quranPages,
-    items,
-    language,
-    setActiveSpace,
-    currentStreak,
-  } = useApp();
+  const { quranPages, items, language, setActiveSpace, currentStreak } =
+    useApp();
 
-  const [quranReviewConfig, setQuranReviewConfig] = useState<{ isOpen: boolean; juzFilter: number | null }>({
+  const [quranReviewConfig, setQuranReviewConfig] = useState<{
+    isOpen: boolean;
+    juzFilter: number | null;
+  }>({
     isOpen: false,
-    juzFilter: null
+    juzFilter: null,
   });
   const [isPersonalReviewOpen, setIsPersonalReviewOpen] = useState(false);
-  const [previewPageNumber, setPreviewPageNumber] = useState<number | null>(null);
+  const [previewPageNumber, setPreviewPageNumber] = useState<number | null>(
+    null,
+  );
 
   useSwipeGesture(null, {
-    disabled: quranReviewConfig.isOpen || isPersonalReviewOpen || previewPageNumber !== null || Boolean(typeof document !== 'undefined' && document.body.getAttribute('data-annotation-open') === 'true'),
+    disabled:
+      quranReviewConfig.isOpen ||
+      isPersonalReviewOpen ||
+      previewPageNumber !== null ||
+      Boolean(
+        typeof document !== "undefined" &&
+        document.body.getAttribute("data-annotation-open") === "true",
+      ),
     onSwipeLeft: () => {
-      soundEffects.playCardFlip('forward');
-      setActiveSpace('quran');
+      soundEffects.playCardFlip("forward");
+      setActiveSpace("quran");
     },
     onSwipeRight: () => {
-      soundEffects.playCardFlip('backward');
-      setActiveSpace('leaderboard');
+      soundEffects.playCardFlip("backward");
+      setActiveSpace("leaderboard");
     },
     threshold: 40,
     minRatio: 1.15,
@@ -43,7 +50,6 @@ export const HomeSpace: React.FC = () => {
 
   return (
     <div className="max-w-5xl mx-auto px-3 sm:px-4 pb-20 space-y-4 sm:space-y-5 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      
       {/* 1. DUAL PROGRESS DIAGRAMS (AL-QUR'AN & RUANG BUKU) - STATUS MAKRO & PENCAPAIAN */}
       <section className="pt-1 sm:pt-2">
         <HomeHeroProgressRings
@@ -51,8 +57,8 @@ export const HomeSpace: React.FC = () => {
           quranPages={quranPages}
           items={items}
           currentStreak={currentStreak}
-          onNavigateQuran={() => setActiveSpace('quran')}
-          onNavigateBooks={() => setActiveSpace('personal')}
+          onNavigateQuran={() => setActiveSpace("quran")}
+          onNavigateBooks={() => setActiveSpace("personal")}
         />
       </section>
 
@@ -64,7 +70,9 @@ export const HomeSpace: React.FC = () => {
       {/* 3. KALENDER / PREDIKSI MURAJAAH (EKSEKUSI TUGAS HARI INI & JADWAL TERDEKAT) */}
       <section>
         <VisualReviewCalendar
-          onOpenQuranReview={(juz) => setQuranReviewConfig({ isOpen: true, juzFilter: juz || null })}
+          onOpenQuranReview={(juz) =>
+            setQuranReviewConfig({ isOpen: true, juzFilter: juz || null })
+          }
           onOpenPersonalReview={() => setIsPersonalReviewOpen(true)}
           onOpenMushafViewer={(page) => setPreviewPageNumber(page)}
         />

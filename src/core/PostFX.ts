@@ -12,13 +12,13 @@
  * -> OutputPass (tone mapping and color space)
  */
 
-import * as THREE from 'three';
-import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
-import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
-import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
-import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
-import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
-import { QualityConfig } from '../config';
+import * as THREE from "three";
+import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
+import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
+import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
+import { ShaderPass } from "three/examples/jsm/postprocessing/ShaderPass.js";
+import { OutputPass } from "three/examples/jsm/postprocessing/OutputPass.js";
+import { QualityConfig } from "../config";
 
 export class PostFX {
   public composer: EffectComposer;
@@ -29,7 +29,7 @@ export class PostFX {
     renderer: THREE.WebGLRenderer,
     scene: THREE.Scene,
     camera: THREE.PerspectiveCamera,
-    quality: QualityConfig
+    quality: QualityConfig,
   ) {
     const width = window.innerWidth;
     const height = window.innerHeight;
@@ -44,7 +44,7 @@ export class PostFX {
     // 2. UnrealBloomPass
     const bloomRes = new THREE.Vector2(
       width * quality.bloomResolutionScale,
-      height * quality.bloomResolutionScale
+      height * quality.bloomResolutionScale,
     );
     this.bloomPass = new UnrealBloomPass(bloomRes, 0.35, 0.7, 0.82);
     this.bloomPass.enabled = quality.bloom;
@@ -52,7 +52,7 @@ export class PostFX {
 
     // 3. Custom Cinema ShaderPass (Aberration, Film Grain, Vignette, Frost Edge)
     const CinemaShader = {
-      name: 'CinemaShader',
+      name: "CinemaShader",
       uniforms: {
         tDiffuse: { value: null },
         uTime: { value: 0 },
@@ -114,7 +114,7 @@ export class PostFX {
 
           gl_FragColor = vec4(color, 1.0);
         }
-      `
+      `,
     };
 
     this.customPass = new ShaderPass(CinemaShader);
@@ -141,11 +141,16 @@ export class PostFX {
     this.customPass.uniforms.uTime.value = time;
 
     // Dynamic aberration based on scroll velocity (idle 0.0012, capped at 0.006)
-    const dynamicAberration = 0.0012 + Math.min(0.0048, Math.abs(scrollVelocity) * 0.0004);
+    const dynamicAberration =
+      0.0012 + Math.min(0.0048, Math.abs(scrollVelocity) * 0.0004);
     // Smooth lerp to dynamic aberration unless overriden by intro
     const current = this.customPass.uniforms.uAberration.value;
     if (current < 0.007) {
-      this.customPass.uniforms.uAberration.value = THREE.MathUtils.lerp(current, dynamicAberration, 0.1);
+      this.customPass.uniforms.uAberration.value = THREE.MathUtils.lerp(
+        current,
+        dynamicAberration,
+        0.1,
+      );
     }
   }
 

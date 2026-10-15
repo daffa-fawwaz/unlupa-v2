@@ -7,17 +7,17 @@ export interface AudioRecord {
   mimeType: string;
 }
 
-const DB_NAME = 'unlupa_audio_db';
+const DB_NAME = "unlupa_audio_db";
 const DB_VERSION = 2;
-const STORE_NAME = 'audio_recordings';
+const STORE_NAME = "audio_recordings";
 
 class AudioStorageServiceImpl {
   private blobUrlCache = new Map<string, string>();
 
   private openDB(): Promise<IDBDatabase> {
     return new Promise((resolve, reject) => {
-      if (typeof window === 'undefined' || !window.indexedDB) {
-        reject(new Error('IndexedDB not supported'));
+      if (typeof window === "undefined" || !window.indexedDB) {
+        reject(new Error("IndexedDB not supported"));
         return;
       }
 
@@ -26,7 +26,7 @@ class AudioStorageServiceImpl {
       request.onupgradeneeded = (event) => {
         const db = (event.target as IDBOpenDBRequest).result;
         if (!db.objectStoreNames.contains(STORE_NAME)) {
-          db.createObjectStore(STORE_NAME, { keyPath: 'itemId' });
+          db.createObjectStore(STORE_NAME, { keyPath: "itemId" });
         }
       };
 
@@ -35,78 +35,91 @@ class AudioStorageServiceImpl {
     });
   }
 
-  public async saveAudio(itemId: string | number, blob: Blob, duration: number): Promise<void> {
+  public async saveAudio(
+    itemId: string | number,
+    blob: Blob,
+    duration: number,
+  ): Promise<void> {
     try {
       const db = await this.openDB();
       const now = Date.now();
       const standardizedId = String(itemId);
-      
+
       const arrayBuffer = await blob.arrayBuffer();
-      const storedMime = blob.type || 'audio/webm';
+      const storedMime = blob.type || "audio/webm";
 
       const record: AudioRecord = {
         itemId: standardizedId,
         audioData: arrayBuffer,
         duration: Math.max(1, Math.round(duration)),
         createdAt: now,
-        mimeType: storedMime
+        mimeType: storedMime,
       };
 
       return new Promise((resolve, reject) => {
-        const tx = db.transaction(STORE_NAME, 'readwrite');
+        const tx = db.transaction(STORE_NAME, "readwrite");
         const store = tx.objectStore(STORE_NAME);
         const req = store.put(record);
 
         req.onsuccess = () => {
           this.clearCachedBlobUrl(standardizedId);
-          window.dispatchEvent(new CustomEvent('audio-updated', { detail: { itemId: standardizedId } }));
+          window.dispatchEvent(
+            new CustomEvent("audio-updated", {
+              detail: { itemId: standardizedId },
+            }),
+          );
           resolve();
         };
 
         req.onerror = () => reject(req.error);
       });
     } catch (err) {
-      console.error('Failed to save audio', err);
+      console.error("Failed to save audio", err);
     }
   }
 
-  public async getAudio(itemId: string | number): Promise<(AudioRecord & { audioBlob: Blob }) | null> {
+  public async getAudio(
+    itemId: string | number,
+  ): Promise<(AudioRecord & { audioBlob: Blob }) | null> {
     try {
       const db = await this.openDB();
       const standardizedId = String(itemId);
 
       return new Promise((resolve, reject) => {
-        const tx = db.transaction(STORE_NAME, 'readonly');
+        const tx = db.transaction(STORE_NAME, "readonly");
         const store = tx.objectStore(STORE_NAME);
         const req = store.get(standardizedId);
 
         req.onsuccess = () => {
           const record = req.result as AudioRecord | undefined;
           if (record) {
-             const type = record.mimeType || 'audio/webm';
-             let finalBlob: Blob | null = null;
-             
-             if (record.audioData && record.audioData.byteLength > 0) {
-                 finalBlob = new Blob([record.audioData], { type });
-             } else if (record.audioBlob && (record.audioBlob as Blob).size > 0) {
-                 finalBlob = record.audioBlob;
-             }
+            const type = record.mimeType || "audio/webm";
+            let finalBlob: Blob | null = null;
 
-             if (!finalBlob || finalBlob.size === 0) {
-                 resolve(null);
-                 return;
-             }
+            if (record.audioData && record.audioData.byteLength > 0) {
+              finalBlob = new Blob([record.audioData], { type });
+            } else if (
+              record.audioBlob &&
+              (record.audioBlob as Blob).size > 0
+            ) {
+              finalBlob = record.audioBlob;
+            }
 
-             resolve({ ...record, audioBlob: finalBlob });
+            if (!finalBlob || finalBlob.size === 0) {
+              resolve(null);
+              return;
+            }
+
+            resolve({ ...record, audioBlob: finalBlob });
           } else {
-             resolve(null);
+            resolve(null);
           }
         };
 
         req.onerror = () => reject(req.error);
       });
     } catch (err) {
-      console.error('Error getting audio:', err);
+      console.error("Error getting audio:", err);
       return null;
     }
   }
@@ -117,20 +130,24 @@ class AudioStorageServiceImpl {
       const standardizedId = String(itemId);
 
       return new Promise((resolve, reject) => {
-        const tx = db.transaction(STORE_NAME, 'readwrite');
+        const tx = db.transaction(STORE_NAME, "readwrite");
         const store = tx.objectStore(STORE_NAME);
         const req = store.delete(standardizedId);
 
         req.onsuccess = () => {
           this.clearCachedBlobUrl(standardizedId);
-          window.dispatchEvent(new CustomEvent('audio-updated', { detail: { itemId: standardizedId } }));
+          window.dispatchEvent(
+            new CustomEvent("audio-updated", {
+              detail: { itemId: standardizedId },
+            }),
+          );
           resolve();
         };
 
         req.onerror = () => reject(req.error);
       });
     } catch (err) {
-      console.error('Error deleting audio:', err);
+      console.error("Error deleting audio:", err);
     }
   }
 
@@ -145,7 +162,7 @@ class AudioStorageServiceImpl {
       return this.blobUrlCache.get(id)!;
     }
     if (!blob) {
-      return '';
+      return "";
     }
     const newUrl = URL.createObjectURL(blob);
     this.blobUrlCache.set(id, newUrl);
@@ -169,10 +186,11 @@ class AudioStorageServiceImpl {
   }
 
   public formatAudioDuration(seconds: number): string {
-    if (!Number.isFinite(seconds) || isNaN(seconds) || seconds < 0) return '00:00';
+    if (!Number.isFinite(seconds) || isNaN(seconds) || seconds < 0)
+      return "00:00";
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
-    return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+    return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
   }
 }
 

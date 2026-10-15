@@ -1,6 +1,15 @@
-import React from 'react';
-import { ShieldCheck, Play, CalendarCheck, CloudDownload, CheckCircle2, Loader2, Zap, Flame } from 'lucide-react';
-import { JuzMeta } from '../../data/quranData';
+import React from "react";
+import {
+  ShieldCheck,
+  Play,
+  CalendarCheck,
+  CloudDownload,
+  CheckCircle2,
+  Loader2,
+  Zap,
+  Flame,
+} from "lucide-react";
+import { JuzMeta } from "../../data/quranData";
 
 interface Props {
   juz: JuzMeta;
@@ -10,12 +19,16 @@ interface Props {
   language: string;
   isDownloadingJuz: boolean;
   downloadProgress: { current: number; total: number } | null;
-  juzOfflineStatus: { total: number; cached: number; isFullyCached: boolean } | null;
+  juzOfflineStatus: {
+    total: number;
+    cached: number;
+    isFullyCached: boolean;
+  } | null;
   onDownloadJuz: () => void;
   onStartReview: () => void;
   onOpenCalendar: () => void;
-  onFilterTabChange: (tab: 'all' | 'due' | 'active' | 'mapan') => void;
-  activeFilterTab: 'all' | 'due' | 'active' | 'mapan';
+  onFilterTabChange: (tab: "all" | "due" | "active" | "mapan") => void;
+  activeFilterTab: "all" | "due" | "active" | "mapan";
 }
 
 export const QuranJuzUnifiedHero: React.FC<Props> = ({
@@ -31,11 +44,11 @@ export const QuranJuzUnifiedHero: React.FC<Props> = ({
   onStartReview,
   onOpenCalendar,
   onFilterTabChange,
-  activeFilterTab
+  activeFilterTab,
 }) => {
   const totalPages = juz.totalPages;
   const inactiveCount = Math.max(0, totalPages - activeCount);
-  
+
   const mapanRatio = totalPages > 0 ? mapanCount / totalPages : 0;
   const activeRatio = totalPages > 0 ? activeCount / totalPages : 0;
   const dueRatio = totalPages > 0 ? dueCount / totalPages : 0;
@@ -69,7 +82,8 @@ export const QuranJuzUnifiedHero: React.FC<Props> = ({
           </div>
           <div className="min-w-0">
             <h2 className="text-xs sm:text-base font-black text-[#18234A] dark:text-[#F8FAFC] tracking-tight whitespace-nowrap">
-              Juz {juz.juzNumber} • Hal {juz.startPage}-{juz.endPage} ({totalPages} hal)
+              Juz {juz.juzNumber} • Hal {juz.startPage}-{juz.endPage} (
+              {totalPages} hal)
             </h2>
           </div>
         </div>
@@ -80,7 +94,11 @@ export const QuranJuzUnifiedHero: React.FC<Props> = ({
             type="button"
             onClick={onOpenCalendar}
             className="w-8 h-8 sm:w-9 sm:h-9 rounded-2xl neumorph-card text-[#FF6F3D] hover:scale-110 active:scale-95 flex items-center justify-center transition-all cursor-pointer shadow-xs"
-            title={language === 'en' ? `Open Review Schedule Calendar` : `Buka Kalender Jadwal Murajaah`}
+            title={
+              language === "en"
+                ? `Open Review Schedule Calendar`
+                : `Buka Kalender Jadwal Murajaah`
+            }
           >
             <CalendarCheck className="w-4 h-4 text-[#FF6F3D]" />
           </button>
@@ -89,11 +107,16 @@ export const QuranJuzUnifiedHero: React.FC<Props> = ({
             <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-2xl neumorph-inset text-[#0EA5E9] font-bold text-[10px]">
               <Loader2 className="w-3.5 h-3.5 animate-spin text-[#0EA5E9]" />
               <span className="hidden sm:inline">
-                {language === 'en' ? `Downloading (${downloadProgress?.current}/${downloadProgress?.total})...` : `Mengunduh (${downloadProgress?.current}/${downloadProgress?.total})...`}
+                {language === "en"
+                  ? `Downloading (${downloadProgress?.current}/${downloadProgress?.total})...`
+                  : `Mengunduh (${downloadProgress?.current}/${downloadProgress?.total})...`}
               </span>
             </div>
           ) : juzOfflineStatus?.isFullyCached ? (
-            <div className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold text-[10px] border border-emerald-500/20" title="Tersedia Offline">
+            <div
+              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold text-[10px] border border-emerald-500/20"
+              title="Tersedia Offline"
+            >
               <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
               <span className="hidden sm:inline">Offline</span>
             </div>
@@ -102,7 +125,11 @@ export const QuranJuzUnifiedHero: React.FC<Props> = ({
               type="button"
               onClick={onDownloadJuz}
               className="w-8 h-8 sm:w-9 sm:h-9 rounded-2xl neumorph-card text-[#0EA5E9] hover:scale-110 active:scale-95 flex items-center justify-center transition-all cursor-pointer shadow-xs"
-              title={language === 'en' ? 'Download Juz for offline reading' : 'Unduh Juz ini untuk dibaca offline'}
+              title={
+                language === "en"
+                  ? "Download Juz for offline reading"
+                  : "Unduh Juz ini untuk dibaca offline"
+              }
             >
               <CloudDownload className="w-4 h-4 text-[#0EA5E9]" />
             </button>
@@ -117,11 +144,11 @@ export const QuranJuzUnifiedHero: React.FC<Props> = ({
           {/* Card 1: Halaman Aktif */}
           <button
             type="button"
-            onClick={() => onFilterTabChange('all')}
+            onClick={() => onFilterTabChange("all")}
             className={`p-2 sm:p-2.5 rounded-2xl flex flex-col items-center justify-center text-center transition-all cursor-pointer ${
-              activeFilterTab === 'all'
-                ? 'neumorph-card ring-2 ring-[#0EA5E9] scale-102 shadow-xs'
-                : 'neumorph-card opacity-90 hover:opacity-100 hover:scale-[1.02]'
+              activeFilterTab === "all"
+                ? "neumorph-card ring-2 ring-[#0EA5E9] scale-102 shadow-xs"
+                : "neumorph-card opacity-90 hover:opacity-100 hover:scale-[1.02]"
             }`}
           >
             <div className="flex items-center gap-1.5 justify-center">
@@ -138,16 +165,18 @@ export const QuranJuzUnifiedHero: React.FC<Props> = ({
           {/* Card 2: Jatuh Tempo */}
           <button
             type="button"
-            onClick={() => onFilterTabChange('due')}
+            onClick={() => onFilterTabChange("due")}
             className={`p-2 sm:p-2.5 rounded-2xl flex flex-col items-center justify-center text-center transition-all cursor-pointer ${
-              activeFilterTab === 'due'
-                ? 'neumorph-card ring-2 ring-[#FF7E4A] scale-102 shadow-xs'
-                : 'neumorph-card opacity-90 hover:opacity-100 hover:scale-[1.02]'
+              activeFilterTab === "due"
+                ? "neumorph-card ring-2 ring-[#FF7E4A] scale-102 shadow-xs"
+                : "neumorph-card opacity-90 hover:opacity-100 hover:scale-[1.02]"
             }`}
           >
             <div className="flex items-center gap-1.5 justify-center">
               <span className="w-2.5 h-2.5 rounded-full bg-[#FF7E4A] shrink-0 shadow-2xs" />
-              <span className={`text-xs sm:text-sm font-black font-mono leading-none ${dueCount > 0 ? 'text-[#FF6F3D]' : 'text-[#18234A] dark:text-[#F8FAFC]'}`}>
+              <span
+                className={`text-xs sm:text-sm font-black font-mono leading-none ${dueCount > 0 ? "text-[#FF6F3D]" : "text-[#18234A] dark:text-[#F8FAFC]"}`}
+              >
                 {dueCount} Hal
               </span>
             </div>
@@ -160,11 +189,38 @@ export const QuranJuzUnifiedHero: React.FC<Props> = ({
         {/* Center Column: Triple Concentric Ring Diagram (DEAD CENTER) */}
         <div className="col-span-4 flex flex-col items-center justify-center min-w-0 my-auto">
           <div className="relative w-24 h-28 sm:w-30 sm:h-30 shrink-0 flex items-center justify-center">
-            <svg viewBox="0 0 100 100" className="w-full h-full transform -rotate-90 overflow-visible">
+            <svg
+              viewBox="0 0 100 100"
+              className="w-full h-full transform -rotate-90 overflow-visible"
+            >
               {/* Background Track Rings */}
-              <circle cx="50" cy="50" r={rOuter} stroke="#D2DBE8" strokeWidth="4" fill="transparent" className="dark:stroke-[#1E293B]" />
-              <circle cx="50" cy="50" r={rMiddle} stroke="#D2DBE8" strokeWidth="4" fill="transparent" className="dark:stroke-[#1E293B]" />
-              <circle cx="50" cy="50" r={rInner} stroke="#D2DBE8" strokeWidth="4" fill="transparent" className="dark:stroke-[#1E293B]" />
+              <circle
+                cx="50"
+                cy="50"
+                r={rOuter}
+                stroke="#D2DBE8"
+                strokeWidth="4"
+                fill="transparent"
+                className="dark:stroke-[#1E293B]"
+              />
+              <circle
+                cx="50"
+                cy="50"
+                r={rMiddle}
+                stroke="#D2DBE8"
+                strokeWidth="4"
+                fill="transparent"
+                className="dark:stroke-[#1E293B]"
+              />
+              <circle
+                cx="50"
+                cy="50"
+                r={rInner}
+                stroke="#D2DBE8"
+                strokeWidth="4"
+                fill="transparent"
+                className="dark:stroke-[#1E293B]"
+              />
 
               {/* Active Outer Ring (Sky Blue #0EA5E9) */}
               <circle
@@ -226,11 +282,11 @@ export const QuranJuzUnifiedHero: React.FC<Props> = ({
           {/* Card 3: Ayat Mapan */}
           <button
             type="button"
-            onClick={() => onFilterTabChange('mapan')}
+            onClick={() => onFilterTabChange("mapan")}
             className={`p-2 sm:p-2.5 rounded-2xl flex flex-col items-center justify-center text-center transition-all cursor-pointer ${
-              activeFilterTab === 'mapan'
-                ? 'neumorph-card ring-2 ring-[#10B981] scale-102 shadow-xs'
-                : 'neumorph-card opacity-90 hover:opacity-100 hover:scale-[1.02]'
+              activeFilterTab === "mapan"
+                ? "neumorph-card ring-2 ring-[#10B981] scale-102 shadow-xs"
+                : "neumorph-card opacity-90 hover:opacity-100 hover:scale-[1.02]"
             }`}
           >
             <div className="flex items-center gap-1.5 justify-center">
@@ -247,11 +303,11 @@ export const QuranJuzUnifiedHero: React.FC<Props> = ({
           {/* Card 4: Belum Aktif */}
           <button
             type="button"
-            onClick={() => onFilterTabChange('active')}
+            onClick={() => onFilterTabChange("active")}
             className={`p-2 sm:p-2.5 rounded-2xl flex flex-col items-center justify-center text-center transition-all cursor-pointer ${
-              activeFilterTab === 'active'
-                ? 'neumorph-card ring-2 ring-slate-400 scale-102 shadow-xs'
-                : 'neumorph-card opacity-80 hover:opacity-100 hover:scale-[1.02]'
+              activeFilterTab === "active"
+                ? "neumorph-card ring-2 ring-slate-400 scale-102 shadow-xs"
+                : "neumorph-card opacity-80 hover:opacity-100 hover:scale-[1.02]"
             }`}
           >
             <div className="flex items-center gap-1.5 justify-center">

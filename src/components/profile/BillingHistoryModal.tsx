@@ -1,7 +1,21 @@
-import React, { useState } from 'react';
-import { X, CreditCard, CheckCircle2, Clock, AlertCircle, Download, ExternalLink, Shield, Crown, ArrowRight, ShieldCheck, Copy, Receipt } from 'lucide-react';
-import { useApp } from '../../context/AppContext';
-import { BookTransaction } from '../../types';
+import React, { useState } from "react";
+import {
+  X,
+  CreditCard,
+  CheckCircle2,
+  Clock,
+  AlertCircle,
+  Download,
+  ExternalLink,
+  Shield,
+  Crown,
+  ArrowRight,
+  ShieldCheck,
+  Copy,
+  Receipt,
+} from "lucide-react";
+import { useApp } from "../../context/AppContext";
+import { BookTransaction } from "../../types";
 
 interface Props {
   isOpen: boolean;
@@ -15,13 +29,16 @@ export const BillingHistoryModal: React.FC<Props> = ({ isOpen, onClose }) => {
 
   if (!isOpen) return null;
 
-  const isPro = userProfile.plan === 'premium' || userProfile.plan === 'institutional';
-  const myTransactions = transactions.filter(t => t.userId === userProfile.id || t.userEmail === userProfile.email);
+  const isPro =
+    userProfile.plan === "premium" || userProfile.plan === "institutional";
+  const myTransactions = transactions.filter(
+    (t) => t.userId === userProfile.id || t.userEmail === userProfile.email,
+  );
 
   const formatIDR = (num: number) => {
-    return new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
+    return new Intl.NumberFormat("id-ID", {
+      style: "currency",
+      currency: "IDR",
       maximumFractionDigits: 0,
     }).format(num);
   };
@@ -34,9 +51,9 @@ export const BillingHistoryModal: React.FC<Props> = ({ isOpen, onClose }) => {
 
   return (
     <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in">
-      <div 
+      <div
         className="bg-white dark:bg-slate-900 rounded-3xl max-w-2xl w-full border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200"
-        onClick={e => e.stopPropagation()}
+        onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/30">
@@ -46,10 +63,14 @@ export const BillingHistoryModal: React.FC<Props> = ({ isOpen, onClose }) => {
             </div>
             <div>
               <h2 className="text-lg font-bold text-slate-900 dark:text-white">
-                {language === 'en' ? 'Billing & Transactions' : 'Langganan & Riwayat Transaksi'}
+                {language === "en"
+                  ? "Billing & Transactions"
+                  : "Langganan & Riwayat Transaksi"}
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                {language === 'en' ? 'Manage your plan, invoices, and purchase records' : 'Kelola paket akun, invoice resmi, dan bukti pembayaran'}
+                {language === "en"
+                  ? "Manage your plan, invoices, and purchase records"
+                  : "Kelola paket akun, invoice resmi, dan bukti pembayaran"}
               </p>
             </div>
           </div>
@@ -63,22 +84,29 @@ export const BillingHistoryModal: React.FC<Props> = ({ isOpen, onClose }) => {
 
         {/* Content Body */}
         <div className="p-6 overflow-y-auto space-y-6 flex-1">
-          
           {/* Active Subscription Status Banner */}
-          <div className={`p-5 rounded-2xl border transition-all ${
-            isPro 
-              ? 'bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-indigo-500/10 border-amber-200/80 dark:border-amber-800/60'
-              : 'bg-slate-50 dark:bg-slate-800/60 border-slate-200/80 dark:border-slate-700'
-          }`}>
+          <div
+            className={`p-5 rounded-2xl border transition-all ${
+              isPro
+                ? "bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-indigo-500/10 border-amber-200/80 dark:border-amber-800/60"
+                : "bg-slate-50 dark:bg-slate-800/60 border-slate-200/80 dark:border-slate-700"
+            }`}
+          >
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
-                  <span className={`px-2.5 py-0.5 rounded-full text-xs font-black uppercase tracking-wider flex items-center gap-1 ${
-                    isPro 
-                      ? 'bg-amber-500 text-white shadow-xs'
-                      : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
-                  }`}>
-                    {isPro ? <Crown className="w-3 h-3" /> : <Shield className="w-3 h-3 text-slate-400" />}
+                  <span
+                    className={`px-2.5 py-0.5 rounded-full text-xs font-black uppercase tracking-wider flex items-center gap-1 ${
+                      isPro
+                        ? "bg-amber-500 text-white shadow-xs"
+                        : "bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300"
+                    }`}
+                  >
+                    {isPro ? (
+                      <Crown className="w-3 h-3" />
+                    ) : (
+                      <Shield className="w-3 h-3 text-slate-400" />
+                    )}
                     <span>{userProfile.plan.toUpperCase()} PLAN</span>
                   </span>
                   <span className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
@@ -87,12 +115,14 @@ export const BillingHistoryModal: React.FC<Props> = ({ isOpen, onClose }) => {
                   </span>
                 </div>
                 <h3 className="text-base font-bold text-slate-900 dark:text-white pt-1">
-                  {isPro ? 'Unlupa Pro (Akses Penuh Tanpa Batas)' : 'Paket Free (Standar Santri)'}
+                  {isPro
+                    ? "Unlupa Pro (Akses Penuh Tanpa Batas)"
+                    : "Paket Free (Standar Santri)"}
                 </h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md">
-                  {isPro 
-                    ? 'Anda menikmati kuota tak terbatas untuk Mushaf 30 Juz, AI Builder, pembuatan kelas tak terbatas, dan fitur pengajar.'
-                    : 'Batas maksimal 2 buku aktif, 50 kartu per buku, dan Juz 30 Qur\'an.'}
+                  {isPro
+                    ? "Anda menikmati kuota tak terbatas untuk Mushaf 30 Juz, AI Builder, pembuatan kelas tak terbatas, dan fitur pengajar."
+                    : "Batas maksimal 2 buku aktif, 50 kartu per buku, dan Juz 30 Qur'an."}
                 </p>
               </div>
 
@@ -101,7 +131,10 @@ export const BillingHistoryModal: React.FC<Props> = ({ isOpen, onClose }) => {
                   <button
                     onClick={() => {
                       onClose();
-                      openUpgradeModal('Billing Center', 'Tingkatkan akun Anda ke Unlupa Pro untuk membuka seluruh potensi pembelajaran.');
+                      openUpgradeModal(
+                        "Billing Center",
+                        "Tingkatkan akun Anda ke Unlupa Pro untuk membuka seluruh potensi pembelajaran.",
+                      );
                     }}
                     className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 active:scale-95 text-white font-extrabold text-xs shadow-lg shadow-amber-500/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap"
                   >
@@ -113,7 +146,10 @@ export const BillingHistoryModal: React.FC<Props> = ({ isOpen, onClose }) => {
                   <button
                     onClick={() => {
                       onClose();
-                      openUpgradeModal('Kelola Langganan', 'Ubah siklus tagihan atau beralih paket.');
+                      openUpgradeModal(
+                        "Kelola Langganan",
+                        "Ubah siklus tagihan atau beralih paket.",
+                      );
                     }}
                     className="w-full sm:w-auto px-4 py-2 rounded-xl border border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950/40 text-xs font-bold transition-all cursor-pointer whitespace-nowrap"
                   >
@@ -128,7 +164,9 @@ export const BillingHistoryModal: React.FC<Props> = ({ isOpen, onClose }) => {
           <div>
             <div className="flex items-center justify-between mb-3">
               <h4 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
-                {language === 'en' ? 'Invoice History' : 'Daftar Invoice & Transaksi'}
+                {language === "en"
+                  ? "Invoice History"
+                  : "Daftar Invoice & Transaksi"}
               </h4>
               <span className="text-[11px] text-slate-500">
                 Total {myTransactions.length} Transaksi
@@ -144,18 +182,24 @@ export const BillingHistoryModal: React.FC<Props> = ({ isOpen, onClose }) => {
               </div>
             ) : (
               <div className="space-y-2.5">
-                {myTransactions.map(tx => (
+                {myTransactions.map((tx) => (
                   <div
                     key={tx.id}
                     className="p-4 rounded-2xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-slate-200 dark:hover:border-slate-700 transition-all shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3"
                   >
                     <div className="flex items-start gap-3 min-w-0">
-                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${
-                        tx.type.startsWith('subscription')
-                          ? 'bg-amber-50 dark:bg-amber-950 text-amber-600 dark:text-amber-400' 
-                          : 'bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400'
-                      }`}>
-                        {tx.type.startsWith('subscription') ? <Crown className="w-4 h-4" /> : <CreditCard className="w-4 h-4" />}
+                      <div
+                        className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${
+                          tx.type.startsWith("subscription")
+                            ? "bg-amber-50 dark:bg-amber-950 text-amber-600 dark:text-amber-400"
+                            : "bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400"
+                        }`}
+                      >
+                        {tx.type.startsWith("subscription") ? (
+                          <Crown className="w-4 h-4" />
+                        ) : (
+                          <CreditCard className="w-4 h-4" />
+                        )}
                       </div>
 
                       <div className="min-w-0">
@@ -171,13 +215,15 @@ export const BillingHistoryModal: React.FC<Props> = ({ isOpen, onClose }) => {
                           {tx.bookTitle}
                         </p>
                         <p className="text-[10px] text-slate-400">
-                          {new Date(tx.createdAt).toLocaleDateString('id-ID', {
-                            day: 'numeric',
-                            month: 'short',
-                            year: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          })} • Metode: {tx.paymentMethod.toUpperCase().replace('_', ' ')}
+                          {new Date(tx.createdAt).toLocaleDateString("id-ID", {
+                            day: "numeric",
+                            month: "short",
+                            year: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}{" "}
+                          • Metode:{" "}
+                          {tx.paymentMethod.toUpperCase().replace("_", " ")}
                         </p>
                       </div>
                     </div>
@@ -187,12 +233,19 @@ export const BillingHistoryModal: React.FC<Props> = ({ isOpen, onClose }) => {
                         {formatIDR(tx.amount)}
                       </span>
                       <button
-                        onClick={() => copyToClipboard(`Invoice: ${tx.id}\nItem: ${tx.bookTitle}\nTotal: ${formatIDR(tx.amount)}\nStatus: Lunas\nTanggal: ${tx.createdAt}`, tx.id)}
+                        onClick={() =>
+                          copyToClipboard(
+                            `Invoice: ${tx.id}\nItem: ${tx.bookTitle}\nTotal: ${formatIDR(tx.amount)}\nStatus: Lunas\nTanggal: ${tx.createdAt}`,
+                            tx.id,
+                          )
+                        }
                         className="px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-[11px] font-semibold text-slate-600 dark:text-slate-300 flex items-center gap-1 cursor-pointer"
                         title="Salin Rincian Invoice"
                       >
                         <Copy className="w-3 h-3" />
-                        <span>{copiedId === tx.id ? 'Tersalin' : 'Rincian'}</span>
+                        <span>
+                          {copiedId === tx.id ? "Tersalin" : "Rincian"}
+                        </span>
                       </button>
                     </div>
                   </div>
@@ -200,7 +253,6 @@ export const BillingHistoryModal: React.FC<Props> = ({ isOpen, onClose }) => {
               </div>
             )}
           </div>
-
         </div>
 
         {/* Footer */}

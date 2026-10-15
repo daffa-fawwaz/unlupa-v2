@@ -1,8 +1,12 @@
-import { ClassGroup, QuranPageItem, BookItem } from '../types';
-import { getSurahForPage, getJuzForPage } from './quranData';
-import { INITIAL_ITEMS } from './sampleBooks';
+import { ClassGroup, QuranPageItem, BookItem } from "../types";
+import { getSurahForPage, getJuzForPage } from "./quranData";
+import { INITIAL_ITEMS } from "./sampleBooks";
 
-export function createSampleStudentBookItems(sourceItems: BookItem[], activeCount: number, dueCount: number): BookItem[] {
+export function createSampleStudentBookItems(
+  sourceItems: BookItem[],
+  activeCount: number,
+  dueCount: number,
+): BookItem[] {
   const today = new Date();
   const yesterday = new Date(today.getTime() - 86400000 * 2);
   const future = new Date(today.getTime() + 86400000 * 12);
@@ -11,26 +15,36 @@ export function createSampleStudentBookItems(sourceItems: BookItem[], activeCoun
   return sourceItems.map((item, index) => {
     const isActive = index < activeCount;
     const isDue = isActive && index < dueCount;
-    const isMastered = isActive && !isDue && index >= dueCount && index < dueCount + 5;
+    const isMastered =
+      isActive && !isDue && index >= dueCount && index < dueCount + 5;
 
     return {
       ...item,
       isActive,
-      status: isMastered ? 'mastered' : isActive ? 'active' : 'inactive',
+      status: isMastered ? "mastered" : isActive ? "active" : "inactive",
       fsrsData: {
         stability: isMastered ? 340.0 : isDue ? 4.5 : isActive ? 18.2 : 0,
         difficulty: 5.0,
         reps: isMastered ? 12 : isDue ? 2 : isActive ? 5 : 0,
         lapses: isDue ? 1 : 0,
         lastReview: isActive ? yesterday.toISOString() : null,
-        nextReview: isDue ? today.toISOString() : isMastered ? distantFuture.toISOString() : isActive ? future.toISOString() : null,
-        state: isMastered ? 'mastered' : isActive ? 'review' : 'new',
-      }
+        nextReview: isDue
+          ? today.toISOString()
+          : isMastered
+            ? distantFuture.toISOString()
+            : isActive
+              ? future.toISOString()
+              : null,
+        state: isMastered ? "mastered" : isActive ? "review" : "new",
+      },
     };
   });
 }
 
-export function createSampleStudentQuranPages(activePageNumbers: number[], duePageNumbers: number[]): QuranPageItem[] {
+export function createSampleStudentQuranPages(
+  activePageNumbers: number[],
+  duePageNumbers: number[],
+): QuranPageItem[] {
   const today = new Date();
   const yesterday = new Date(today.getTime() - 86400000);
   const future = new Date(today.getTime() + 86400000 * 5);
@@ -52,7 +66,11 @@ export function createSampleStudentQuranPages(activePageNumbers: number[], duePa
       ayahRange: surah.ayahRange,
       isActive,
       imageUrl: `https://quran.ksu.edu.sa/png_pages/${pageNumber}.png`,
-      status: isMastered ? 'mastered_for_now' : isActive ? 'active' : 'inactive',
+      status: isMastered
+        ? "mastered_for_now"
+        : isActive
+          ? "active"
+          : "inactive",
       mapanCelebrated: isMastered,
       fsrsData: {
         stability: isMastered ? 78.0 : isDue ? 4.2 : isActive ? 18.5 : 0,
@@ -60,9 +78,13 @@ export function createSampleStudentQuranPages(activePageNumbers: number[], duePa
         reps: isMastered ? 8 : isDue ? 2 : isActive ? 5 : 0,
         lapses: isDue ? 1 : 0,
         lastReview: isActive ? yesterday.toISOString() : null,
-        nextReview: isDue ? today.toISOString() : isActive ? future.toISOString() : null,
-        state: isMastered ? 'mastered' : isActive ? 'review' : 'new',
-      }
+        nextReview: isDue
+          ? today.toISOString()
+          : isActive
+            ? future.toISOString()
+            : null,
+        state: isMastered ? "mastered" : isActive ? "review" : "new",
+      },
     });
   }
 

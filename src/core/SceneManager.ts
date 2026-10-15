@@ -8,8 +8,8 @@
  * - Provides seamless blending and transition hooks for subsequent scenes (Scenes 02–06)
  */
 
-import { IScene, SceneContext } from '../scenes/Scene01Hero';
-import { TOKENS } from '../config';
+import { IScene, SceneContext } from "../scenes/Scene01Hero";
+import { TOKENS } from "../config";
 
 export class SceneManager {
   private scenes: Map<string, IScene> = new Map();
@@ -62,7 +62,10 @@ export class SceneManager {
       // Compute normalized local progress within this scene's segment
       const [start, end] = currentActiveScene.range;
       const span = end - start;
-      const localProgress = span > 0 ? Math.max(0, Math.min(1, (globalProgress - start) / span)) : 0;
+      const localProgress =
+        span > 0
+          ? Math.max(0, Math.min(1, (globalProgress - start) / span))
+          : 0;
 
       // Update active scene
       currentActiveScene.update(this.ctx, localProgress, dt, time);

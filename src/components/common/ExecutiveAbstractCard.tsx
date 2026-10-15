@@ -1,31 +1,31 @@
-import React from 'react';
-import { 
-  Award, 
-  Brain, 
-  CheckCircle2, 
-  Flame, 
-  ShieldCheck, 
-  Sparkles, 
-  TrendingUp, 
+import React from "react";
+import {
+  Award,
+  Brain,
+  CheckCircle2,
+  Flame,
+  ShieldCheck,
+  Sparkles,
+  TrendingUp,
   Zap,
   Target,
   Clock,
-  Compass
-} from 'lucide-react';
-import { FireStrikeBar } from '../shared/FireStrikeBar';
+  Compass,
+} from "lucide-react";
+import { FireStrikeBar } from "../shared/FireStrikeBar";
 
 export interface ExecutiveAbstractCardProps {
   studentName: string;
   className?: string;
-  classType?: 'quran' | 'books';
+  classType?: "quran" | "books";
   totalActive: number;
   totalMastered: number;
   retentionRate: number; // 0 - 100%
-  avgStability: number;  // in days
+  avgStability: number; // in days
   totalReviews?: number;
   dueToday?: number;
   awardTitle?: string;
-  awardLevel?: 'Gold' | 'Emerald' | 'Ruby' | 'Diamond';
+  awardLevel?: "Gold" | "Emerald" | "Ruby" | "Diamond";
   awardDescription?: string;
   readinessTitle?: string;
   readinessDesc?: string;
@@ -40,34 +40,35 @@ export interface ExecutiveAbstractCardProps {
 
 export const ExecutiveAbstractCard: React.FC<ExecutiveAbstractCardProps> = ({
   studentName,
-  className = '',
-  classType = 'quran',
+  className = "",
+  classType = "quran",
   totalActive,
   totalMastered,
   retentionRate,
   avgStability,
   totalReviews = 0,
   dueToday = 0,
-  awardTitle = 'Hafidz Mutqin Mumtaz',
-  awardLevel = 'Diamond',
+  awardTitle = "Hafidz Mutqin Mumtaz",
+  awardLevel = "Diamond",
   awardDescription,
-  readinessTitle = 'Rekomendasi Akselerasi Hafalan',
+  readinessTitle = "Rekomendasi Akselerasi Hafalan",
   readinessDesc,
   teacherNote,
-  teacherName = 'Musyrif / Pengajar',
-  institutionName = 'unlupa.id Learning Center',
+  teacherName = "Musyrif / Pengajar",
+  institutionName = "unlupa.id Learning Center",
   dateFormatted,
-  language = 'id',
+  language = "id",
   streakCount = 7,
   interactiveFire = true,
 }) => {
-  const masteredPct = totalActive > 0 ? Math.round((totalMastered / totalActive) * 100) : 0;
-  const unitLabel = classType === 'quran' ? 'Halaman' : 'Materi';
+  const masteredPct =
+    totalActive > 0 ? Math.round((totalMastered / totalActive) * 100) : 0;
+  const unitLabel = classType === "quran" ? "Halaman" : "Materi";
 
   // Dynamic Executive Abstract Narrative Generator
   const abstractText = React.useMemo(() => {
-    let narrative = '';
-    
+    let narrative = "";
+
     if (retentionRate >= 90) {
       narrative = `Berdasarkan evaluasi algoritma Spaced Repetition, ananda ${studentName} menunjukkan tingkat retensi memori yang sangat unggul sebesar ${retentionRate}% dengan rerata stabilitas memori ${avgStability} hari. Sebanyak ${totalMastered} dari ${totalActive} ${unitLabel.toLowerCase()} aktif (${masteredPct}%) telah mencapai kualifikasi Mutqin Mapan dengan interval ketahanan bebas lupa melebihi 30 hari. Kurva daya ingat terpantau stabil tanpa akumulasi beban jatuh tempo berlebih.`;
     } else if (retentionRate >= 75) {
@@ -77,36 +78,44 @@ export const ExecutiveAbstractCard: React.FC<ExecutiveAbstractCardProps> = ({
     }
 
     return narrative;
-  }, [studentName, retentionRate, avgStability, totalMastered, totalActive, masteredPct, unitLabel]);
+  }, [
+    studentName,
+    retentionRate,
+    avgStability,
+    totalMastered,
+    totalActive,
+    masteredPct,
+    unitLabel,
+  ]);
 
   const levelColorMap = {
     Diamond: {
-      badgeBg: 'bg-gradient-to-r from-cyan-500 via-blue-500 to-indigo-600',
-      badgeText: 'text-white',
-      glowColor: 'shadow-cyan-500/20',
-      borderColor: 'border-cyan-400/40',
-      accentText: 'text-cyan-400',
+      badgeBg: "bg-gradient-to-r from-cyan-500 via-blue-500 to-indigo-600",
+      badgeText: "text-white",
+      glowColor: "shadow-cyan-500/20",
+      borderColor: "border-cyan-400/40",
+      accentText: "text-cyan-400",
     },
     Emerald: {
-      badgeBg: 'bg-gradient-to-r from-emerald-500 via-teal-500 to-green-600',
-      badgeText: 'text-white',
-      glowColor: 'shadow-emerald-500/20',
-      borderColor: 'border-emerald-400/40',
-      accentText: 'text-emerald-400',
+      badgeBg: "bg-gradient-to-r from-emerald-500 via-teal-500 to-green-600",
+      badgeText: "text-white",
+      glowColor: "shadow-emerald-500/20",
+      borderColor: "border-emerald-400/40",
+      accentText: "text-emerald-400",
     },
     Gold: {
-      badgeBg: 'bg-gradient-to-r from-amber-400 via-amber-500 to-orange-500',
-      badgeText: 'text-slate-950 font-black',
-      glowColor: 'shadow-amber-500/20',
-      borderColor: 'border-amber-400/40',
-      accentText: 'text-amber-400',
+      badgeBg: "bg-gradient-to-r from-amber-400 via-amber-500 to-orange-500",
+      badgeText: "text-slate-950 font-black",
+      glowColor: "shadow-amber-500/20",
+      borderColor: "border-amber-400/40",
+      accentText: "text-amber-400",
     },
     Ruby: {
-      badgeBg: 'bg-gradient-to-r from-rose-500 via-pink-500 to-red-600',
-      badgeText: 'text-white',
-      glowColor: 'shadow-rose-500/20',
-      borderColor: 'border-rose-400/40',
-      accentText: 'text-rose-400',
+      badgeBg: "bg-gradient-to-r from-rose-500 via-pink-500 to-red-600",
+      badgeText: "text-white",
+      glowColor: "shadow-rose-500/20",
+      borderColor: "border-rose-400/40",
+      accentText: "text-rose-400",
     },
   };
 
@@ -137,7 +146,14 @@ export const ExecutiveAbstractCard: React.FC<ExecutiveAbstractCardProps> = ({
               <h3 className="text-base sm:text-lg font-black font-serif tracking-tight text-white flex items-center gap-2">
                 <span>{studentName}</span>
                 <span className="text-xs font-sans font-medium text-slate-300">
-                  ({dateFormatted || new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })})
+                  (
+                  {dateFormatted ||
+                    new Date().toLocaleDateString("id-ID", {
+                      day: "numeric",
+                      month: "long",
+                      year: "numeric",
+                    })}
+                  )
                 </span>
               </h3>
             </div>
@@ -188,13 +204,17 @@ export const ExecutiveAbstractCard: React.FC<ExecutiveAbstractCardProps> = ({
               <ShieldCheck className="w-4 h-4 text-emerald-400" />
             </div>
             <div className="flex items-baseline gap-1.5">
-              <span className="text-2xl font-black text-white font-mono">{avgStability}</span>
+              <span className="text-2xl font-black text-white font-mono">
+                {avgStability}
+              </span>
               <span className="text-xs text-slate-300">Hari (Interval)</span>
             </div>
             <div className="w-full bg-slate-800/80 rounded-full h-1.5 overflow-hidden">
               <div
                 className="bg-emerald-400 h-full rounded-full transition-all duration-500"
-                style={{ width: `${Math.min(100, (avgStability / 40) * 100)}%` }}
+                style={{
+                  width: `${Math.min(100, (avgStability / 40) * 100)}%`,
+                }}
               />
             </div>
             <span className="text-[10px] text-emerald-300 font-medium">
@@ -211,7 +231,9 @@ export const ExecutiveAbstractCard: React.FC<ExecutiveAbstractCardProps> = ({
               <TrendingUp className="w-4 h-4 text-purple-400" />
             </div>
             <div className="flex items-baseline gap-1.5">
-              <span className="text-2xl font-black text-white font-mono">{retentionRate}%</span>
+              <span className="text-2xl font-black text-white font-mono">
+                {retentionRate}%
+              </span>
               <span className="text-xs text-slate-300">Tepat Waktu</span>
             </div>
             <div className="w-full bg-slate-800/80 rounded-full h-1.5 overflow-hidden">
@@ -238,7 +260,8 @@ export const ExecutiveAbstractCard: React.FC<ExecutiveAbstractCardProps> = ({
                 {readinessTitle}
               </span>
               <span className="text-[11px] text-slate-300 block line-clamp-2 leading-tight mt-0.5">
-                {readinessDesc || 'Sangat siap untuk akselerasi penambahan materi baru.'}
+                {readinessDesc ||
+                  "Sangat siap untuk akselerasi penambahan materi baru."}
               </span>
             </div>
             <div className="pt-1 flex items-center gap-1 text-[10px] text-amber-300/90 font-bold">
@@ -256,7 +279,9 @@ export const ExecutiveAbstractCard: React.FC<ExecutiveAbstractCardProps> = ({
               <span>Konsistensi Istiqomah (Fire Strike)</span>
             </span>
             <span className="font-mono text-purple-300 text-xs">
-              {dueToday === 0 ? 'Semua Tuntas Hari Ini' : `${dueToday} ${unitLabel} Perlu Disetor`}
+              {dueToday === 0
+                ? "Semua Tuntas Hari Ini"
+                : `${dueToday} ${unitLabel} Perlu Disetor`}
             </span>
           </div>
           <FireStrikeBar

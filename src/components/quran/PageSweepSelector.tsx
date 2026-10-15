@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Layers, Check, RotateCcw } from 'lucide-react';
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import { Layers, Check, RotateCcw } from "lucide-react";
 
 interface Props {
   startPage: number;
@@ -18,7 +18,7 @@ export const PageSweepSelector: React.FC<Props> = ({
   fromPage,
   toPage,
   onChangeRange,
-  language
+  language,
 }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState<number | null>(null);
@@ -39,18 +39,24 @@ export const PageSweepSelector: React.FC<Props> = ({
       const cMax = Math.min(endPage, Math.max(startPage, Math.max(start, end)));
       onChangeRange(cMin, cMax);
     },
-    [startPage, endPage, onChangeRange]
+    [startPage, endPage, onChangeRange],
   );
 
-  const getPageFromCoords = (clientX: number, clientY: number): number | null => {
+  const getPageFromCoords = (
+    clientX: number,
+    clientY: number,
+  ): number | null => {
     const el = document.elementFromPoint(clientX, clientY);
-    const item = el?.closest<HTMLElement>('[data-page-num]');
+    const item = el?.closest<HTMLElement>("[data-page-num]");
     if (!item) return null;
     const num = Number(item.dataset.pageNum);
     return !isNaN(num) && num >= startPage && num <= endPage ? num : null;
   };
 
-  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>, pageNum: number) => {
+  const handlePointerDown = (
+    e: React.PointerEvent<HTMLDivElement>,
+    pageNum: number,
+  ) => {
     e.preventDefault();
     try {
       e.currentTarget.setPointerCapture(e.pointerId);
@@ -88,16 +94,16 @@ export const PageSweepSelector: React.FC<Props> = ({
       }
     };
 
-    window.addEventListener('pointerup', handleGlobalEnd);
-    window.addEventListener('pointercancel', handleGlobalEnd);
-    window.addEventListener('touchend', handleGlobalEnd);
-    window.addEventListener('touchcancel', handleGlobalEnd);
+    window.addEventListener("pointerup", handleGlobalEnd);
+    window.addEventListener("pointercancel", handleGlobalEnd);
+    window.addEventListener("touchend", handleGlobalEnd);
+    window.addEventListener("touchcancel", handleGlobalEnd);
 
     return () => {
-      window.removeEventListener('pointerup', handleGlobalEnd);
-      window.removeEventListener('pointercancel', handleGlobalEnd);
-      window.removeEventListener('touchend', handleGlobalEnd);
-      window.removeEventListener('touchcancel', handleGlobalEnd);
+      window.removeEventListener("pointerup", handleGlobalEnd);
+      window.removeEventListener("pointercancel", handleGlobalEnd);
+      window.removeEventListener("touchend", handleGlobalEnd);
+      window.removeEventListener("touchcancel", handleGlobalEnd);
     };
   }, []);
 
@@ -109,7 +115,7 @@ export const PageSweepSelector: React.FC<Props> = ({
     chunkPresets.push({
       label: `${p - startPage + 1}-${chunkEnd - startPage + 1}`,
       from: p,
-      to: chunkEnd
+      to: chunkEnd,
     });
   }
 
@@ -123,7 +129,7 @@ export const PageSweepSelector: React.FC<Props> = ({
           </div>
           <div>
             <h3 className="font-extrabold text-xs sm:text-sm text-[#18234A] dark:text-[#F8FAFC]">
-              {language === 'en' ? 'Page Sweep System' : 'Sistem Sapu Halaman'}
+              {language === "en" ? "Page Sweep System" : "Sistem Sapu Halaman"}
             </h3>
           </div>
         </div>
@@ -135,11 +141,11 @@ export const PageSweepSelector: React.FC<Props> = ({
             onClick={() => onChangeRange(startPage, endPage)}
             className={`px-2.5 py-1 rounded-xl text-[10px] font-extrabold transition-all cursor-pointer ${
               isAll
-                ? 'bg-gradient-to-r from-[#0EA5E9] to-[#2563EB] text-white shadow-xs scale-105'
-                : 'neumorph-card text-[#5E6D88] dark:text-[#94A3B8] hover:text-[#18234A]'
+                ? "bg-gradient-to-r from-[#0EA5E9] to-[#2563EB] text-white shadow-xs scale-105"
+                : "neumorph-card text-[#5E6D88] dark:text-[#94A3B8] hover:text-[#18234A]"
             }`}
           >
-            {language === 'en' ? 'All Pages' : 'Semua (1-20)'}
+            {language === "en" ? "All Pages" : "Semua (1-20)"}
           </button>
 
           {chunkPresets.map((preset, idx) => {
@@ -151,8 +157,8 @@ export const PageSweepSelector: React.FC<Props> = ({
                 onClick={() => onChangeRange(preset.from, preset.to)}
                 className={`px-2 py-1 rounded-xl text-[10px] font-extrabold transition-all cursor-pointer ${
                   isSelected
-                    ? 'bg-gradient-to-r from-[#0EA5E9] to-[#2563EB] text-white shadow-xs scale-105'
-                    : 'neumorph-inset text-[#5E6D88] dark:text-[#94A3B8] hover:text-[#18234A]'
+                    ? "bg-gradient-to-r from-[#0EA5E9] to-[#2563EB] text-white shadow-xs scale-105"
+                    : "neumorph-inset text-[#5E6D88] dark:text-[#94A3B8] hover:text-[#18234A]"
                 }`}
               >
                 Hal {preset.label}
@@ -163,7 +169,7 @@ export const PageSweepSelector: React.FC<Props> = ({
       </div>
 
       {/* Sweepable Interactive Page Chips Grid (Sky Blue / Blue Theme) */}
-      <div 
+      <div
         className="grid grid-cols-5 sm:grid-cols-10 gap-1.5 p-2 rounded-2xl neumorph-inset bg-slate-100/50 dark:bg-slate-900/60 touch-none"
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
@@ -180,8 +186,8 @@ export const PageSweepSelector: React.FC<Props> = ({
               onPointerDown={(e) => handlePointerDown(e, pageNum)}
               className={`py-1.5 px-1 rounded-xl text-center cursor-pointer transition-all flex flex-col items-center justify-center h-10 select-none ${
                 isSelected
-                  ? 'bg-gradient-to-br from-[#0EA5E9] to-[#2563EB] text-white font-black shadow-xs scale-102'
-                  : 'neumorph-card text-[#5E6D88] dark:text-[#94A3B8] font-bold hover:scale-102'
+                  ? "bg-gradient-to-br from-[#0EA5E9] to-[#2563EB] text-white font-black shadow-xs scale-102"
+                  : "neumorph-card text-[#5E6D88] dark:text-[#94A3B8] font-bold hover:scale-102"
               }`}
             >
               <span className="text-[10px] font-mono leading-none">

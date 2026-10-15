@@ -1,8 +1,8 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from "react";
 
 export interface PurpleStrikeFireBadgeProps {
   streakCount?: number;
-  size?: 'sm' | 'md' | 'lg';
+  size?: "sm" | "md" | "lg";
   allowClick?: boolean;
   onStrikeChange?: (newStreak: number) => void;
   className?: string;
@@ -45,10 +45,10 @@ class Particle {
 
 export const PurpleStrikeFireBadge: React.FC<PurpleStrikeFireBadgeProps> = ({
   streakCount: initialStreak = 1,
-  size = 'md',
+  size = "md",
   allowClick = true,
   onStrikeChange,
-  className = '',
+  className = "",
   showControls = true,
 }) => {
   const [currentStreak, setCurrentStreak] = useState<number>(initialStreak);
@@ -62,12 +62,15 @@ export const PurpleStrikeFireBadge: React.FC<PurpleStrikeFireBadgeProps> = ({
   }, [initialStreak]);
 
   // Burst explosion trigger
-  const triggerBurst = useCallback((cx: number, cy: number, intensity: number) => {
-    const count = 40 + intensity * 15;
-    for (let i = 0; i < count; i++) {
-      particlesRef.current.push(new Particle(cx, cy, true, intensity));
-    }
-  }, []);
+  const triggerBurst = useCallback(
+    (cx: number, cy: number, intensity: number) => {
+      const count = 40 + intensity * 15;
+      for (let i = 0; i < count; i++) {
+        particlesRef.current.push(new Particle(cx, cy, true, intensity));
+      }
+    },
+    [],
+  );
 
   const handleStrike = useCallback(
     (newNum: number) => {
@@ -82,14 +85,14 @@ export const PurpleStrikeFireBadge: React.FC<PurpleStrikeFireBadgeProps> = ({
 
       setTimeout(() => setAnimating(false), 400);
     },
-    [onStrikeChange, triggerBurst]
+    [onStrikeChange, triggerBurst],
   );
 
   // Main canvas animation loop
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
     let particles = particlesRef.current;
@@ -119,14 +122,14 @@ export const PurpleStrikeFireBadge: React.FC<PurpleStrikeFireBadgeProps> = ({
         new Particle(
           cx + (Math.random() - 0.5) * W * 0.4,
           baseY + (Math.random() - 0.5) * 20,
-          false
-        )
+          false,
+        ),
       );
     };
 
     const draw = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.globalCompositeOperation = 'source-over';
+      ctx.globalCompositeOperation = "source-over";
 
       if (currentStreak > 0) {
         for (let i = 0; i < 4; i++) {
@@ -165,8 +168,14 @@ export const PurpleStrikeFireBadge: React.FC<PurpleStrikeFireBadgeProps> = ({
         }
 
         const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size);
-        grad.addColorStop(0, `rgba(${Math.round(r)}, ${Math.round(g)}, ${Math.round(b)}, ${a})`);
-        grad.addColorStop(1, `rgba(${Math.round(r)}, ${Math.round(g)}, ${Math.round(b)}, 0)`);
+        grad.addColorStop(
+          0,
+          `rgba(${Math.round(r)}, ${Math.round(g)}, ${Math.round(b)}, ${a})`,
+        );
+        grad.addColorStop(
+          1,
+          `rgba(${Math.round(r)}, ${Math.round(g)}, ${Math.round(b)}, 0)`,
+        );
 
         ctx.fillStyle = grad;
         ctx.beginPath();
@@ -188,15 +197,15 @@ export const PurpleStrikeFireBadge: React.FC<PurpleStrikeFireBadgeProps> = ({
   }, [currentStreak]);
 
   const sizeDimensions = {
-    sm: 'w-[180px] h-[180px]',
-    md: 'w-[260px] h-[260px]',
-    lg: 'w-[320px] h-[320px]',
+    sm: "w-[180px] h-[180px]",
+    md: "w-[260px] h-[260px]",
+    lg: "w-[320px] h-[320px]",
   };
 
   const numberFontSizes = {
-    sm: 'text-[90px]',
-    md: 'text-[140px]',
-    lg: 'text-[170px]',
+    sm: "text-[90px]",
+    md: "text-[140px]",
+    lg: "text-[170px]",
   };
 
   return (
@@ -209,7 +218,7 @@ export const PurpleStrikeFireBadge: React.FC<PurpleStrikeFireBadgeProps> = ({
           }
         }}
         className={`stage relative ${sizeDimensions[size]} flex items-center justify-center ${
-          allowClick ? 'cursor-pointer hover:scale-[1.02] active:scale-95' : ''
+          allowClick ? "cursor-pointer hover:scale-[1.02] active:scale-95" : ""
         } transition-all duration-300 drop-shadow-[0_10px_15px_rgba(160,32,240,0.25)]`}
       >
         {/* FIRE CANVAS */}
@@ -223,18 +232,19 @@ export const PurpleStrikeFireBadge: React.FC<PurpleStrikeFireBadgeProps> = ({
           <span
             className={`number ${numberFontSizes[size]} font-black leading-none text-white tracking-tight`}
             style={{
-              color: '#ffffff',
+              color: "#ffffff",
               textShadow:
                 currentStreak > 0
-                  ? '0 0 10px #ffffff, 0 0 20px #d18aff, 0 0 40px #a020f0, 0 0 80px #6a0dad'
-                  : '0 0 4px rgba(0,0,0,0.2)',
+                  ? "0 0 10px #ffffff, 0 0 20px #d18aff, 0 0 40px #a020f0, 0 0 80px #6a0dad"
+                  : "0 0 4px rgba(0,0,0,0.2)",
               opacity: currentStreak === 0 ? 0.3 : 1,
-              transform: animating ? 'scale(1.35)' : 'scale(1)',
-              transition: 'transform 0.4s cubic-bezier(0.2, 1.6, 0.4, 1), opacity 0.4s',
+              transform: animating ? "scale(1.35)" : "scale(1)",
+              transition:
+                "transform 0.4s cubic-bezier(0.2, 1.6, 0.4, 1), opacity 0.4s",
               animation:
                 currentStreak > 0
-                  ? 'purpleFlame 0.4s ease-in-out infinite alternate, purpleFlicker 2s ease-in-out infinite'
-                  : 'none',
+                  ? "purpleFlame 0.4s ease-in-out infinite alternate, purpleFlicker 2s ease-in-out infinite"
+                  : "none",
             }}
           >
             {currentStreak}

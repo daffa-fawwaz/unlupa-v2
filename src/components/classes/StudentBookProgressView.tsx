@@ -1,20 +1,20 @@
-import React, { useState } from 'react';
-import { ClassStudent, ClassGroup, Book, Chapter, BookItem } from '../../types';
-import { useApp } from '../../context/AppContext';
-import { isDue, getIntervalDays } from '../../lib/fsrs';
-import { 
-  ArrowLeft, 
-  BookOpen, 
-  Layers, 
-  Brain, 
-  CheckCircle2, 
-  Clock, 
-  Calendar, 
-  ChevronRight, 
-  ChevronDown, 
-  HelpCircle
-} from 'lucide-react';
-import { BilingualCardText } from '../common/BilingualCardText';
+import React, { useState } from "react";
+import { ClassStudent, ClassGroup, Book, Chapter, BookItem } from "../../types";
+import { useApp } from "../../context/AppContext";
+import { isDue, getIntervalDays } from "../../lib/fsrs";
+import {
+  ArrowLeft,
+  BookOpen,
+  Layers,
+  Brain,
+  CheckCircle2,
+  Clock,
+  Calendar,
+  ChevronRight,
+  ChevronDown,
+  HelpCircle,
+} from "lucide-react";
+import { BilingualCardText } from "../common/BilingualCardText";
 
 interface StudentBookProgressViewProps {
   student: ClassStudent;
@@ -22,27 +22,31 @@ interface StudentBookProgressViewProps {
   onClose: () => void;
 }
 
-export const StudentBookProgressView: React.FC<StudentBookProgressViewProps> = ({
-  student,
-  classGroup,
-  onClose,
-}) => {
+export const StudentBookProgressView: React.FC<
+  StudentBookProgressViewProps
+> = ({ student, classGroup, onClose }) => {
   const { books, chapters, items, language } = useApp();
 
   // Find assigned book or default to first book
   const assignedBookId = classGroup.assignedBookIds?.[0] || books[0]?.id;
-  const book = books.find(b => b.id === assignedBookId) || books[0];
-  const bookChapters = chapters.filter(c => c.bookId === book?.id);
-  const bookItems = items.filter(i => i.bookId === book?.id);
+  const book = books.find((b) => b.id === assignedBookId) || books[0];
+  const bookChapters = chapters.filter((c) => c.bookId === book?.id);
+  const bookItems = items.filter((i) => i.bookId === book?.id);
 
-  const [expandedChapterId, setExpandedChapterId] = useState<string | null>(bookChapters[0]?.id || null);
+  const [expandedChapterId, setExpandedChapterId] = useState<string | null>(
+    bookChapters[0]?.id || null,
+  );
 
   if (!book) {
     return (
       <div className="p-8 text-center bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800">
         <BookOpen className="w-12 h-12 text-slate-400 mx-auto mb-3" />
-        <h3 className="font-bold text-lg text-slate-800 dark:text-slate-200">Kitab Belum Ditetapkan</h3>
-        <p className="text-sm text-slate-500 mt-1 mb-4">Kelas ini belum memiliki kitab atau materi yang ditautkan.</p>
+        <h3 className="font-bold text-lg text-slate-800 dark:text-slate-200">
+          Kitab Belum Ditetapkan
+        </h3>
+        <p className="text-sm text-slate-500 mt-1 mb-4">
+          Kelas ini belum memiliki kitab atau materi yang ditautkan.
+        </p>
         <button
           onClick={onClose}
           className="px-4 py-2 bg-slate-800 text-white rounded-xl text-sm font-medium hover:bg-slate-700 transition-colors"
@@ -55,30 +59,35 @@ export const StudentBookProgressView: React.FC<StudentBookProgressViewProps> = (
 
   // Computed student progress stats for this book
   const totalItems = bookItems.length;
-  
+
   // Actually calculate from bookItemsData if available
   let actualActiveCount = 0;
   let actualDueCount = 0;
   let actualMasteredCount = 0;
   let totalReps = 0;
   let totalLapses = 0;
-  
+
   const studentItems = student.bookItemsData || bookItems; // Fallback to provided items
-  
+
   if (student.bookItemsData && student.bookItemsData.length > 0) {
-    const classItems = student.bookItemsData.filter(i => i.bookId === book.id || i.bookId === `class-book-${book.id}`); // Depending on ID matching
-    
-    classItems.forEach(item => {
+    const classItems = student.bookItemsData.filter(
+      (i) => i.bookId === book.id || i.bookId === `class-book-${book.id}`,
+    ); // Depending on ID matching
+
+    classItems.forEach((item) => {
       if (item.isActive) {
         actualActiveCount++;
         if (item.fsrsData) {
-          totalReps += (item.fsrsData.reps || 0);
-          totalLapses += (item.fsrsData.lapses || 0);
+          totalReps += item.fsrsData.reps || 0;
+          totalLapses += item.fsrsData.lapses || 0;
           // basic heuristic for due
           if (new Date() >= new Date(item.fsrsData.nextReview || 0)) {
             actualDueCount++;
           }
-          if ((item.fsrsData.stability || 0) >= 30 || item.status === 'mastered') {
+          if (
+            (item.fsrsData.stability || 0) >= 30 ||
+            item.status === "mastered"
+          ) {
             actualMasteredCount++;
           }
         }
@@ -86,13 +95,23 @@ export const StudentBookProgressView: React.FC<StudentBookProgressViewProps> = (
     });
   }
 
-  const activeCount = actualActiveCount > 0 ? actualActiveCount : (student.activeItemsCount || Math.min(totalItems, 12));
-  const dueCount = actualActiveCount > 0 ? actualDueCount : (student.dueTodayCount || 0);
-  const masteredCount = actualActiveCount > 0 ? actualMasteredCount : Math.max(0, activeCount - dueCount - 2);
-  
+  const activeCount =
+    actualActiveCount > 0
+      ? actualActiveCount
+      : student.activeItemsCount || Math.min(totalItems, 12);
+  const dueCount =
+    actualActiveCount > 0 ? actualDueCount : student.dueTodayCount || 0;
+  const masteredCount =
+    actualActiveCount > 0
+      ? actualMasteredCount
+      : Math.max(0, activeCount - dueCount - 2);
+
   let retentionRate = student.retentionRate || 95;
   if (totalReps > 0) {
-    retentionRate = Math.max(0, Math.round(((totalReps - totalLapses) / totalReps) * 100));
+    retentionRate = Math.max(
+      0,
+      Math.round(((totalReps - totalLapses) / totalReps) * 100),
+    );
   } else if (actualActiveCount > 0) {
     retentionRate = 100;
   }
@@ -110,7 +129,7 @@ export const StudentBookProgressView: React.FC<StudentBookProgressViewProps> = (
             <ArrowLeft className="w-4 h-4" />
             <span>Kembali ke Kelas</span>
           </button>
-          
+
           <div className="h-5 w-px bg-slate-200 dark:bg-slate-700 shrink-0" />
 
           <div className="min-w-0">
@@ -119,7 +138,7 @@ export const StudentBookProgressView: React.FC<StudentBookProgressViewProps> = (
                 {student.name}
               </h2>
               <span className="text-[10px] font-mono font-medium px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 shrink-0">
-                {student.quranSpaceCode || 'ID: ' + student.id.slice(-4)}
+                {student.quranSpaceCode || "ID: " + student.id.slice(-4)}
               </span>
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
@@ -133,37 +152,52 @@ export const StudentBookProgressView: React.FC<StudentBookProgressViewProps> = (
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
         <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
           <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-1.5">
-            <span className="text-xs font-semibold uppercase tracking-wider">Materi Aktif</span>
+            <span className="text-xs font-semibold uppercase tracking-wider">
+              Materi Aktif
+            </span>
             <BookOpen className="w-4 h-4 text-blue-500" />
           </div>
           <div className="text-2xl font-black text-slate-900 dark:text-white">
-            {activeCount} <span className="text-xs font-normal text-slate-400">/ {totalItems} item</span>
+            {activeCount}{" "}
+            <span className="text-xs font-normal text-slate-400">
+              / {totalItems} item
+            </span>
           </div>
         </div>
 
         <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
           <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-1.5">
-            <span className="text-xs font-semibold uppercase tracking-wider">Tugas Review</span>
+            <span className="text-xs font-semibold uppercase tracking-wider">
+              Tugas Review
+            </span>
             <Clock className="w-4 h-4 text-amber-500" />
           </div>
-          <div className={`text-2xl font-black ${dueCount > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-slate-900 dark:text-white'}`}>
-            {dueCount} <span className="text-xs font-normal text-slate-400">hari ini</span>
+          <div
+            className={`text-2xl font-black ${dueCount > 0 ? "text-amber-600 dark:text-amber-400" : "text-slate-900 dark:text-white"}`}
+          >
+            {dueCount}{" "}
+            <span className="text-xs font-normal text-slate-400">hari ini</span>
           </div>
         </div>
 
         <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
           <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-1.5">
-            <span className="text-xs font-semibold uppercase tracking-wider">Mapan / Mutqin</span>
+            <span className="text-xs font-semibold uppercase tracking-wider">
+              Mapan / Mutqin
+            </span>
             <CheckCircle2 className="w-4 h-4 text-emerald-500" />
           </div>
           <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400">
-            {masteredCount} <span className="text-xs font-normal text-slate-400">item</span>
+            {masteredCount}{" "}
+            <span className="text-xs font-normal text-slate-400">item</span>
           </div>
         </div>
 
         <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
           <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-1.5">
-            <span className="text-xs font-semibold uppercase tracking-wider">Tingkat Penguasaan</span>
+            <span className="text-xs font-semibold uppercase tracking-wider">
+              Tingkat Penguasaan
+            </span>
             <Brain className="w-4 h-4 text-indigo-500" />
           </div>
           <div className="text-2xl font-black text-indigo-600 dark:text-indigo-400">
@@ -186,7 +220,9 @@ export const StudentBookProgressView: React.FC<StudentBookProgressViewProps> = (
         ) : (
           <div className="space-y-3">
             {bookChapters.map((chap, idx) => {
-              const chapItems = bookItems.filter(i => i.chapterId === chap.id);
+              const chapItems = bookItems.filter(
+                (i) => i.chapterId === chap.id,
+              );
               const isExpanded = expandedChapterId === chap.id;
 
               return (
@@ -195,7 +231,9 @@ export const StudentBookProgressView: React.FC<StudentBookProgressViewProps> = (
                   className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-xs transition-all"
                 >
                   <button
-                    onClick={() => setExpandedChapterId(isExpanded ? null : chap.id)}
+                    onClick={() =>
+                      setExpandedChapterId(isExpanded ? null : chap.id)
+                    }
                     className="w-full flex items-center justify-between p-4.5 text-left hover:bg-slate-50/70 dark:hover:bg-slate-800/50 transition-colors"
                   >
                     <div className="flex items-center gap-3">
@@ -227,7 +265,9 @@ export const StudentBookProgressView: React.FC<StudentBookProgressViewProps> = (
                   {isExpanded && (
                     <div className="p-4 pt-1 border-t border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-950/40 space-y-2.5">
                       {chapItems.length === 0 ? (
-                        <p className="text-xs text-slate-400 italic py-2">Tidak ada item dalam bab ini.</p>
+                        <p className="text-xs text-slate-400 italic py-2">
+                          Tidak ada item dalam bab ini.
+                        </p>
                       ) : (
                         chapItems.map((item, itemIdx) => (
                           <div
@@ -240,18 +280,27 @@ export const StudentBookProgressView: React.FC<StudentBookProgressViewProps> = (
                                   #{itemIdx + 1}
                                 </span>
                                 <div className="font-semibold text-slate-800 dark:text-slate-200 flex-1">
-                                  <BilingualCardText text={item.question} type="question" variant="compact" />
+                                  <BilingualCardText
+                                    text={item.question}
+                                    type="question"
+                                    variant="compact"
+                                  />
                                 </div>
                               </div>
                               <div className="text-slate-500 dark:text-slate-400 pl-4 border-l-2 border-slate-200 dark:border-slate-700 mt-1">
-                                <BilingualCardText text={item.answer} type="answer" variant="compact" />
+                                <BilingualCardText
+                                  text={item.answer}
+                                  type="answer"
+                                  variant="compact"
+                                />
                               </div>
                             </div>
 
                             <div className="flex items-center gap-3 self-end sm:self-center">
                               <div className="text-right">
                                 <span className="block text-[11px] font-bold text-indigo-600 dark:text-indigo-400">
-                                  Stabilitas: {getIntervalDays(item.fsrsData)} hari
+                                  Stabilitas: {getIntervalDays(item.fsrsData)}{" "}
+                                  hari
                                 </span>
                                 <span className="text-[10px] text-slate-400">
                                   {item.fsrsData.reps || 3}x pengulangan

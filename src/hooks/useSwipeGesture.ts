@@ -1,4 +1,4 @@
-import { useEffect, useRef, RefObject } from 'react';
+import { useEffect, useRef, RefObject } from "react";
 
 export interface SwipeConfig {
   onSwipeLeft?: () => void;
@@ -15,7 +15,7 @@ export interface SwipeConfig {
  * - onSwipeRight: used for "back" / previous layer / previous space navigation
  * - onSwipeLeft: used for "forward" / next page / next space navigation
  * - onSwipeDown: used for closing full-page popups / sheets / modal overlays
- * 
+ *
  * Features:
  * - Ref-stabilized callbacks: immune to parent component re-renders during gesture tracking
  * - Natural thumb-arc angle tolerance (minRatio = 1.15)
@@ -25,9 +25,17 @@ export interface SwipeConfig {
  */
 export function useSwipeGesture<T extends HTMLElement = HTMLElement>(
   targetRef: RefObject<T | null> | null,
-  config: SwipeConfig
+  config: SwipeConfig,
 ) {
-  const { onSwipeLeft, onSwipeRight, onSwipeDown, onSwipeUp, threshold = 40, minRatio = 1.15, disabled = false } = config;
+  const {
+    onSwipeLeft,
+    onSwipeRight,
+    onSwipeDown,
+    onSwipeUp,
+    threshold = 40,
+    minRatio = 1.15,
+    disabled = false,
+  } = config;
 
   // Keep latest config in ref so listeners don't need to detach/re-attach on every re-render
   const configRef = useRef<SwipeConfig>({
@@ -37,7 +45,7 @@ export function useSwipeGesture<T extends HTMLElement = HTMLElement>(
     onSwipeUp,
     threshold,
     minRatio,
-    disabled
+    disabled,
   });
 
   useEffect(() => {
@@ -48,11 +56,21 @@ export function useSwipeGesture<T extends HTMLElement = HTMLElement>(
       onSwipeUp,
       threshold,
       minRatio,
-      disabled
+      disabled,
     };
-  }, [onSwipeLeft, onSwipeRight, onSwipeDown, onSwipeUp, threshold, minRatio, disabled]);
+  }, [
+    onSwipeLeft,
+    onSwipeRight,
+    onSwipeDown,
+    onSwipeUp,
+    threshold,
+    minRatio,
+    disabled,
+  ]);
 
-  const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
+  const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(
+    null,
+  );
 
   /**
    * Helper to determine whether swipe navigation must be suppressed.
@@ -61,12 +79,12 @@ export function useSwipeGesture<T extends HTMLElement = HTMLElement>(
    * 2. The touch gesture started on an input, textarea, select, or explicitly marked [data-no-swipe] element.
    */
   const isSwipeSuppressed = (target: HTMLElement | null): boolean => {
-    if (typeof document === 'undefined') return false;
+    if (typeof document === "undefined") return false;
 
     // 1. Check if user is currently annotating / drawing
     if (
-      document.body.getAttribute('data-annotation-open') === 'true' ||
-      document.body.classList.contains('is-annotating')
+      document.body.getAttribute("data-annotation-open") === "true" ||
+      document.body.classList.contains("is-annotating")
     ) {
       return true;
     }
@@ -76,9 +94,9 @@ export function useSwipeGesture<T extends HTMLElement = HTMLElement>(
     // 2. Element check for form inputs, interactive textfields, or canvas
     const blockedElement = target.closest(
       'input:not([type="button"]):not([type="submit"]):not([type="checkbox"]):not([type="radio"]), ' +
-      'textarea, select, [contenteditable="true"], ' +
-      'canvas, [data-no-swipe], [data-carousel], .no-swipe, ' +
-      '[data-annotation-active="true"]'
+        'textarea, select, [contenteditable="true"], ' +
+        "canvas, [data-no-swipe], [data-carousel], .no-swipe, " +
+        '[data-annotation-active="true"]',
     );
     if (blockedElement) return true;
 
@@ -86,7 +104,7 @@ export function useSwipeGesture<T extends HTMLElement = HTMLElement>(
   };
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (typeof window === "undefined") return;
 
     // Attach to provided target element or window for global coverage
     const element: EventTarget = targetRef?.current || window;
@@ -117,7 +135,8 @@ export function useSwipeGesture<T extends HTMLElement = HTMLElement>(
         return;
       }
 
-      if (!touchStartRef.current || touchEvent.changedTouches.length !== 1) return;
+      if (!touchStartRef.current || touchEvent.changedTouches.length !== 1)
+        return;
 
       const target = touchEvent.target as HTMLElement | null;
       if (isSwipeSuppressed(target)) {
@@ -144,9 +163,16 @@ export function useSwipeGesture<T extends HTMLElement = HTMLElement>(
       if (absDx >= activeThreshold && absDx >= absDy * activeMinRatio) {
         if (target) {
           // If the swipe originated inside a horizontally scrollable container with room to scroll in that direction, let it scroll
-          const scrollParent = target.closest('.overflow-x-auto, .overflow-x-scroll') as HTMLElement | null;
-          if (scrollParent && scrollParent.scrollWidth > scrollParent.clientWidth + 20) {
-            const canScrollRight = scrollParent.scrollLeft + scrollParent.clientWidth < scrollParent.scrollWidth - 10;
+          const scrollParent = target.closest(
+            ".overflow-x-auto, .overflow-x-scroll",
+          ) as HTMLElement | null;
+          if (
+            scrollParent &&
+            scrollParent.scrollWidth > scrollParent.clientWidth + 20
+          ) {
+            const canScrollRight =
+              scrollParent.scrollLeft + scrollParent.clientWidth <
+              scrollParent.scrollWidth - 10;
             const canScrollLeft = scrollParent.scrollLeft > 10;
             // dx < 0 means finger moving left, revealing content to the right
             // Only suppress page swipe for small local drags (< 70px). Deliberate screen swipes (>= 70px) navigate between tabs!
@@ -175,7 +201,9 @@ export function useSwipeGesture<T extends HTMLElement = HTMLElement>(
         if (dy > 0 && configRef.current.onSwipeDown) {
           // Check if vertically scrollable container is already at top or not scrolling
           if (target) {
-            const scrollParent = target.closest('.overflow-y-auto, .overflow-y-scroll') as HTMLElement | null;
+            const scrollParent = target.closest(
+              ".overflow-y-auto, .overflow-y-scroll",
+            ) as HTMLElement | null;
             if (scrollParent && scrollParent.scrollTop > 10) {
               return;
             }
@@ -191,14 +219,28 @@ export function useSwipeGesture<T extends HTMLElement = HTMLElement>(
       touchStartRef.current = null;
     };
 
-    element.addEventListener('touchstart', handleTouchStart as EventListener, { passive: true });
-    element.addEventListener('touchend', handleTouchEnd as EventListener, { passive: true });
-    element.addEventListener('touchcancel', handleTouchCancel as EventListener, { passive: true });
+    element.addEventListener("touchstart", handleTouchStart as EventListener, {
+      passive: true,
+    });
+    element.addEventListener("touchend", handleTouchEnd as EventListener, {
+      passive: true,
+    });
+    element.addEventListener(
+      "touchcancel",
+      handleTouchCancel as EventListener,
+      { passive: true },
+    );
 
     return () => {
-      element.removeEventListener('touchstart', handleTouchStart as EventListener);
-      element.removeEventListener('touchend', handleTouchEnd as EventListener);
-      element.removeEventListener('touchcancel', handleTouchCancel as EventListener);
+      element.removeEventListener(
+        "touchstart",
+        handleTouchStart as EventListener,
+      );
+      element.removeEventListener("touchend", handleTouchEnd as EventListener);
+      element.removeEventListener(
+        "touchcancel",
+        handleTouchCancel as EventListener,
+      );
     };
   }, [targetRef]);
 }

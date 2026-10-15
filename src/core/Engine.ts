@@ -10,9 +10,9 @@
  * - Viewport Resize handling with aspect-ratio awareness
  */
 
-import * as THREE from 'three';
-import { QualityConfig, QUALITY_TIERS, QualityTier, TOKENS } from '../config';
-import { PostFX } from './PostFX';
+import * as THREE from "three";
+import { QualityConfig, QUALITY_TIERS, QualityTier, TOKENS } from "../config";
+import { PostFX } from "./PostFX";
 
 export interface EngineContext {
   renderer: THREE.WebGLRenderer;
@@ -50,7 +50,7 @@ export class Engine {
   // Per-frame user tick callback
   private onTickCallback?: (dt: number, time: number) => void;
 
-  constructor(container: HTMLElement, initialTier: QualityTier = 'HIGH') {
+  constructor(container: HTMLElement, initialTier: QualityTier = "HIGH") {
     this.canvasContainer = container;
     this.quality = { ...QUALITY_TIERS[initialTier] };
     this.clock = new THREE.Clock();
@@ -68,12 +68,14 @@ export class Engine {
     this.renderer = new THREE.WebGLRenderer({
       antialias: true,
       alpha: false,
-      powerPreference: 'high-performance',
+      powerPreference: "high-performance",
       stencil: false,
       depth: true,
     });
     this.renderer.setSize(window.innerWidth, window.innerHeight);
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, this.quality.maxDPR));
+    this.renderer.setPixelRatio(
+      Math.min(window.devicePixelRatio, this.quality.maxDPR),
+    );
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.0;
     this.renderer.shadowMap.enabled = false; // Physically transmitted materials rely on environment reflections
@@ -81,25 +83,38 @@ export class Engine {
     this.canvasContainer.appendChild(this.renderer.domElement);
 
     // 4. Cursor / Pointer Specular Light (drifts with mouse / pointer movement)
-    this.cursorLight = new THREE.PointLight(new THREE.Color(TOKENS.colors.iceGlow), 2.2, 8.0);
+    this.cursorLight = new THREE.PointLight(
+      new THREE.Color(TOKENS.colors.iceGlow),
+      2.2,
+      8.0,
+    );
     this.cursorLight.position.set(0, 0, 3.5);
     this.scene.add(this.cursorLight);
 
     // 5. PostFX Pipeline
-    this.postFX = new PostFX(this.renderer, this.scene, this.camera, this.quality);
+    this.postFX = new PostFX(
+      this.renderer,
+      this.scene,
+      this.camera,
+      this.quality,
+    );
 
     // 6. Bind Event Listeners
     this.bindEvents();
   }
 
   private bindEvents() {
-    window.addEventListener('resize', this.handleResize);
-    window.addEventListener('mousemove', this.handleMouseMove);
-    document.addEventListener('visibilitychange', this.handleVisibilityChange);
+    window.addEventListener("resize", this.handleResize);
+    window.addEventListener("mousemove", this.handleMouseMove);
+    document.addEventListener("visibilitychange", this.handleVisibilityChange);
 
     // Device orientation support for mobile gyroscope glints
     if (window.DeviceOrientationEvent) {
-      window.addEventListener('deviceorientation', this.handleOrientation, false);
+      window.addEventListener(
+        "deviceorientation",
+        this.handleOrientation,
+        false,
+      );
     }
   }
 
@@ -112,7 +127,9 @@ export class Engine {
     this.camera.updateProjectionMatrix();
 
     this.renderer.setSize(width, height);
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, this.quality.maxDPR));
+    this.renderer.setPixelRatio(
+      Math.min(window.devicePixelRatio, this.quality.maxDPR),
+    );
     this.postFX.setSize(width, height);
   };
 
@@ -124,8 +141,8 @@ export class Engine {
 
   private handleOrientation = (e: DeviceOrientationEvent) => {
     if (e.gamma !== null && e.beta !== null) {
-      const x = (e.gamma / 45); // -1 to 1
-      const y = ((e.beta - 45) / 45);
+      const x = e.gamma / 45; // -1 to 1
+      const y = (e.beta - 45) / 45;
       this.mouseTarget.set(x * 2.0, y * 1.5);
     }
   };
@@ -142,7 +159,9 @@ export class Engine {
 
   public setQualityTier(tier: QualityTier) {
     this.quality = { ...QUALITY_TIERS[tier] };
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, this.quality.maxDPR));
+    this.renderer.setPixelRatio(
+      Math.min(window.devicePixelRatio, this.quality.maxDPR),
+    );
     this.postFX.bloomPass.enabled = this.quality.bloom;
     console.info(`[Unlupa Engine] Adaptive Quality shifted to: ${tier}`);
   }
@@ -167,7 +186,11 @@ export class Engine {
 
         // 1. Smoothly lerp cursor light to mouse position
         this.mouseCurrent.lerp(this.mouseTarget, 0.08);
-        this.cursorLight.position.set(this.mouseCurrent.x, this.mouseCurrent.y, 3.2);
+        this.cursorLight.position.set(
+          this.mouseCurrent.x,
+          this.mouseCurrent.y,
+          3.2,
+        );
 
         // 2. Adaptive Quality Monitor
         this.monitorPerformance(now);
@@ -196,13 +219,14 @@ export class Engine {
         this.fpsBuffer.shift();
       }
 
-      const avgFps = this.fpsBuffer.reduce((a, b) => a + b, 0) / this.fpsBuffer.length;
+      const avgFps =
+        this.fpsBuffer.reduce((a, b) => a + b, 0) / this.fpsBuffer.length;
 
       // Auto-downgrade quality tier if sustained FPS < 45
-      if (avgFps < 45 && this.quality.tier === 'HIGH') {
-        this.setQualityTier('MEDIUM');
-      } else if (avgFps < 38 && this.quality.tier === 'MEDIUM') {
-        this.setQualityTier('LOW');
+      if (avgFps < 45 && this.quality.tier === "HIGH") {
+        this.setQualityTier("MEDIUM");
+      } else if (avgFps < 38 && this.quality.tier === "MEDIUM") {
+        this.setQualityTier("LOW");
       }
 
       this.frameCount = 0;
@@ -220,11 +244,18 @@ export class Engine {
 
   public dispose() {
     this.stop();
-    window.removeEventListener('resize', this.handleResize);
-    window.removeEventListener('mousemove', this.handleMouseMove);
-    document.removeEventListener('visibilitychange', this.handleVisibilityChange);
+    window.removeEventListener("resize", this.handleResize);
+    window.removeEventListener("mousemove", this.handleMouseMove);
+    document.removeEventListener(
+      "visibilitychange",
+      this.handleVisibilityChange,
+    );
     if (window.DeviceOrientationEvent) {
-      window.removeEventListener('deviceorientation', this.handleOrientation, false);
+      window.removeEventListener(
+        "deviceorientation",
+        this.handleOrientation,
+        false,
+      );
     }
 
     this.postFX.dispose();

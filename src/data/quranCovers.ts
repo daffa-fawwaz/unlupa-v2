@@ -6,7 +6,15 @@ export interface JuzCoverTheme {
   spineColor: string;
   borderFoil: string;
   accentGold: string;
-  medallionType: 'shamsa8' | 'shamsa12' | 'star16' | 'mandala' | 'arabesque' | 'rosette' | 'arch' | 'octagram';
+  medallionType:
+    | "shamsa8"
+    | "shamsa12"
+    | "star16"
+    | "mandala"
+    | "arabesque"
+    | "rosette"
+    | "arch"
+    | "octagram";
   patternStyle: string;
   cornerFoil: string;
   textColor: string;
@@ -23,10 +31,11 @@ export const JUZ_COVER_THEMES: Record<number, JuzCoverTheme> = {
     borderFoil: "border-amber-200/80",
     accentGold: "#FDE68A",
     medallionType: "shamsa12",
-    patternStyle: "radial-gradient(circle at 50% 50%, rgba(254, 243, 199, 0.25) 0%, transparent 70%)",
+    patternStyle:
+      "radial-gradient(circle at 50% 50%, rgba(254, 243, 199, 0.25) 0%, transparent 70%)",
     cornerFoil: "border-amber-300",
     textColor: "#FFFFFF",
-    subtitle: "Alif Lam Meem"
+    subtitle: "Alif Lam Meem",
   },
   2: {
     juzNumber: 2,
@@ -37,10 +46,11 @@ export const JUZ_COVER_THEMES: Record<number, JuzCoverTheme> = {
     borderFoil: "border-orange-200/80",
     accentGold: "#FFEDD5",
     medallionType: "octagram",
-    patternStyle: "radial-gradient(circle at 50% 50%, rgba(255, 237, 213, 0.25) 0%, transparent 70%)",
+    patternStyle:
+      "radial-gradient(circle at 50% 50%, rgba(255, 237, 213, 0.25) 0%, transparent 70%)",
     cornerFoil: "border-orange-300",
     textColor: "#FFFFFF",
-    subtitle: "Sayaqool"
+    subtitle: "Sayaqool",
   },
   3: {
     juzNumber: 3,
@@ -51,10 +61,11 @@ export const JUZ_COVER_THEMES: Record<number, JuzCoverTheme> = {
     borderFoil: "border-sky-200/80",
     accentGold: "#E0F2FE",
     medallionType: "shamsa8",
-    patternStyle: "radial-gradient(circle at 50% 50%, rgba(224, 242, 254, 0.25) 0%, transparent 70%)",
+    patternStyle:
+      "radial-gradient(circle at 50% 50%, rgba(224, 242, 254, 0.25) 0%, transparent 70%)",
     cornerFoil: "border-sky-300",
     textColor: "#FFFFFF",
-    subtitle: "Tilkar Rusul"
+    subtitle: "Tilkar Rusul",
   },
   4: {
     juzNumber: 4,
@@ -65,10 +76,11 @@ export const JUZ_COVER_THEMES: Record<number, JuzCoverTheme> = {
     borderFoil: "border-amber-200/90",
     accentGold: "#FEF3C7",
     medallionType: "star16",
-    patternStyle: "radial-gradient(circle at 50% 50%, rgba(254, 243, 199, 0.3) 0%, transparent 70%)",
+    patternStyle:
+      "radial-gradient(circle at 50% 50%, rgba(254, 243, 199, 0.3) 0%, transparent 70%)",
     cornerFoil: "border-amber-300",
     textColor: "#FFFFFF",
-    subtitle: "Lan Tanaaloo"
+    subtitle: "Lan Tanaaloo",
   },
   5: {
     juzNumber: 5,
@@ -79,10 +91,11 @@ export const JUZ_COVER_THEMES: Record<number, JuzCoverTheme> = {
     borderFoil: "border-emerald-200/80",
     accentGold: "#D1FAE5",
     medallionType: "arabesque",
-    patternStyle: "radial-gradient(circle at 50% 50%, rgba(209, 250, 229, 0.25) 0%, transparent 70%)",
+    patternStyle:
+      "radial-gradient(circle at 50% 50%, rgba(209, 250, 229, 0.25) 0%, transparent 70%)",
     cornerFoil: "border-emerald-300",
     textColor: "#FFFFFF",
-    subtitle: "Wal Muhsanat"
+    subtitle: "Wal Muhsanat",
   },
   6: {
     juzNumber: 6,
@@ -93,10 +106,11 @@ export const JUZ_COVER_THEMES: Record<number, JuzCoverTheme> = {
     borderFoil: "border-amber-100/90",
     accentGold: "#FEF3C7",
     medallionType: "rosette",
-    patternStyle: "radial-gradient(circle at 50% 50%, rgba(254, 243, 199, 0.25) 0%, transparent 70%)",
+    patternStyle:
+      "radial-gradient(circle at 50% 50%, rgba(254, 243, 199, 0.25) 0%, transparent 70%)",
     cornerFoil: "border-amber-300",
     textColor: "#FFFFFF",
-    subtitle: "La Yuhibbullah"
+    subtitle: "La Yuhibbullah",
   },
   7: {
     juzNumber: 7,
@@ -107,10 +121,11 @@ export const JUZ_COVER_THEMES: Record<number, JuzCoverTheme> = {
     borderFoil: "border-blue-200/80",
     accentGold: "#DBEAFE",
     medallionType: "shamsa12",
-    patternStyle: "radial-gradient(circle at 50% 50%, rgba(219, 234, 254, 0.25) 0%, transparent 70%)",
+    patternStyle:
+      "radial-gradient(circle at 50% 50%, rgba(219, 234, 254, 0.25) 0%, transparent 70%)",
     cornerFoil: "border-blue-300",
     textColor: "#FFFFFF",
-    subtitle: "Wa Iza Sami'oo"
+    subtitle: "Wa Iza Sami'oo",
   },
   8: {
     juzNumber: 8,
@@ -121,10 +136,11 @@ export const JUZ_COVER_THEMES: Record<number, JuzCoverTheme> = {
     borderFoil: "border-rose-200/80",
     accentGold: "#FFE4E6",
     medallionType: "mandala",
-    patternStyle: "radial-gradient(circle at 50% 50%, rgba(255, 228, 230, 0.25) 0%, transparent 70%)",
+    patternStyle:
+      "radial-gradient(circle at 50% 50%, rgba(255, 228, 230, 0.25) 0%, transparent 70%)",
     cornerFoil: "border-rose-300",
     textColor: "#FFFFFF",
-    subtitle: "Wa Lau Annana"
+    subtitle: "Wa Lau Annana",
   },
   9: {
     juzNumber: 9,
@@ -135,10 +151,11 @@ export const JUZ_COVER_THEMES: Record<number, JuzCoverTheme> = {
     borderFoil: "border-amber-200/80",
     accentGold: "#FEF3C7",
     medallionType: "arch",
-    patternStyle: "radial-gradient(circle at 50% 50%, rgba(254, 243, 199, 0.25) 0%, transparent 70%)",
+    patternStyle:
+      "radial-gradient(circle at 50% 50%, rgba(254, 243, 199, 0.25) 0%, transparent 70%)",
     cornerFoil: "border-amber-300",
     textColor: "#FFFFFF",
-    subtitle: "Qalal Malao"
+    subtitle: "Qalal Malao",
   },
   10: {
     juzNumber: 10,
@@ -149,10 +166,11 @@ export const JUZ_COVER_THEMES: Record<number, JuzCoverTheme> = {
     borderFoil: "border-teal-200/80",
     accentGold: "#CCFBF1",
     medallionType: "octagram",
-    patternStyle: "radial-gradient(circle at 50% 50%, rgba(204, 251, 241, 0.25) 0%, transparent 70%)",
+    patternStyle:
+      "radial-gradient(circle at 50% 50%, rgba(204, 251, 241, 0.25) 0%, transparent 70%)",
     cornerFoil: "border-teal-300",
     textColor: "#FFFFFF",
-    subtitle: "Wa'alamu"
+    subtitle: "Wa'alamu",
   },
   11: {
     juzNumber: 11,
@@ -163,10 +181,11 @@ export const JUZ_COVER_THEMES: Record<number, JuzCoverTheme> = {
     borderFoil: "border-purple-200/80",
     accentGold: "#EDE9FE",
     medallionType: "star16",
-    patternStyle: "radial-gradient(circle at 50% 50%, rgba(237, 233, 254, 0.25) 0%, transparent 70%)",
+    patternStyle:
+      "radial-gradient(circle at 50% 50%, rgba(237, 233, 254, 0.25) 0%, transparent 70%)",
     cornerFoil: "border-purple-300",
     textColor: "#FFFFFF",
-    subtitle: "Ya'taziroon"
+    subtitle: "Ya'taziroon",
   },
   12: {
     juzNumber: 12,
@@ -177,10 +196,11 @@ export const JUZ_COVER_THEMES: Record<number, JuzCoverTheme> = {
     borderFoil: "border-amber-200/90",
     accentGold: "#FFFBEB",
     medallionType: "shamsa12",
-    patternStyle: "radial-gradient(circle at 50% 50%, rgba(254, 243, 199, 0.3) 0%, transparent 70%)",
+    patternStyle:
+      "radial-gradient(circle at 50% 50%, rgba(254, 243, 199, 0.3) 0%, transparent 70%)",
     cornerFoil: "border-amber-300",
     textColor: "#FFFFFF",
-    subtitle: "Wa Mamin Da'abbah"
+    subtitle: "Wa Mamin Da'abbah",
   },
   13: {
     juzNumber: 13,
@@ -191,10 +211,11 @@ export const JUZ_COVER_THEMES: Record<number, JuzCoverTheme> = {
     borderFoil: "border-emerald-200/80",
     accentGold: "#D1FAE5",
     medallionType: "arabesque",
-    patternStyle: "radial-gradient(circle at 50% 50%, rgba(209, 250, 229, 0.25) 0%, transparent 70%)",
+    patternStyle:
+      "radial-gradient(circle at 50% 50%, rgba(209, 250, 229, 0.25) 0%, transparent 70%)",
     cornerFoil: "border-emerald-300",
     textColor: "#FFFFFF",
-    subtitle: "Wa Ma Obarri'o"
+    subtitle: "Wa Ma Obarri'o",
   },
   14: {
     juzNumber: 14,
@@ -205,10 +226,11 @@ export const JUZ_COVER_THEMES: Record<number, JuzCoverTheme> = {
     borderFoil: "border-orange-200/80",
     accentGold: "#FFEDD5",
     medallionType: "rosette",
-    patternStyle: "radial-gradient(circle at 50% 50%, rgba(255, 237, 213, 0.25) 0%, transparent 70%)",
+    patternStyle:
+      "radial-gradient(circle at 50% 50%, rgba(255, 237, 213, 0.25) 0%, transparent 70%)",
     cornerFoil: "border-orange-300",
     textColor: "#FFFFFF",
-    subtitle: "Rubama"
+    subtitle: "Rubama",
   },
   15: {
     juzNumber: 15,
@@ -219,10 +241,11 @@ export const JUZ_COVER_THEMES: Record<number, JuzCoverTheme> = {
     borderFoil: "border-sky-200/80",
     accentGold: "#CCFBF1",
     medallionType: "shamsa8",
-    patternStyle: "radial-gradient(circle at 50% 50%, rgba(204, 251, 241, 0.25) 0%, transparent 70%)",
+    patternStyle:
+      "radial-gradient(circle at 50% 50%, rgba(204, 251, 241, 0.25) 0%, transparent 70%)",
     cornerFoil: "border-sky-300",
     textColor: "#FFFFFF",
-    subtitle: "Subhanallazi"
+    subtitle: "Subhanallazi",
   },
   16: {
     juzNumber: 16,
@@ -233,10 +256,11 @@ export const JUZ_COVER_THEMES: Record<number, JuzCoverTheme> = {
     borderFoil: "border-indigo-200/80",
     accentGold: "#E0E7FF",
     medallionType: "mandala",
-    patternStyle: "radial-gradient(circle at 50% 50%, rgba(224, 231, 255, 0.25) 0%, transparent 70%)",
+    patternStyle:
+      "radial-gradient(circle at 50% 50%, rgba(224, 231, 255, 0.25) 0%, transparent 70%)",
     cornerFoil: "border-indigo-300",
     textColor: "#FFFFFF",
-    subtitle: "Qala Alam"
+    subtitle: "Qala Alam",
   },
   17: {
     juzNumber: 17,
@@ -247,10 +271,11 @@ export const JUZ_COVER_THEMES: Record<number, JuzCoverTheme> = {
     borderFoil: "border-yellow-200/80",
     accentGold: "#FEF9C3",
     medallionType: "arch",
-    patternStyle: "radial-gradient(circle at 50% 50%, rgba(254, 249, 195, 0.25) 0%, transparent 70%)",
+    patternStyle:
+      "radial-gradient(circle at 50% 50%, rgba(254, 249, 195, 0.25) 0%, transparent 70%)",
     cornerFoil: "border-yellow-300",
     textColor: "#FFFFFF",
-    subtitle: "Iqtaraba Li'nnas"
+    subtitle: "Iqtaraba Li'nnas",
   },
   18: {
     juzNumber: 18,
@@ -261,10 +286,11 @@ export const JUZ_COVER_THEMES: Record<number, JuzCoverTheme> = {
     borderFoil: "border-emerald-200/80",
     accentGold: "#D1FAE5",
     medallionType: "octagram",
-    patternStyle: "radial-gradient(circle at 50% 50%, rgba(209, 250, 229, 0.25) 0%, transparent 70%)",
+    patternStyle:
+      "radial-gradient(circle at 50% 50%, rgba(209, 250, 229, 0.25) 0%, transparent 70%)",
     cornerFoil: "border-emerald-300",
     textColor: "#FFFFFF",
-    subtitle: "Qadd Aflaha"
+    subtitle: "Qadd Aflaha",
   },
   19: {
     juzNumber: 19,
@@ -275,10 +301,11 @@ export const JUZ_COVER_THEMES: Record<number, JuzCoverTheme> = {
     borderFoil: "border-amber-200/80",
     accentGold: "#FEF3C7",
     medallionType: "star16",
-    patternStyle: "radial-gradient(circle at 50% 50%, rgba(254, 243, 199, 0.25) 0%, transparent 70%)",
+    patternStyle:
+      "radial-gradient(circle at 50% 50%, rgba(254, 243, 199, 0.25) 0%, transparent 70%)",
     cornerFoil: "border-amber-300",
     textColor: "#FFFFFF",
-    subtitle: "Wa Qal'allazina"
+    subtitle: "Wa Qal'allazina",
   },
   20: {
     juzNumber: 20,
@@ -289,10 +316,11 @@ export const JUZ_COVER_THEMES: Record<number, JuzCoverTheme> = {
     borderFoil: "border-sky-200/80",
     accentGold: "#E0F2FE",
     medallionType: "shamsa12",
-    patternStyle: "radial-gradient(circle at 50% 50%, rgba(224, 242, 254, 0.25) 0%, transparent 70%)",
+    patternStyle:
+      "radial-gradient(circle at 50% 50%, rgba(224, 242, 254, 0.25) 0%, transparent 70%)",
     cornerFoil: "border-sky-300",
     textColor: "#FFFFFF",
-    subtitle: "Amman Khalaqa"
+    subtitle: "Amman Khalaqa",
   },
   21: {
     juzNumber: 21,
@@ -303,10 +331,11 @@ export const JUZ_COVER_THEMES: Record<number, JuzCoverTheme> = {
     borderFoil: "border-amber-200/80",
     accentGold: "#FEF3C7",
     medallionType: "rosette",
-    patternStyle: "radial-gradient(circle at 50% 50%, rgba(254, 243, 199, 0.25) 0%, transparent 70%)",
+    patternStyle:
+      "radial-gradient(circle at 50% 50%, rgba(254, 243, 199, 0.25) 0%, transparent 70%)",
     cornerFoil: "border-amber-300",
     textColor: "#FFFFFF",
-    subtitle: "Utlu Ma Oohiya"
+    subtitle: "Utlu Ma Oohiya",
   },
   22: {
     juzNumber: 22,
@@ -317,10 +346,11 @@ export const JUZ_COVER_THEMES: Record<number, JuzCoverTheme> = {
     borderFoil: "border-purple-200/80",
     accentGold: "#F3E8FF",
     medallionType: "mandala",
-    patternStyle: "radial-gradient(circle at 50% 50%, rgba(243, 232, 255, 0.25) 0%, transparent 70%)",
+    patternStyle:
+      "radial-gradient(circle at 50% 50%, rgba(243, 232, 255, 0.25) 0%, transparent 70%)",
     cornerFoil: "border-purple-300",
     textColor: "#FFFFFF",
-    subtitle: "Wa Manyaqnut"
+    subtitle: "Wa Manyaqnut",
   },
   23: {
     juzNumber: 23,
@@ -331,10 +361,11 @@ export const JUZ_COVER_THEMES: Record<number, JuzCoverTheme> = {
     borderFoil: "border-rose-200/80",
     accentGold: "#FFE4E6",
     medallionType: "shamsa8",
-    patternStyle: "radial-gradient(circle at 50% 50%, rgba(255, 228, 230, 0.25) 0%, transparent 70%)",
+    patternStyle:
+      "radial-gradient(circle at 50% 50%, rgba(255, 228, 230, 0.25) 0%, transparent 70%)",
     cornerFoil: "border-rose-300",
     textColor: "#FFFFFF",
-    subtitle: "Wa Maliya"
+    subtitle: "Wa Maliya",
   },
   24: {
     juzNumber: 24,
@@ -345,10 +376,11 @@ export const JUZ_COVER_THEMES: Record<number, JuzCoverTheme> = {
     borderFoil: "border-emerald-200/80",
     accentGold: "#D1FAE5",
     medallionType: "arch",
-    patternStyle: "radial-gradient(circle at 50% 50%, rgba(209, 250, 229, 0.25) 0%, transparent 70%)",
+    patternStyle:
+      "radial-gradient(circle at 50% 50%, rgba(209, 250, 229, 0.25) 0%, transparent 70%)",
     cornerFoil: "border-emerald-300",
     textColor: "#FFFFFF",
-    subtitle: "Faman Azlamu"
+    subtitle: "Faman Azlamu",
   },
   25: {
     juzNumber: 25,
@@ -359,10 +391,11 @@ export const JUZ_COVER_THEMES: Record<number, JuzCoverTheme> = {
     borderFoil: "border-sky-200/80",
     accentGold: "#E0F2FE",
     medallionType: "octagram",
-    patternStyle: "radial-gradient(circle at 50% 50%, rgba(224, 242, 254, 0.25) 0%, transparent 70%)",
+    patternStyle:
+      "radial-gradient(circle at 50% 50%, rgba(224, 242, 254, 0.25) 0%, transparent 70%)",
     cornerFoil: "border-sky-300",
     textColor: "#FFFFFF",
-    subtitle: "Ilayhi Yuraddu"
+    subtitle: "Ilayhi Yuraddu",
   },
   26: {
     juzNumber: 26,
@@ -373,10 +406,11 @@ export const JUZ_COVER_THEMES: Record<number, JuzCoverTheme> = {
     borderFoil: "border-amber-200/80",
     accentGold: "#FEF3C7",
     medallionType: "star16",
-    patternStyle: "radial-gradient(circle at 50% 50%, rgba(254, 243, 199, 0.25) 0%, transparent 70%)",
+    patternStyle:
+      "radial-gradient(circle at 50% 50%, rgba(254, 243, 199, 0.25) 0%, transparent 70%)",
     cornerFoil: "border-amber-300",
     textColor: "#FFFFFF",
-    subtitle: "Ha'a Meem"
+    subtitle: "Ha'a Meem",
   },
   27: {
     juzNumber: 27,
@@ -387,10 +421,11 @@ export const JUZ_COVER_THEMES: Record<number, JuzCoverTheme> = {
     borderFoil: "border-orange-200/80",
     accentGold: "#FFEDD5",
     medallionType: "shamsa12",
-    patternStyle: "radial-gradient(circle at 50% 50%, rgba(255, 237, 213, 0.25) 0%, transparent 70%)",
+    patternStyle:
+      "radial-gradient(circle at 50% 50%, rgba(255, 237, 213, 0.25) 0%, transparent 70%)",
     cornerFoil: "border-orange-300",
     textColor: "#FFFFFF",
-    subtitle: "Qala Fama Khatbukum"
+    subtitle: "Qala Fama Khatbukum",
   },
   28: {
     juzNumber: 28,
@@ -401,10 +436,11 @@ export const JUZ_COVER_THEMES: Record<number, JuzCoverTheme> = {
     borderFoil: "border-teal-200/80",
     accentGold: "#CCFBF1",
     medallionType: "arabesque",
-    patternStyle: "radial-gradient(circle at 50% 50%, rgba(204, 251, 241, 0.25) 0%, transparent 70%)",
+    patternStyle:
+      "radial-gradient(circle at 50% 50%, rgba(204, 251, 241, 0.25) 0%, transparent 70%)",
     cornerFoil: "border-teal-300",
     textColor: "#FFFFFF",
-    subtitle: "Qadd Sami'allah"
+    subtitle: "Qadd Sami'allah",
   },
   29: {
     juzNumber: 29,
@@ -415,10 +451,11 @@ export const JUZ_COVER_THEMES: Record<number, JuzCoverTheme> = {
     borderFoil: "border-amber-200/90",
     accentGold: "#FEF3C7",
     medallionType: "shamsa8",
-    patternStyle: "radial-gradient(circle at 50% 50%, rgba(254, 243, 199, 0.3) 0%, transparent 70%)",
+    patternStyle:
+      "radial-gradient(circle at 50% 50%, rgba(254, 243, 199, 0.3) 0%, transparent 70%)",
     cornerFoil: "border-amber-300",
     textColor: "#FFFFFF",
-    subtitle: "Tabarakallazi"
+    subtitle: "Tabarakallazi",
   },
   30: {
     juzNumber: 30,
@@ -429,11 +466,12 @@ export const JUZ_COVER_THEMES: Record<number, JuzCoverTheme> = {
     borderFoil: "border-amber-200/95",
     accentGold: "#FEF3C7",
     medallionType: "star16",
-    patternStyle: "radial-gradient(circle at 50% 50%, rgba(254, 243, 199, 0.35) 0%, transparent 70%)",
+    patternStyle:
+      "radial-gradient(circle at 50% 50%, rgba(254, 243, 199, 0.35) 0%, transparent 70%)",
     cornerFoil: "border-amber-300",
     textColor: "#FFFFFF",
-    subtitle: "Amma Yatasa'aloon"
-  }
+    subtitle: "Amma Yatasa'aloon",
+  },
 };
 
 export function getJuzCoverTheme(juzNumber: number): JuzCoverTheme {

@@ -1,8 +1,23 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { BookItem, Book, Chapter, ClassGroup, Language } from '../../types';
-import { X, Sparkles, Search, BookOpen, Clock, Calendar, CheckCircle2, ArrowRight, GraduationCap, Library } from 'lucide-react';
-import { getBookItemClusterKey, BookIntervalClusterKey, getNonQuranIntervalDays } from '../../lib/fsrs';
-import { BilingualCardText } from '../common/BilingualCardText';
+import React, { useState, useEffect, useMemo } from "react";
+import { BookItem, Book, Chapter, ClassGroup, Language } from "../../types";
+import {
+  X,
+  Sparkles,
+  Search,
+  BookOpen,
+  Clock,
+  Calendar,
+  CheckCircle2,
+  ArrowRight,
+  GraduationCap,
+  Library,
+} from "lucide-react";
+import {
+  getBookItemClusterKey,
+  BookIntervalClusterKey,
+  getNonQuranIntervalDays,
+} from "../../lib/fsrs";
+import { BilingualCardText } from "../common/BilingualCardText";
 
 interface Props {
   isOpen: boolean;
@@ -27,59 +42,59 @@ const BOOK_CLUSTERS: Array<{
   badge: string;
 }> = [
   {
-    key: '<75',
-    labelEn: '< 75 Days',
-    labelId: '< 75 Hari',
-    subEn: 'Foundation & Early Adaptation (< 75 Days)',
-    subId: 'Tahap Pondasi & Pengenalan Awal (< 75 Hari)',
-    color: 'text-rose-600 dark:text-rose-400',
-    badge: 'clay-badge-rose text-white'
+    key: "<75",
+    labelEn: "< 75 Days",
+    labelId: "< 75 Hari",
+    subEn: "Foundation & Early Adaptation (< 75 Days)",
+    subId: "Tahap Pondasi & Pengenalan Awal (< 75 Hari)",
+    color: "text-rose-600 dark:text-rose-400",
+    badge: "clay-badge-rose text-white",
   },
   {
-    key: '<150',
-    labelEn: '75 - 149 Days',
-    labelId: '75 - 149 Hari',
-    subEn: 'Developing Stability (75 - 149 Days)',
-    subId: 'Penguatan Menengah & Terpola (75 - 149 Hari)',
-    color: 'text-amber-600 dark:text-amber-400',
-    badge: 'clay-badge-orange text-white'
+    key: "<150",
+    labelEn: "75 - 149 Days",
+    labelId: "75 - 149 Hari",
+    subEn: "Developing Stability (75 - 149 Days)",
+    subId: "Penguatan Menengah & Terpola (75 - 149 Hari)",
+    color: "text-amber-600 dark:text-amber-400",
+    badge: "clay-badge-orange text-white",
   },
   {
-    key: '<225',
-    labelEn: '150 - 224 Days',
-    labelId: '150 - 224 Hari',
-    subEn: 'Deep Knowledge Anchoring (150 - 224 Days)',
-    subId: 'Pemahaman Kuat & Tertanam (150 - 224 Hari)',
-    color: 'text-purple-600 dark:text-purple-400',
-    badge: 'clay-badge-purple text-white'
+    key: "<225",
+    labelEn: "150 - 224 Days",
+    labelId: "150 - 224 Hari",
+    subEn: "Deep Knowledge Anchoring (150 - 224 Days)",
+    subId: "Pemahaman Kuat & Tertanam (150 - 224 Hari)",
+    color: "text-purple-600 dark:text-purple-400",
+    badge: "clay-badge-purple text-white",
   },
   {
-    key: '<300',
-    labelEn: '225 - 299 Days',
-    labelId: '225 - 299 Hari',
-    subEn: 'Advanced Consolidation (225 - 299 Days)',
-    subId: 'Konsolidasi Lanjut & Mantap (225 - 299 Hari)',
-    color: 'text-sky-600 dark:text-sky-400',
-    badge: 'clay-badge-sky text-white'
+    key: "<300",
+    labelEn: "225 - 299 Days",
+    labelId: "225 - 299 Hari",
+    subEn: "Advanced Consolidation (225 - 299 Days)",
+    subId: "Konsolidasi Lanjut & Mantap (225 - 299 Hari)",
+    color: "text-sky-600 dark:text-sky-400",
+    badge: "clay-badge-sky text-white",
   },
   {
-    key: '<375',
-    labelEn: '300 - 374 Days',
-    labelId: '300 - 374 Hari',
-    subEn: 'Near Mastery Stage (300 - 374 Days)',
-    subId: 'Kian Matang Menuju Kelulusan (300 - 374 Hari)',
-    color: 'text-indigo-600 dark:text-indigo-400',
-    badge: 'clay-badge-indigo text-white'
+    key: "<375",
+    labelEn: "300 - 374 Days",
+    labelId: "300 - 374 Hari",
+    subEn: "Near Mastery Stage (300 - 374 Days)",
+    subId: "Kian Matang Menuju Kelulusan (300 - 374 Hari)",
+    color: "text-indigo-600 dark:text-indigo-400",
+    badge: "clay-badge-indigo text-white",
   },
   {
-    key: '>375',
-    labelEn: '≥ 375 Days',
-    labelId: '≥ 375 Hari',
-    subEn: 'Mastered / Book Graduation (≥ 375 Days)',
-    subId: 'Mapan & Lulus Kitab (≥ 375 Hari)',
-    color: 'text-emerald-600 dark:text-emerald-400',
-    badge: 'clay-badge-emerald text-white'
-  }
+    key: ">375",
+    labelEn: "≥ 375 Days",
+    labelId: "≥ 375 Hari",
+    subEn: "Mastered / Book Graduation (≥ 375 Days)",
+    subId: "Mapan & Lulus Kitab (≥ 375 Hari)",
+    color: "text-emerald-600 dark:text-emerald-400",
+    badge: "clay-badge-emerald text-white",
+  },
 ];
 
 export const BookIntervalCardsModal: React.FC<Props> = ({
@@ -94,9 +109,13 @@ export const BookIntervalCardsModal: React.FC<Props> = ({
   onOpenInPersonalSpace,
   onOpenInClassesSpace,
 }) => {
-  const [activeCluster, setActiveCluster] = useState<BookIntervalClusterKey>(clusterKey || '<75');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [sourceFilter, setSourceFilter] = useState<'all' | 'personal' | 'classes'>('all');
+  const [activeCluster, setActiveCluster] = useState<BookIntervalClusterKey>(
+    clusterKey || "<75",
+  );
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sourceFilter, setSourceFilter] = useState<
+    "all" | "personal" | "classes"
+  >("all");
 
   useEffect(() => {
     if (clusterKey) {
@@ -107,14 +126,14 @@ export const BookIntervalCardsModal: React.FC<Props> = ({
   // Compute live counts for all 6 clusters
   const clusterCounts = useMemo(() => {
     const counts: Record<BookIntervalClusterKey, number> = {
-      '<75': 0,
-      '<150': 0,
-      '<225': 0,
-      '<300': 0,
-      '<375': 0,
-      '>375': 0,
+      "<75": 0,
+      "<150": 0,
+      "<225": 0,
+      "<300": 0,
+      "<375": 0,
+      ">375": 0,
     };
-    (items || []).forEach(item => {
+    (items || []).forEach((item) => {
       if (item && item.isActive) {
         const k = getBookItemClusterKey(item);
         counts[k] = (counts[k] || 0) + 1;
@@ -124,32 +143,39 @@ export const BookIntervalCardsModal: React.FC<Props> = ({
   }, [items]);
 
   const activeClusterConfig = useMemo(() => {
-    return BOOK_CLUSTERS.find(c => c.key === activeCluster) || BOOK_CLUSTERS[0];
+    return (
+      BOOK_CLUSTERS.find((c) => c.key === activeCluster) || BOOK_CLUSTERS[0]
+    );
   }, [activeCluster]);
 
   const filteredCards = useMemo(() => {
-    const activeItems = (items || []).filter(item => {
+    const activeItems = (items || []).filter((item) => {
       if (!item || !item.isActive) return false;
       if (getBookItemClusterKey(item) !== activeCluster) return false;
 
-      const book = (books || []).find(b => b.id === item.bookId);
+      const book = (books || []).find((b) => b.id === item.bookId);
       const isClassBook = !!book?.classId;
-      if (sourceFilter === 'personal' && isClassBook) return false;
-      if (sourceFilter === 'classes' && !isClassBook) return false;
+      if (sourceFilter === "personal" && isClassBook) return false;
+      if (sourceFilter === "classes" && !isClassBook) return false;
 
       return true;
     });
 
     if (!searchQuery.trim()) return activeItems;
     const q = searchQuery.toLowerCase().trim();
-    return activeItems.filter(item => {
-      const question = item.question?.toLowerCase() || '';
-      const answer = item.answer?.toLowerCase() || '';
-      const book = (books || []).find(b => b.id === item.bookId);
-      const chapter = (chapters || []).find(c => c.id === item.chapterId);
-      const bookTitle = book?.title?.toLowerCase() || '';
-      const chapterTitle = chapter?.title?.toLowerCase() || '';
-      return question.includes(q) || answer.includes(q) || bookTitle.includes(q) || chapterTitle.includes(q);
+    return activeItems.filter((item) => {
+      const question = item.question?.toLowerCase() || "";
+      const answer = item.answer?.toLowerCase() || "";
+      const book = (books || []).find((b) => b.id === item.bookId);
+      const chapter = (chapters || []).find((c) => c.id === item.chapterId);
+      const bookTitle = book?.title?.toLowerCase() || "";
+      const chapterTitle = chapter?.title?.toLowerCase() || "";
+      return (
+        question.includes(q) ||
+        answer.includes(q) ||
+        bookTitle.includes(q) ||
+        chapterTitle.includes(q)
+      );
     });
   }, [items, activeCluster, searchQuery, books, chapters, sourceFilter]);
 
@@ -157,7 +183,7 @@ export const BookIntervalCardsModal: React.FC<Props> = ({
 
   return (
     <div className="fixed inset-0 z-[110] flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <div 
+      <div
         className="clay-card rounded-3xl max-w-4xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden border border-black/[0.04] dark:border-white/[0.06] animate-in zoom-in-95 duration-200"
         role="dialog"
         aria-modal="true"
@@ -171,14 +197,22 @@ export const BookIntervalCardsModal: React.FC<Props> = ({
             <div>
               <div className="flex items-center gap-2 flex-wrap">
                 <h2 className="text-base sm:text-lg font-black text-[#18234A] dark:text-[#F8FAFC] tracking-tight">
-                  {language === 'en' ? 'Book Retention Clusters' : 'Klaster Retensi Kartu Kitab'}
+                  {language === "en"
+                    ? "Book Retention Clusters"
+                    : "Klaster Retensi Kartu Kitab"}
                 </h2>
-                <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black ${activeClusterConfig.badge} shadow-2xs`}>
-                  {language === 'en' ? activeClusterConfig.labelEn : activeClusterConfig.labelId}
+                <span
+                  className={`px-2.5 py-0.5 rounded-full text-[10px] font-black ${activeClusterConfig.badge} shadow-2xs`}
+                >
+                  {language === "en"
+                    ? activeClusterConfig.labelEn
+                    : activeClusterConfig.labelId}
                 </span>
               </div>
               <p className="text-xs text-[#64748B] dark:text-[#94A3B8] font-medium mt-0.5">
-                {language === 'en' ? activeClusterConfig.subEn : activeClusterConfig.subId}
+                {language === "en"
+                  ? activeClusterConfig.subEn
+                  : activeClusterConfig.subId}
               </p>
             </div>
           </div>
@@ -194,7 +228,7 @@ export const BookIntervalCardsModal: React.FC<Props> = ({
 
         {/* Cluster Tabs Horizontal Selector */}
         <div className="px-4 sm:px-6 py-2.5 bg-[#FAFBFC]/40 dark:bg-[#141C2B]/40 border-b border-black/[0.03] dark:border-white/[0.04] flex items-center gap-2 overflow-x-auto scrollbar-none shrink-0">
-          {BOOK_CLUSTERS.map(c => {
+          {BOOK_CLUSTERS.map((c) => {
             const isSelected = activeCluster === c.key;
             const count = clusterCounts[c.key] || 0;
             return (
@@ -204,11 +238,13 @@ export const BookIntervalCardsModal: React.FC<Props> = ({
                 className={`px-3 py-1.5 rounded-2xl text-xs font-black whitespace-nowrap transition-all flex items-center gap-1.5 cursor-pointer ${
                   isSelected
                     ? `${c.badge} shadow-2xs scale-102`
-                    : 'clay-pill text-[#64748B] dark:text-[#94A3B8] hover:text-[#18234A] dark:hover:text-[#F8FAFC]'
+                    : "clay-pill text-[#64748B] dark:text-[#94A3B8] hover:text-[#18234A] dark:hover:text-[#F8FAFC]"
                 }`}
               >
-                <span>{language === 'en' ? c.labelEn : c.labelId}</span>
-                <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${isSelected ? 'bg-white/25 text-white' : 'bg-black/5 dark:bg-white/10'}`}>
+                <span>{language === "en" ? c.labelEn : c.labelId}</span>
+                <span
+                  className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${isSelected ? "bg-white/25 text-white" : "bg-black/5 dark:bg-white/10"}`}
+                >
                   {count}
                 </span>
               </button>
@@ -222,14 +258,18 @@ export const BookIntervalCardsModal: React.FC<Props> = ({
             <Search className="w-4 h-4 text-[#94A3B8] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               type="text"
-              placeholder={language === 'en' ? 'Search question, answer, kitab, chapter...' : 'Cari pertanyaan, jawaban, kitab, bab...'}
+              placeholder={
+                language === "en"
+                  ? "Search question, answer, kitab, chapter..."
+                  : "Cari pertanyaan, jawaban, kitab, bab..."
+              }
               value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
+              onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-9 pr-3 py-2 rounded-2xl clay-inset text-xs sm:text-sm text-[#18234A] dark:text-[#F8FAFC] placeholder:text-[#94A3B8] focus:outline-none focus:ring-2 focus:ring-[#FF6F3D]/30 transition-all"
             />
             {searchQuery && (
               <button
-                onClick={() => setSearchQuery('')}
+                onClick={() => setSearchQuery("")}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94A3B8] hover:text-[#18234A] dark:hover:text-white"
               >
                 <X className="w-3.5 h-3.5" />
@@ -238,21 +278,27 @@ export const BookIntervalCardsModal: React.FC<Props> = ({
           </div>
 
           <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-auto">
-            {(['all', 'personal', 'classes'] as const).map(src => (
+            {(["all", "personal", "classes"] as const).map((src) => (
               <button
                 key={src}
                 onClick={() => setSourceFilter(src)}
                 className={`px-3 py-1.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
                   sourceFilter === src
-                    ? 'clay-badge-orange text-white shadow-2xs'
-                    : 'clay-pill text-[#64748B] dark:text-[#94A3B8]'
+                    ? "clay-badge-orange text-white shadow-2xs"
+                    : "clay-pill text-[#64748B] dark:text-[#94A3B8]"
                 }`}
               >
-                {src === 'all'
-                  ? (language === 'en' ? 'All' : 'Semua')
-                  : src === 'personal'
-                  ? (language === 'en' ? 'Personal' : 'Kitab Mandiri')
-                  : (language === 'en' ? 'Classes' : 'Halaqah')}
+                {src === "all"
+                  ? language === "en"
+                    ? "All"
+                    : "Semua"
+                  : src === "personal"
+                    ? language === "en"
+                      ? "Personal"
+                      : "Kitab Mandiri"
+                    : language === "en"
+                      ? "Classes"
+                      : "Halaqah"}
               </button>
             ))}
           </div>
@@ -264,16 +310,22 @@ export const BookIntervalCardsModal: React.FC<Props> = ({
             <div className="text-center py-16 px-4">
               <Sparkles className="w-10 h-10 text-[#94A3B8] mx-auto mb-2" />
               <h4 className="font-extrabold text-[#18234A] dark:text-[#F8FAFC] text-sm">
-                {language === 'en' ? 'No cards in this cluster' : 'Belum ada kartu di klaster ini'}
+                {language === "en"
+                  ? "No cards in this cluster"
+                  : "Belum ada kartu di klaster ini"}
               </h4>
               <p className="text-xs text-[#64748B] dark:text-[#94A3B8] font-medium mt-1">
-                {language === 'en' ? 'Keep reviewing your flashcards to advance their retention stage.' : 'Terus murajaah kartu Anda untuk menaikkan interval retensinya.'}
+                {language === "en"
+                  ? "Keep reviewing your flashcards to advance their retention stage."
+                  : "Terus murajaah kartu Anda untuk menaikkan interval retensinya."}
               </p>
             </div>
           ) : (
-            filteredCards.map(item => {
-              const book = (books || []).find(b => b.id === item.bookId);
-              const chapter = (chapters || []).find(c => c.id === item.chapterId);
+            filteredCards.map((item) => {
+              const book = (books || []).find((b) => b.id === item.bookId);
+              const chapter = (chapters || []).find(
+                (c) => c.id === item.chapterId,
+              );
               const interval = getNonQuranIntervalDays(item.fsrsData);
 
               return (
@@ -284,7 +336,7 @@ export const BookIntervalCardsModal: React.FC<Props> = ({
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="px-2 py-0.5 rounded-lg clay-pill text-[10px] font-black text-[#FF6F3D]">
-                        {book?.title || 'Kitab'}
+                        {book?.title || "Kitab"}
                       </span>
                       {chapter && (
                         <span className="text-[11px] font-semibold text-[#64748B] dark:text-[#94A3B8]">
@@ -295,7 +347,10 @@ export const BookIntervalCardsModal: React.FC<Props> = ({
 
                     <div className="flex items-center gap-1.5 text-xs font-black text-[#18234A] dark:text-[#F8FAFC]">
                       <Clock className="w-3.5 h-3.5 text-[#FF6F3D]" />
-                      <span>{interval} {language === 'en' ? 'days interval' : 'hari interval'}</span>
+                      <span>
+                        {interval}{" "}
+                        {language === "en" ? "days interval" : "hari interval"}
+                      </span>
                     </div>
                   </div>
 
@@ -316,14 +371,15 @@ export const BookIntervalCardsModal: React.FC<Props> = ({
         {/* Footer */}
         <div className="p-4 sm:p-5 border-t border-black/[0.04] dark:border-white/[0.05] bg-[#FAFBFC]/80 dark:bg-[#141C2B]/80 flex items-center justify-between gap-3 shrink-0">
           <span className="text-xs font-bold text-[#64748B] dark:text-[#94A3B8]">
-            {filteredCards.length} {language === 'en' ? 'cards found' : 'kartu ditemukan'}
+            {filteredCards.length}{" "}
+            {language === "en" ? "cards found" : "kartu ditemukan"}
           </span>
 
           <button
             onClick={onClose}
             className="px-4 py-2 rounded-xl clay-pill text-[#18234A] dark:text-[#F8FAFC] text-xs font-bold hover:scale-105 active:scale-95 transition-all cursor-pointer"
           >
-            {language === 'en' ? 'Close' : 'Tutup'}
+            {language === "en" ? "Close" : "Tutup"}
           </button>
         </div>
       </div>

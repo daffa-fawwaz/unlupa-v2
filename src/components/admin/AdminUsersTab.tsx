@@ -1,17 +1,20 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  Users, 
-  Search, 
-  Filter, 
-  RefreshCw, 
-  AlertCircle, 
-  CheckCircle2, 
-  ShieldCheck, 
-  UserCheck, 
-  BookOpen
-} from 'lucide-react';
-import { useApp } from '../../context/AppContext';
-import { adminUserApiService, AdminUserItem } from '../../services/adminUserApiService';
+import React, { useState, useEffect } from "react";
+import {
+  Users,
+  Search,
+  Filter,
+  RefreshCw,
+  AlertCircle,
+  CheckCircle2,
+  ShieldCheck,
+  UserCheck,
+  BookOpen,
+} from "lucide-react";
+import { useApp } from "../../context/AppContext";
+import {
+  adminUserApiService,
+  AdminUserItem,
+} from "../../services/adminUserApiService";
 
 export const AdminUsersTab: React.FC = () => {
   const { language, userProfile } = useApp();
@@ -19,10 +22,13 @@ export const AdminUsersTab: React.FC = () => {
   // Users Directory State
   const [users, setUsers] = useState<AdminUserItem[]>([]);
   const [usersLoading, setUsersLoading] = useState(false);
-  const [userSearchQuery, setUserSearchQuery] = useState('');
-  const [userRoleFilter, setUserRoleFilter] = useState<string>('ALL');
+  const [userSearchQuery, setUserSearchQuery] = useState("");
+  const [userRoleFilter, setUserRoleFilter] = useState<string>("ALL");
   const [updatingUserId, setUpdatingUserId] = useState<string | null>(null);
-  const [feedbackMsg, setFeedbackMsg] = useState<{ text: string; isError: boolean } | null>(null);
+  const [feedbackMsg, setFeedbackMsg] = useState<{
+    text: string;
+    isError: boolean;
+  } | null>(null);
 
   useEffect(() => {
     loadUsers();
@@ -34,7 +40,7 @@ export const AdminUsersTab: React.FC = () => {
       const data = await adminUserApiService.getAdminUsers();
       setUsers(data);
     } catch (err: any) {
-      console.error('Failed to load users:', err);
+      console.error("Failed to load users:", err);
     } finally {
       setUsersLoading(false);
     }
@@ -44,14 +50,18 @@ export const AdminUsersTab: React.FC = () => {
     try {
       setUpdatingUserId(targetUserId);
       await adminUserApiService.updateAdminUserRole(targetUserId, newRole);
-      setUsers(prev => prev.map(u => u.id === targetUserId ? { ...u, role: newRole as any } : u));
+      setUsers((prev) =>
+        prev.map((u) =>
+          u.id === targetUserId ? { ...u, role: newRole as any } : u,
+        ),
+      );
       setFeedbackMsg({
         text: `Role pengguna berhasil diubah menjadi ${newRole}.`,
         isError: false,
       });
     } catch (err: any) {
       setFeedbackMsg({
-        text: err?.message || 'Gagal memperbarui role pengguna.',
+        text: err?.message || "Gagal memperbarui role pengguna.",
         isError: true,
       });
     } finally {
@@ -59,35 +69,52 @@ export const AdminUsersTab: React.FC = () => {
     }
   };
 
-  const filteredUsers = users.filter(u => {
-    const matchesSearch = 
-      (u.fullName || '').toLowerCase().includes(userSearchQuery.toLowerCase()) ||
-      (u.email || '').toLowerCase().includes(userSearchQuery.toLowerCase()) ||
-      (u.quranSpaceCode || '').toLowerCase().includes(userSearchQuery.toLowerCase());
-    
+  const filteredUsers = users.filter((u) => {
+    const matchesSearch =
+      (u.fullName || "")
+        .toLowerCase()
+        .includes(userSearchQuery.toLowerCase()) ||
+      (u.email || "").toLowerCase().includes(userSearchQuery.toLowerCase()) ||
+      (u.quranSpaceCode || "")
+        .toLowerCase()
+        .includes(userSearchQuery.toLowerCase());
+
     if (!matchesSearch) return false;
-    if (userRoleFilter === 'ALL') return true;
+    if (userRoleFilter === "ALL") return true;
     return u.role.toUpperCase() === userRoleFilter.toUpperCase();
   });
 
   const totalUsers = users.length;
-  const regularUsersCount = users.filter(u => u.role === 'USER').length;
-  const adminUsersCount = users.filter(u => u.role === 'ADMIN' || u.role === 'SUPERADMIN').length;
+  const regularUsersCount = users.filter((u) => u.role === "USER").length;
+  const adminUsersCount = users.filter(
+    (u) => u.role === "ADMIN" || u.role === "SUPERADMIN",
+  ).length;
 
   return (
     <div className="space-y-6">
       {/* Toast Feedback */}
       {feedbackMsg && (
-        <div className={`p-4 rounded-2xl flex items-center justify-between gap-3 text-xs sm:text-sm font-semibold transition-all ${
-          feedbackMsg.isError 
-            ? 'bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400' 
-            : 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400'
-        }`}>
+        <div
+          className={`p-4 rounded-2xl flex items-center justify-between gap-3 text-xs sm:text-sm font-semibold transition-all ${
+            feedbackMsg.isError
+              ? "bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400"
+              : "bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400"
+          }`}
+        >
           <div className="flex items-center gap-2">
-            {feedbackMsg.isError ? <AlertCircle className="w-5 h-5 shrink-0" /> : <CheckCircle2 className="w-5 h-5 shrink-0" />}
+            {feedbackMsg.isError ? (
+              <AlertCircle className="w-5 h-5 shrink-0" />
+            ) : (
+              <CheckCircle2 className="w-5 h-5 shrink-0" />
+            )}
             <span>{feedbackMsg.text}</span>
           </div>
-          <button onClick={() => setFeedbackMsg(null)} className="text-xs opacity-75 hover:opacity-100 cursor-pointer">✕</button>
+          <button
+            onClick={() => setFeedbackMsg(null)}
+            className="text-xs opacity-75 hover:opacity-100 cursor-pointer"
+          >
+            ✕
+          </button>
         </div>
       )}
 
@@ -98,8 +125,12 @@ export const AdminUsersTab: React.FC = () => {
             <Users className="w-5 h-5" />
           </div>
           <div>
-            <p className="text-[11px] font-bold text-[#687086] dark:text-[#94A3B8]">Total Pengguna</p>
-            <p className="text-lg font-black text-[#18234A] dark:text-[#F8FAFC]">{totalUsers}</p>
+            <p className="text-[11px] font-bold text-[#687086] dark:text-[#94A3B8]">
+              Total Pengguna
+            </p>
+            <p className="text-lg font-black text-[#18234A] dark:text-[#F8FAFC]">
+              {totalUsers}
+            </p>
           </div>
         </div>
 
@@ -108,8 +139,12 @@ export const AdminUsersTab: React.FC = () => {
             <UserCheck className="w-5 h-5" />
           </div>
           <div>
-            <p className="text-[11px] font-bold text-[#687086] dark:text-[#94A3B8]">Akun Pengguna (User)</p>
-            <p className="text-lg font-black text-[#18234A] dark:text-[#F8FAFC]">{regularUsersCount}</p>
+            <p className="text-[11px] font-bold text-[#687086] dark:text-[#94A3B8]">
+              Akun Pengguna (User)
+            </p>
+            <p className="text-lg font-black text-[#18234A] dark:text-[#F8FAFC]">
+              {regularUsersCount}
+            </p>
           </div>
         </div>
 
@@ -118,8 +153,12 @@ export const AdminUsersTab: React.FC = () => {
             <ShieldCheck className="w-5 h-5" />
           </div>
           <div>
-            <p className="text-[11px] font-bold text-[#687086] dark:text-[#94A3B8]">Admin & Super Admin</p>
-            <p className="text-lg font-black text-[#18234A] dark:text-[#F8FAFC]">{adminUsersCount}</p>
+            <p className="text-[11px] font-bold text-[#687086] dark:text-[#94A3B8]">
+              Admin & Super Admin
+            </p>
+            <p className="text-lg font-black text-[#18234A] dark:text-[#F8FAFC]">
+              {adminUsersCount}
+            </p>
           </div>
         </div>
       </div>
@@ -172,30 +211,35 @@ export const AdminUsersTab: React.FC = () => {
       ) : filteredUsers.length === 0 ? (
         <div className="clay-card p-10 rounded-3xl text-center space-y-2">
           <Users className="w-8 h-8 text-slate-400 mx-auto" />
-          <p className="text-xs text-[#687086] dark:text-[#94A3B8]">Tidak ada pengguna yang cocok dengan pencarian.</p>
+          <p className="text-xs text-[#687086] dark:text-[#94A3B8]">
+            Tidak ada pengguna yang cocok dengan pencarian.
+          </p>
         </div>
       ) : (
         <div className="clay-card rounded-3xl overflow-hidden divide-y divide-black/5 dark:divide-white/5">
-          {filteredUsers.map(user => {
+          {filteredUsers.map((user) => {
             const isCurrent = user.id === userProfile.id;
             const isBusy = updatingUserId === user.id;
 
             return (
-              <div 
-                key={user.id} 
+              <div
+                key={user.id}
                 className="p-4 sm:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors"
               >
                 {/* User Identity */}
                 <div className="flex items-center gap-3.5">
                   <img
-                    src={user.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80'}
-                    alt={user.fullName || 'User'}
+                    src={
+                      user.avatarUrl ||
+                      "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80"
+                    }
+                    alt={user.fullName || "User"}
                     className="w-11 h-11 rounded-full object-cover border border-black/10 dark:border-white/10 shrink-0"
                   />
                   <div>
                     <div className="flex items-center gap-2 flex-wrap">
                       <h4 className="text-sm font-bold text-[#18234A] dark:text-[#F8FAFC]">
-                        {user.fullName || 'Tanpa Nama'}
+                        {user.fullName || "Tanpa Nama"}
                       </h4>
                       {isCurrent && (
                         <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-orange-100 dark:bg-orange-900/40 text-[#F27A3D]">
@@ -207,7 +251,8 @@ export const AdminUsersTab: React.FC = () => {
                       </span>
                     </div>
                     <p className="text-xs text-[#687086] dark:text-[#94A3B8]">
-                      {user.email || 'Tanpa Email'} • Bergabung: {new Date(user.createdAt).toLocaleDateString('id-ID')}
+                      {user.email || "Tanpa Email"} • Bergabung:{" "}
+                      {new Date(user.createdAt).toLocaleDateString("id-ID")}
                     </p>
                   </div>
                 </div>
@@ -215,28 +260,40 @@ export const AdminUsersTab: React.FC = () => {
                 {/* Meta stats & Role Selector */}
                 <div className="flex items-center gap-4 self-end md:self-center">
                   <div className="hidden lg:flex items-center gap-3 text-[11px] text-[#687086] dark:text-[#94A3B8]">
-                    <span title="Kelas yang dibuat/diajar">👨‍🏫 {user._count?.teachingClasses || 0} Kelas Dibuat</span>
-                    <span title="Kelas yang diikuti">🎒 {user._count?.classMemberships || 0} Kelas Diikuti</span>
+                    <span title="Kelas yang dibuat/diajar">
+                      👨‍🏫 {user._count?.teachingClasses || 0} Kelas Dibuat
+                    </span>
+                    <span title="Kelas yang diikuti">
+                      🎒 {user._count?.classMemberships || 0} Kelas Diikuti
+                    </span>
                   </div>
 
                   {/* Role Dropdown */}
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-[#687086] dark:text-[#94A3B8]">Role:</span>
+                    <span className="text-xs font-bold text-[#687086] dark:text-[#94A3B8]">
+                      Role:
+                    </span>
                     <select
-                      disabled={isBusy || (isCurrent && user.role === 'SUPERADMIN')}
+                      disabled={
+                        isBusy || (isCurrent && user.role === "SUPERADMIN")
+                      }
                       value={user.role}
-                      onChange={(e) => handleUpdateRole(user.id, e.target.value)}
+                      onChange={(e) =>
+                        handleUpdateRole(user.id, e.target.value)
+                      }
                       className={`px-3 py-1.5 rounded-xl text-xs font-bold focus:outline-none cursor-pointer ${
-                        user.role === 'ADMIN' || user.role === 'SUPERADMIN'
-                          ? 'bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300'
-                          : 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300'
+                        user.role === "ADMIN" || user.role === "SUPERADMIN"
+                          ? "bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300"
+                          : "bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300"
                       }`}
                     >
                       <option value="USER">USER (Pengguna Biasa)</option>
                       <option value="ADMIN">ADMIN</option>
                       <option value="SUPERADMIN">SUPERADMIN</option>
                     </select>
-                    {isBusy && <RefreshCw className="w-3.5 h-3.5 animate-spin text-[#F27A3D]" />}
+                    {isBusy && (
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin text-[#F27A3D]" />
+                    )}
                   </div>
                 </div>
               </div>

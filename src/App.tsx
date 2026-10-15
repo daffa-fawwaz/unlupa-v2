@@ -18,10 +18,10 @@ import { ProfessionalWalkthroughModal } from './components/onboarding/Profession
 import { OnboardingSettingsModal } from './components/profile/OnboardingSettingsModal';
 import { PublicReportViewer } from './components/classes/PublicReportViewer';
 import { useDailyReminder } from './hooks/useDailyReminder';
-import { AuthModal } from './components/auth/AuthModal';
 import { FloatingXpOverlay } from './components/common/FloatingXpToast';
 import { RotateCcw, AlertCircle } from 'lucide-react';
 import { isUserAdmin } from './services/authRbacService';
+import { AuthModal } from './components/auth';
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -152,17 +152,13 @@ const MainContent: React.FC = () => {
     userProfile,
     quranStats,
     personalStats, 
-    isLandingPageOpen, 
-    setIsLandingPageOpen,
+    isLandingPageOpen,
     isWalkthroughOpen,
     closePageWalkthrough,
     activeWalkthroughPage,
     openPageWalkthrough,
     isOnboardingSettingsOpen,
-    setIsOnboardingSettingsOpen,
-    isAuthModalOpen,
-    setIsAuthModalOpen,
-    authModalMode
+    setIsOnboardingSettingsOpen
   } = useApp();
 
   // Protect Admin space: only allow superadmin/admin or preconfigured admin@anlupa.id
@@ -181,24 +177,7 @@ const MainContent: React.FC = () => {
   }
 
   if (isLandingPageOpen) {
-    return (
-      <>
-        <FloatingXpOverlay />
-        <LandingPage />
-        <AuthModal
-          isOpen={isAuthModalOpen}
-          onClose={() => setIsAuthModalOpen(false)}
-          initialMode={authModalMode}
-          onSuccess={() => {
-            try {
-              sessionStorage.setItem('unlupa_in_app', 'true');
-              window.location.hash = 'app';
-            } catch (e) {}
-            setIsLandingPageOpen(false);
-          }}
-        />
-      </>
-    );
+    return <LandingPage />;
   }
 
   return (
@@ -235,19 +214,6 @@ const MainContent: React.FC = () => {
         }}
       />
 
-      {/* Authentication & Security Modal */}
-      <AuthModal
-        isOpen={isAuthModalOpen}
-        onClose={() => setIsAuthModalOpen(false)}
-        initialMode={authModalMode}
-        onSuccess={() => {
-          try {
-            sessionStorage.setItem('unlupa_in_app', 'true');
-            window.location.hash = 'app';
-          } catch (e) {}
-          setIsLandingPageOpen(false);
-        }}
-      />
     </div>
   );
 };
@@ -257,6 +223,7 @@ export default function App() {
     <AppErrorBoundary>
       <AppProvider>
         <MainContent />
+        <AuthModal />
       </AppProvider>
     </AppErrorBoundary>
   );

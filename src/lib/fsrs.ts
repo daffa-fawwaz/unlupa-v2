@@ -1,4 +1,4 @@
-import { FSRSState, MapanScheduleConfig } from '../types';
+import { FSRSState, MapanScheduleConfig } from "../types";
 import {
   fsrs,
   generatorParameters,
@@ -8,13 +8,13 @@ import {
   Card,
   FSRS6_DEFAULT_DECAY,
   default_w,
-} from 'ts-fsrs';
+} from "ts-fsrs";
 
 /**
  * ============================================================================
  * UNLUPA DUAL MEMORY ENGINE ARCHITECTURE (POWERED BY OFFICIAL FSRS-6)
  * ============================================================================
- * 
+ *
  * Mengapa Retensi Al-Qur'an 95% (Bukan 50%)?
  * ----------------------------------------------------------------------------
  * Rumus Retrievability Resmi FSRS-6 (Power-Law Forgetting Curve):
@@ -22,29 +22,29 @@ import {
  * di mana:
  * - DECAY = 0.1542 (Parameter default resmi FSRS-6 w20)
  * - FACTOR = 0.9^(-1 / DECAY) - 1 ≈ 0.9803
- * 
+ *
  * S (Stability) adalah jumlah hari yang dibutuhkan hingga Retrievability (R)
  * turun ke tepat 90%: R(S) = (1 + FACTOR)^(-DECAY) = 0.90 (90%).
- * 
+ *
  * Interval Penjadwalan pada Target Retensi (r):
  * I(r, S) = (S / FACTOR) * (r^(-1 / DECAY) - 1)
- * 
+ *
  * Untuk Target Retensi 95% (Al-Qur'an):
  * I(0.95, S) ≈ S * 0.40
  * Artinya, hafalan Al-Qur'an diuji saat kekuatan memori masih 95% utuh!
- * 
+ *
  * 1. PADA RETENSI 95% (MESIN AL-QUR'AN):
  *    Algoritma memicu recall tepat saat kemungkinan ingat masih 95%.
  *    Pada titik ini, hafiz hanya mengalami sedikit kelonggaran memori,
  *    sehingga saat melafalkan ayat, hafalan langsung terkunci kembali (mutqin)
  *    tanpa salah sambung ayat (mutasyabihat).
- * 
+ *
  * 2. HANYA DUA TOMBOL PENILAIAN (AGAIN / HARD):
  *    Al-Qur'an itu mutlak (benar atau salah).
  *    - Rating 1: Perlu Murajaah (Again -> Rating.Again)
  *    - Rating 2: Lancar (Hard -> Rating.Hard)
  *    Tidak ada tombol Good/Easy untuk Al-Qur'an guna mencegah over-akselerasi.
- * 
+ *
  * 3. CAP MAKSIMAL 30 HARI (KHATAM BULANAN):
  *    Setelah interval mencapai 30 hari (pada stabilitas ~78 hari),
  *    hafalan berstatus "Mapan / Mutqin".
@@ -60,19 +60,23 @@ export const FSRS_DECAY = FSRS6_DEFAULT_DECAY; // 0.1542
 export const FSRS_FACTOR = Math.pow(0.9, -1 / FSRS_DECAY) - 1; // ≈ 0.980346
 
 // Initialise Schedulers using the official ts-fsrs library
-const quranScheduler = fsrs(generatorParameters({
-  request_retention: QURAN_TARGET_RETENTION,
-  maximum_interval: QURAN_MAX_INTERVAL_DAYS,
-  enable_fuzz: false,
-  enable_short_term: false,
-}));
+const quranScheduler = fsrs(
+  generatorParameters({
+    request_retention: QURAN_TARGET_RETENTION,
+    maximum_interval: QURAN_MAX_INTERVAL_DAYS,
+    enable_fuzz: false,
+    enable_short_term: false,
+  }),
+);
 
-const nonQuranScheduler = fsrs(generatorParameters({
-  request_retention: NON_QURAN_TARGET_RETENTION,
-  maximum_interval: NON_QURAN_MAX_INTERVAL_DAYS,
-  enable_fuzz: false,
-  enable_short_term: false,
-}));
+const nonQuranScheduler = fsrs(
+  generatorParameters({
+    request_retention: NON_QURAN_TARGET_RETENTION,
+    maximum_interval: NON_QURAN_MAX_INTERVAL_DAYS,
+    enable_fuzz: false,
+    enable_short_term: false,
+  }),
+);
 
 export function createInitialFSRSState(): FSRSState {
   return {
@@ -82,24 +86,24 @@ export function createInitialFSRSState(): FSRSState {
     lapses: 0,
     lastReview: null,
     nextReview: null,
-    state: 'new',
+    state: "new",
   };
 }
 
 /**
  * Canonical scheduling timezone for Unlupa.id: WIB (Asia/Jakarta, UTC+7)
  */
-export const WIB_TIMEZONE = 'Asia/Jakarta';
+export const WIB_TIMEZONE = "Asia/Jakarta";
 
 /**
  * Get formatted calendar date YYYY-MM-DD in Asia/Jakarta (WIB) timezone
  */
 export function getWIBDateString(date: Date = new Date()): string {
-  const formatter = new Intl.DateTimeFormat('en-CA', {
+  const formatter = new Intl.DateTimeFormat("en-CA", {
     timeZone: WIB_TIMEZONE,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
   });
   return formatter.format(date);
 }
@@ -108,9 +112,12 @@ export function getWIBDateString(date: Date = new Date()): string {
  * Calculate difference in calendar days between two dates in Asia/Jakarta (WIB) timezone.
  * Returns (dateB_WIB - dateA_WIB) in integer days.
  */
-export function getWIBCalendarDayDiff(dateA: Date | string, dateB: Date | string): number {
-  const dA = typeof dateA === 'string' ? new Date(dateA) : dateA;
-  const dB = typeof dateB === 'string' ? new Date(dateB) : dateB;
+export function getWIBCalendarDayDiff(
+  dateA: Date | string,
+  dateB: Date | string,
+): number {
+  const dA = typeof dateA === "string" ? new Date(dateA) : dateA;
+  const dB = typeof dateB === "string" ? new Date(dateB) : dateB;
 
   if (isNaN(dA.getTime()) || isNaN(dB.getTime())) {
     return 0;
@@ -119,8 +126,8 @@ export function getWIBCalendarDayDiff(dateA: Date | string, dateB: Date | string
   const strA = getWIBDateString(dA);
   const strB = getWIBDateString(dB);
 
-  const [yA, mA, dDayA] = strA.split('-').map(Number);
-  const [yB, mB, dDayB] = strB.split('-').map(Number);
+  const [yA, mA, dDayA] = strA.split("-").map(Number);
+  const [yB, mB, dDayB] = strB.split("-").map(Number);
 
   const utcA = Date.UTC(yA, mA - 1, dDayA);
   const utcB = Date.UTC(yB, mB - 1, dDayB);
@@ -135,14 +142,16 @@ export function getWIBCalendarDayDiff(dateA: Date | string, dateB: Date | string
 export function calculatePreviousScheduledInterval(
   lastReview: Date | string | null | undefined,
   nextReview: Date | string | null | undefined,
-  reps: number = 0
+  reps: number = 0,
 ): number {
   if (reps === 0 || !lastReview || !nextReview) {
     return 0;
   }
 
-  const lastDate = typeof lastReview === 'string' ? new Date(lastReview) : lastReview;
-  const nextDate = typeof nextReview === 'string' ? new Date(nextReview) : nextReview;
+  const lastDate =
+    typeof lastReview === "string" ? new Date(lastReview) : lastReview;
+  const nextDate =
+    typeof nextReview === "string" ? new Date(nextReview) : nextReview;
 
   if (isNaN(lastDate.getTime()) || isNaN(nextDate.getTime())) {
     return 0;
@@ -155,7 +164,10 @@ export function calculatePreviousScheduledInterval(
 /**
  * Check if item was reviewed today in Asia/Jakarta (WIB) calendar day
  */
-export function isReviewedToday(lastReviewIso: string | null | undefined, referenceDate: Date = new Date()): boolean {
+export function isReviewedToday(
+  lastReviewIso: string | null | undefined,
+  referenceDate: Date = new Date(),
+): boolean {
   if (!lastReviewIso) return false;
   const lastDate = new Date(lastReviewIso);
   if (isNaN(lastDate.getTime())) return false;
@@ -173,7 +185,7 @@ export function isDue(
   nextReviewIso: string | null | undefined,
   isActive: boolean,
   lastReviewIso?: string | null | undefined,
-  referenceDate: Date = new Date()
+  referenceDate: Date = new Date(),
 ): boolean {
   if (!isActive) return false;
 
@@ -226,10 +238,16 @@ function stateToCard(state: FSRSState, reviewDate: Date): Card {
  * Calculate current Retrievability (Kekuatan Hafalan R) on day t given Stability S
  * Returns a value between 0.0 and 1.0 (e.g. 0.95 = 95% retention probability)
  */
-export function calculateRetrievability(stability: number, daysSinceLastReview: number): number {
+export function calculateRetrievability(
+  stability: number,
+  daysSinceLastReview: number,
+): number {
   if (stability <= 0) return 0;
   if (daysSinceLastReview <= 0) return 1.0;
-  const r = Math.pow(1 + FSRS_FACTOR * (daysSinceLastReview / stability), -FSRS_DECAY);
+  const r = Math.pow(
+    1 + FSRS_FACTOR * (daysSinceLastReview / stability),
+    -FSRS_DECAY,
+  );
   return Math.min(1.0, Math.max(0.0, r));
 }
 
@@ -237,9 +255,15 @@ export function calculateRetrievability(stability: number, daysSinceLastReview: 
  * Calculate review interval in days given Stability and Target Retention.
  * Formula: I(r, S) = (S / FACTOR) * (r^(-1 / DECAY) - 1)
  */
-export function calculateInterval(stability: number, targetRetention: number, maxInterval: number): number {
+export function calculateInterval(
+  stability: number,
+  targetRetention: number,
+  maxInterval: number,
+): number {
   if (stability <= 0) return 1;
-  const rawInterval = (stability / FSRS_FACTOR) * (Math.pow(targetRetention, -1 / FSRS_DECAY) - 1);
+  const rawInterval =
+    (stability / FSRS_FACTOR) *
+    (Math.pow(targetRetention, -1 / FSRS_DECAY) - 1);
   const rounded = Math.max(1, Math.round(rawInterval));
   return Math.min(rounded, maxInterval);
 }
@@ -254,16 +278,16 @@ export function calculateInterval(stability: number, targetRetention: number, ma
 export function calculateNextMapanDate(
   config: MapanScheduleConfig | undefined,
   rawIntervalDays: number,
-  fromDate: Date = new Date()
+  fromDate: Date = new Date(),
 ): { nextDate: Date; intervalDays: number } {
-  if (!config || config.mode === 'fsrs') {
+  if (!config || config.mode === "fsrs") {
     const next = new Date(fromDate);
     const days = Math.max(1, rawIntervalDays);
     next.setDate(next.getDate() + days);
     return { nextDate: next, intervalDays: days };
   }
 
-  if (config.mode === 'weekly' && typeof config.weeklyDay === 'number') {
+  if (config.mode === "weekly" && typeof config.weeklyDay === "number") {
     const targetDay = config.weeklyDay; // 0 = Ahad, 1 = Senin, ..., 5 = Jum'at, 6 = Sabtu
     const next = new Date(fromDate);
     const currentDay = next.getDay();
@@ -273,7 +297,7 @@ export function calculateNextMapanDate(
     return { nextDate: next, intervalDays: daysToAdd };
   }
 
-  if (config.mode === 'monthly' && typeof config.monthlyDate === 'number') {
+  if (config.mode === "monthly" && typeof config.monthlyDate === "number") {
     const targetDate = Math.min(31, Math.max(1, config.monthlyDate));
     const next = new Date(fromDate);
     let nextMonth = next.getMonth() + 1;
@@ -312,8 +336,12 @@ export function updateQuranFSRS(
   currentState: FSRSState,
   rating: 1 | 2 | 3,
   reviewDate: Date = new Date(),
-  mapanSchedule?: MapanScheduleConfig
-): { newState: FSRSState; nextIntervalDays: number; isMasteredForNow: boolean } {
+  mapanSchedule?: MapanScheduleConfig,
+): {
+  newState: FSRSState;
+  nextIntervalDays: number;
+  isMasteredForNow: boolean;
+} {
   const reps = (currentState.reps || 0) + 1;
   const currentS = currentState.stability || 0;
   const difficulty = 10.0; // Standar kelancaran mutlak Al-Qur'an (D maksimum)
@@ -338,13 +366,13 @@ export function updateQuranFSRS(
   } else if (rating === 2) {
     // Rating 2: Kurang Lancar / Cukup / Terbata (Hard) -> Kenaikan bertahap konservatif
     if (!currentS || currentS <= 0 || reps === 1) {
-      nextS = 2.70;
+      nextS = 2.7;
     } else {
       let inc: number;
       if (currentS < 74.5) {
         inc = 0.18635 * Math.pow(currentS, -0.20407);
       } else {
-        inc = Math.max(0.30, 0.45 * Math.pow(currentS / 74.5, -0.12));
+        inc = Math.max(0.3, 0.45 * Math.pow(currentS / 74.5, -0.12));
       }
 
       // Bonus ketahanan memori jika murajaah dilakukan tepat waktu atau melampaui interval
@@ -352,7 +380,9 @@ export function updateQuranFSRS(
       if (elapsedDays > expectedInterval && currentS > 0) {
         const decay = -FSRS_DECAY;
         const R = Math.pow(1 + FSRS_FACTOR * (elapsedDays / currentS), -decay);
-        const boost = (Math.exp((1 - R) * 0.796) - 1) / (Math.exp((1 - QURAN_TARGET_RETENTION) * 0.796) - 1);
+        const boost =
+          (Math.exp((1 - R) * 0.796) - 1) /
+          (Math.exp((1 - QURAN_TARGET_RETENTION) * 0.796) - 1);
         inc = inc * Math.max(1.0, Math.min(2.5, boost));
       }
       nextS = Number((currentS * (1 + inc)).toFixed(2));
@@ -360,20 +390,22 @@ export function updateQuranFSRS(
   } else {
     // Rating 3: Lancar Mutqin / Mumtaz (Good) -> Kenaikan stabilitas lebih cepat & optimal
     if (!currentS || currentS <= 0 || reps === 1) {
-      nextS = 5.50;
+      nextS = 5.5;
     } else {
       let inc: number;
       if (currentS < 74.5) {
         inc = 0.45 * Math.pow(currentS, -0.14);
       } else {
-        inc = Math.max(0.60, 0.85 * Math.pow(currentS / 74.5, -0.10));
+        inc = Math.max(0.6, 0.85 * Math.pow(currentS / 74.5, -0.1));
       }
 
       const expectedInterval = currentS * 0.4025587;
       if (elapsedDays > expectedInterval && currentS > 0) {
         const decay = -FSRS_DECAY;
         const R = Math.pow(1 + FSRS_FACTOR * (elapsedDays / currentS), -decay);
-        const boost = (Math.exp((1 - R) * 0.796) - 1) / (Math.exp((1 - QURAN_TARGET_RETENTION) * 0.796) - 1);
+        const boost =
+          (Math.exp((1 - R) * 0.796) - 1) /
+          (Math.exp((1 - QURAN_TARGET_RETENTION) * 0.796) - 1);
         inc = inc * Math.max(1.0, Math.min(2.5, boost));
       }
       nextS = Number((currentS * (1 + inc)).toFixed(2));
@@ -393,9 +425,17 @@ export function updateQuranFSRS(
     nextIntervalDays = 1;
     nextReviewDate = new Date(reviewDate);
     nextReviewDate.setDate(nextReviewDate.getDate() + 1);
-  } else if (isMasteredForNow && mapanSchedule && mapanSchedule.mode !== 'fsrs') {
+  } else if (
+    isMasteredForNow &&
+    mapanSchedule &&
+    mapanSchedule.mode !== "fsrs"
+  ) {
     // Jika mapan dan pengguna menyetel ritme mandiri (mingguan/bulanan)
-    const scheduled = calculateNextMapanDate(mapanSchedule, rawInterval, reviewDate);
+    const scheduled = calculateNextMapanDate(
+      mapanSchedule,
+      rawInterval,
+      reviewDate,
+    );
     nextReviewDate = scheduled.nextDate;
     nextIntervalDays = scheduled.intervalDays;
   } else {
@@ -412,7 +452,7 @@ export function updateQuranFSRS(
     lapses,
     lastReview: reviewDate.toISOString(),
     nextReview: nextReviewDate.toISOString(),
-    state: isMasteredForNow ? 'mastered' : 'review',
+    state: isMasteredForNow ? "mastered" : "review",
   };
 
   return { newState, nextIntervalDays, isMasteredForNow };
@@ -430,7 +470,7 @@ export function updateQuranFSRS(
 export function updateNonQuranFSRS(
   currentState: FSRSState,
   rating: 1 | 2 | 3 | 4,
-  reviewDate: Date = new Date()
+  reviewDate: Date = new Date(),
 ): { newState: FSRSState; nextIntervalDays: number } {
   const ratingMap = {
     1: Rating.Again,
@@ -456,7 +496,7 @@ export function updateNonQuranFSRS(
     lapses: nextCard.lapses,
     lastReview: reviewDate.toISOString(),
     nextReview: nextReviewDate.toISOString(),
-    state: nextCard.reps >= 3 ? 'review' : 'learning',
+    state: nextCard.reps >= 3 ? "review" : "learning",
   };
 
   return { newState, nextIntervalDays };
@@ -466,22 +506,34 @@ export function updateNonQuranFSRS(
  * Engine Object Modules (Clean Separation)
  */
 export const quranMemoryEngine = {
-  name: 'Mesin Khusus Al-Qur\'an',
+  name: "Mesin Khusus Al-Qur'an",
   targetRetention: QURAN_TARGET_RETENTION,
   maxIntervalDays: QURAN_MAX_INTERVAL_DAYS,
   ratingsCount: 2,
-  calculateInterval: (stability: number) => calculateInterval(stability, QURAN_TARGET_RETENTION, QURAN_MAX_INTERVAL_DAYS),
-  calculateRetrievability: (stability: number, days: number) => calculateRetrievability(stability, days),
+  calculateInterval: (stability: number) =>
+    calculateInterval(
+      stability,
+      QURAN_TARGET_RETENTION,
+      QURAN_MAX_INTERVAL_DAYS,
+    ),
+  calculateRetrievability: (stability: number, days: number) =>
+    calculateRetrievability(stability, days),
   update: updateQuranFSRS,
 };
 
 export const generalKnowledgeEngine = {
-  name: 'Mesin Pengetahuan & Buku',
+  name: "Mesin Pengetahuan & Buku",
   targetRetention: NON_QURAN_TARGET_RETENTION,
   maxIntervalDays: NON_QURAN_MAX_INTERVAL_DAYS,
   ratingsCount: 4,
-  calculateInterval: (stability: number) => calculateInterval(stability, NON_QURAN_TARGET_RETENTION, NON_QURAN_MAX_INTERVAL_DAYS),
-  calculateRetrievability: (stability: number, days: number) => calculateRetrievability(stability, days),
+  calculateInterval: (stability: number) =>
+    calculateInterval(
+      stability,
+      NON_QURAN_TARGET_RETENTION,
+      NON_QURAN_MAX_INTERVAL_DAYS,
+    ),
+  calculateRetrievability: (stability: number, days: number) =>
+    calculateRetrievability(stability, days),
   update: updateNonQuranFSRS,
 };
 
@@ -490,9 +542,9 @@ export const generalKnowledgeEngine = {
  */
 export function predictQuranIntervals(
   currentState: FSRSState,
-  mapanSchedule?: MapanScheduleConfig
-): { 
-  needReview: string; 
+  mapanSchedule?: MapanScheduleConfig,
+): {
+  needReview: string;
   hard: string;
   good: string;
   iKnow: string;
@@ -504,7 +556,12 @@ export function predictQuranIntervals(
   goodDays: number;
   iKnowDays: number;
 } {
-  const simNeedReview = updateQuranFSRS(currentState, 1, new Date(), mapanSchedule);
+  const simNeedReview = updateQuranFSRS(
+    currentState,
+    1,
+    new Date(),
+    mapanSchedule,
+  );
   const simHard = updateQuranFSRS(currentState, 2, new Date(), mapanSchedule);
   const simGood = updateQuranFSRS(currentState, 3, new Date(), mapanSchedule);
 
@@ -512,11 +569,29 @@ export function predictQuranIntervals(
   let r2 = `${simHard.nextIntervalDays}d`;
   let r3 = `${simGood.nextIntervalDays}d`;
 
-  if (simGood.isMasteredForNow && mapanSchedule && mapanSchedule.mode !== 'fsrs') {
-    if (mapanSchedule.mode === 'weekly' && typeof mapanSchedule.weeklyDay === 'number') {
-      const dayNames = ['Ahad', 'Senin', 'Selasa', 'Rabu', 'Kamis', "Jum'at", 'Sabtu'];
+  if (
+    simGood.isMasteredForNow &&
+    mapanSchedule &&
+    mapanSchedule.mode !== "fsrs"
+  ) {
+    if (
+      mapanSchedule.mode === "weekly" &&
+      typeof mapanSchedule.weeklyDay === "number"
+    ) {
+      const dayNames = [
+        "Ahad",
+        "Senin",
+        "Selasa",
+        "Rabu",
+        "Kamis",
+        "Jum'at",
+        "Sabtu",
+      ];
       r3 = dayNames[mapanSchedule.weeklyDay] || `${simGood.nextIntervalDays}d`;
-    } else if (mapanSchedule.mode === 'monthly' && typeof mapanSchedule.monthlyDate === 'number') {
+    } else if (
+      mapanSchedule.mode === "monthly" &&
+      typeof mapanSchedule.monthlyDate === "number"
+    ) {
       r3 = `Tgl ${mapanSchedule.monthlyDate}`;
     }
   }
@@ -536,7 +611,10 @@ export function predictQuranIntervals(
   };
 }
 
-export function predictNonQuranIntervals(currentState: FSRSState, reviewDate: Date = new Date()): {
+export function predictNonQuranIntervals(
+  currentState: FSRSState,
+  reviewDate: Date = new Date(),
+): {
   again: string;
   hard: string;
   good: string;
@@ -556,7 +634,7 @@ export function predictNonQuranIntervals(currentState: FSRSState, reviewDate: Da
   const sim4 = updateNonQuranFSRS(currentState, 4, reviewDate);
 
   const formatDays = (days: number) => {
-    if (days <= 1) return '1d';
+    if (days <= 1) return "1d";
     if (days < 365) return `${days}d`;
     return `${(days / 365).toFixed(1)}y`;
   };
@@ -587,29 +665,46 @@ export function calculateStabilityDays(stability: number): number {
   return Math.max(1, Math.round(stability * 0.4025587));
 }
 
-export type QuranIntervalClusterKey = '<5' | '<10' | '<15' | '<20' | '<30' | '>30';
+export type QuranIntervalClusterKey =
+  | "<5"
+  | "<10"
+  | "<15"
+  | "<20"
+  | "<30"
+  | ">30";
 
-export function getQuranPageClusterKey(page: { status?: string; fsrsData: { stability?: number } }): QuranIntervalClusterKey {
+export function getQuranPageClusterKey(page: {
+  status?: string;
+  fsrsData: { stability?: number };
+}): QuranIntervalClusterKey {
   const rawInterval = Math.round((page.fsrsData.stability || 0) * 0.4025587);
-  const isMapan = page.status === 'mastered_for_now' || rawInterval >= 30;
-  if (isMapan) return '>30';
-  if (rawInterval < 5) return '<5';
-  if (rawInterval < 10) return '<10';
-  if (rawInterval < 15) return '<15';
-  if (rawInterval < 20) return '<20';
-  return '<30';
+  const isMapan = page.status === "mastered_for_now" || rawInterval >= 30;
+  if (isMapan) return ">30";
+  if (rawInterval < 5) return "<5";
+  if (rawInterval < 10) return "<10";
+  if (rawInterval < 15) return "<15";
+  if (rawInterval < 20) return "<20";
+  return "<30";
 }
 
-export type BookIntervalClusterKey = '<75' | '<150' | '<225' | '<300' | '<375' | '>375';
+export type BookIntervalClusterKey =
+  | "<75"
+  | "<150"
+  | "<225"
+  | "<300"
+  | "<375"
+  | ">375";
 
-export function getBookItemClusterKey(item: { fsrsData: FSRSState }): BookIntervalClusterKey {
+export function getBookItemClusterKey(item: {
+  fsrsData: FSRSState;
+}): BookIntervalClusterKey {
   const intervalDays = getNonQuranIntervalDays(item.fsrsData);
-  if (intervalDays >= 375) return '>375';
-  if (intervalDays < 75) return '<75';
-  if (intervalDays < 150) return '<150';
-  if (intervalDays < 225) return '<225';
-  if (intervalDays < 300) return '<300';
-  return '<375';
+  if (intervalDays >= 375) return ">375";
+  if (intervalDays < 75) return "<75";
+  if (intervalDays < 150) return "<150";
+  if (intervalDays < 225) return "<225";
+  if (intervalDays < 300) return "<300";
+  return "<375";
 }
 
 /**
@@ -619,14 +714,14 @@ export function getIntervalDays(fsrsData: FSRSState): number {
   if (fsrsData.stability && fsrsData.stability > 0) {
     return calculateStabilityDays(fsrsData.stability);
   }
-  
+
   if (!fsrsData.lastReview || !fsrsData.nextReview) {
     return 0;
   }
-  
+
   const last = new Date(fsrsData.lastReview);
   const next = new Date(fsrsData.nextReview);
-  
+
   const diffDays = getWIBCalendarDayDiff(last, next);
   return Math.max(1, diffDays);
 }
@@ -645,7 +740,11 @@ export function getNonQuranIntervalDays(fsrsData: FSRSState): number {
   }
   let fromStability = 0;
   if (fsrsData.stability && fsrsData.stability > 0) {
-    fromStability = calculateInterval(fsrsData.stability, NON_QURAN_TARGET_RETENTION, NON_QURAN_MAX_INTERVAL_DAYS);
+    fromStability = calculateInterval(
+      fsrsData.stability,
+      NON_QURAN_TARGET_RETENTION,
+      NON_QURAN_MAX_INTERVAL_DAYS,
+    );
   }
   return Math.max(fromDates, fromStability);
 }

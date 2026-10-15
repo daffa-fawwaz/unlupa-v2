@@ -6,14 +6,17 @@ class SoundEffects {
   private isEnabled: boolean = true;
 
   private getContext(): AudioContext | null {
-    if (typeof window === 'undefined') return null;
+    if (typeof window === "undefined") return null;
     if (!this.ctx) {
-      const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      const AudioCtx =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext: typeof AudioContext })
+          .webkitAudioContext;
       if (AudioCtx) {
         this.ctx = new AudioCtx();
       }
     }
-    if (this.ctx && this.ctx.state === 'suspended') {
+    if (this.ctx && this.ctx.state === "suspended") {
       this.ctx.resume().catch(() => {});
     }
     return this.ctx;
@@ -29,7 +32,7 @@ class SoundEffects {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
 
-      osc.type = 'sine';
+      osc.type = "sine";
       gain.connect(ctx.destination);
       osc.connect(gain);
 
@@ -87,12 +90,12 @@ class SoundEffects {
       if (!ctx) return;
 
       const now = ctx.currentTime;
-      const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6 arpeggio
+      const notes = [523.25, 659.25, 783.99, 1046.5]; // C5, E5, G5, C6 arpeggio
 
       notes.forEach((freq, idx) => {
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
-        osc.type = 'sine';
+        osc.type = "sine";
         osc.frequency.setValueAtTime(freq, now + idx * 0.08);
         gain.gain.setValueAtTime(0.05, now + idx * 0.08);
         gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.08 + 0.35);
@@ -114,7 +117,7 @@ class SoundEffects {
       const now = ctx.currentTime;
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
-      osc.type = 'triangle';
+      osc.type = "triangle";
       osc.frequency.setValueAtTime(400, now);
       osc.frequency.exponentialRampToValueAtTime(300, now + 0.05);
       gain.gain.setValueAtTime(0.03, now);
@@ -128,7 +131,7 @@ class SoundEffects {
     }
   }
 
-  public playCardFlip(direction: 'forward' | 'backward' = 'forward') {
+  public playCardFlip(direction: "forward" | "backward" = "forward") {
     if (!this.isEnabled) return;
     try {
       const ctx = this.getContext();
@@ -149,9 +152,9 @@ class SoundEffects {
       whiteNoise.buffer = noiseBuffer;
 
       const filter = ctx.createBiquadFilter();
-      filter.type = 'bandpass';
-      const startFreq = direction === 'forward' ? 2400 : 1800;
-      const endFreq = direction === 'forward' ? 1200 : 2600;
+      filter.type = "bandpass";
+      const startFreq = direction === "forward" ? 2400 : 1800;
+      const endFreq = direction === "forward" ? 1200 : 2600;
       filter.frequency.setValueAtTime(startFreq, now);
       filter.frequency.exponentialRampToValueAtTime(endFreq, now + 0.075);
       filter.Q.setValueAtTime(2.2, now);
@@ -171,9 +174,9 @@ class SoundEffects {
       // 2. Tactile Cardstock Snap / Flick Transient (Authentic physical card release)
       const clickOsc = ctx.createOscillator();
       const clickGain = ctx.createGain();
-      clickOsc.type = 'triangle';
-      
-      const snapPitch = direction === 'forward' ? 820 : 720;
+      clickOsc.type = "triangle";
+
+      const snapPitch = direction === "forward" ? 820 : 720;
       clickOsc.frequency.setValueAtTime(snapPitch, now + 0.012);
       clickOsc.frequency.exponentialRampToValueAtTime(240, now + 0.045);
 
@@ -214,14 +217,17 @@ class SoundEffects {
       if (amount >= 20) {
         // Grand Triumph / Session Reward (Glittering ascending glockenspiel)
         // C5 (523Hz), E5 (659Hz), G5 (784Hz), B5 (988Hz), C6 (1046Hz)
-        const notes = [523.25, 659.25, 783.99, 987.77, 1046.50];
+        const notes = [523.25, 659.25, 783.99, 987.77, 1046.5];
         notes.forEach((freq, idx) => {
           const osc = ctx.createOscillator();
           const gain = ctx.createGain();
-          osc.type = 'sine';
+          osc.type = "sine";
           osc.frequency.setValueAtTime(freq, now + idx * 0.055);
           gain.gain.setValueAtTime(0.045, now + idx * 0.055);
-          gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.055 + 0.28);
+          gain.gain.exponentialRampToValueAtTime(
+            0.001,
+            now + idx * 0.055 + 0.28,
+          );
           osc.connect(gain);
           gain.connect(ctx.destination);
           osc.start(now + idx * 0.055);
@@ -234,10 +240,13 @@ class SoundEffects {
         notes.forEach((freq, idx) => {
           const osc = ctx.createOscillator();
           const gain = ctx.createGain();
-          osc.type = 'sine';
+          osc.type = "sine";
           osc.frequency.setValueAtTime(freq, now + idx * 0.05);
           gain.gain.setValueAtTime(0.04, now + idx * 0.05);
-          gain.gain.exponentialRampToValueAtTime(0.0008, now + idx * 0.05 + 0.18);
+          gain.gain.exponentialRampToValueAtTime(
+            0.0008,
+            now + idx * 0.05 + 0.18,
+          );
           osc.connect(gain);
           gain.connect(ctx.destination);
           osc.start(now + idx * 0.05);

@@ -1,6 +1,6 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Play, Pause, Volume2, VolumeX, Loader2 } from 'lucide-react';
-import { getQuranPageAudioUrl } from '../../data/quranData';
+import React, { useState, useRef, useEffect } from "react";
+import { Play, Pause, Volume2, VolumeX, Loader2 } from "lucide-react";
+import { getQuranPageAudioUrl } from "../../data/quranData";
 
 interface Props {
   pageNumber: number;
@@ -26,18 +26,19 @@ export const MurottalPlayer: React.FC<Props> = ({ pageNumber }) => {
 
   const togglePlay = () => {
     if (!audioRef.current) return;
-    
+
     if (isPlaying) {
       audioRef.current.pause();
       setIsPlaying(false);
     } else {
       setIsLoading(true);
-      audioRef.current.play()
+      audioRef.current
+        .play()
         .then(() => {
           setIsPlaying(true);
           setIsLoading(false);
         })
-        .catch(err => {
+        .catch((err) => {
           console.error("Audio playback error:", err);
           setIsLoading(false);
           setIsPlaying(false);
@@ -53,18 +54,18 @@ export const MurottalPlayer: React.FC<Props> = ({ pageNumber }) => {
 
   return (
     <div className="flex items-center gap-1.5 clay-inset px-2 py-1 rounded-full">
-      <audio 
-        ref={audioRef} 
-        src={audioUrl} 
+      <audio
+        ref={audioRef}
+        src={audioUrl}
         onEnded={() => setIsPlaying(false)}
         preload="none"
       />
-      
+
       <button
         onClick={togglePlay}
         disabled={isLoading}
         className={`w-6 h-6 flex items-center justify-center rounded-full text-white transition-all cursor-pointer hover:scale-105 active:scale-95 shadow-2xs disabled:opacity-50 ${
-          isPlaying ? 'bg-emerald-500' : 'clay-btn-primary'
+          isPlaying ? "bg-emerald-500" : "clay-btn-primary"
         }`}
         title={isPlaying ? "Jeda Murottal" : "Putar Murottal (Mishary Alafasy)"}
       >
@@ -82,9 +83,12 @@ export const MurottalPlayer: React.FC<Props> = ({ pageNumber }) => {
         className="w-6 h-6 flex items-center justify-center rounded-full text-[#707E94] hover:text-[#1B254B] dark:text-[#94A3B8] dark:hover:text-white transition-colors cursor-pointer"
         title={isMuted ? "Bunyikan" : "Bisukan"}
       >
-        {isMuted ? <VolumeX className="w-3.5 h-3.5 text-rose-500" /> : <Volume2 className="w-3.5 h-3.5" />}
+        {isMuted ? (
+          <VolumeX className="w-3.5 h-3.5 text-rose-500" />
+        ) : (
+          <Volume2 className="w-3.5 h-3.5" />
+        )}
       </button>
     </div>
   );
 };
-

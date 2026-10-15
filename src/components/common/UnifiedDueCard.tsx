@@ -1,6 +1,6 @@
-import React from 'react';
-import { Play, CheckCircle2, Clock, Calendar } from 'lucide-react';
-import { Language } from '../../types';
+import React from "react";
+import { Play, CheckCircle2, Clock, Calendar } from "lucide-react";
+import { Language } from "../../types";
 
 export interface DueFilterPill {
   id: string | number;
@@ -21,7 +21,7 @@ export interface UnifiedDueCardProps {
   onStartAll: () => void;
   onOpenCalendar?: () => void;
   filterPills?: DueFilterPill[];
-  pillGridCols?: 3 | 4 | 5 | 6 | 'books' | 'quran' | 'personal' | 'classes';
+  pillGridCols?: 3 | 4 | 5 | 6 | "books" | "quran" | "personal" | "classes";
   allCaughtUpTitle?: string;
   allCaughtUpSubtitle?: string;
   nextUpcomingText?: string;
@@ -39,29 +39,50 @@ export const UnifiedDueCard: React.FC<UnifiedDueCardProps> = ({
   pillGridCols = 5,
   allCaughtUpTitle,
   primaryActionLabel,
-  className = '',
+  className = "",
 }) => {
-  const defaultTitle = title || (language === 'en' ? 'Review Queue' : 'Antrean Murajaah');
-  const defaultPrimaryLabel = primaryActionLabel || (language === 'en' ? `Review All (${dueCount})` : `Murajaah Semua (${dueCount})`);
-  const noReviewLabel = allCaughtUpTitle || (language === 'en' ? 'All items reviewed for today!' : 'Semua materi telah tuntas dimurajaah hari ini!');
+  const defaultTitle =
+    title || (language === "en" ? "Review Queue" : "Antrean Murajaah");
+  const defaultPrimaryLabel =
+    primaryActionLabel ||
+    (language === "en"
+      ? `Review All (${dueCount})`
+      : `Murajaah Semua (${dueCount})`);
+  const noReviewLabel =
+    allCaughtUpTitle ||
+    (language === "en"
+      ? "All items reviewed for today!"
+      : "Semua materi telah tuntas dimurajaah hari ini!");
 
   const colsKey = String(pillGridCols);
-  const isBooksMode = colsKey === '3' || colsKey === 'books' || colsKey === 'personal' || colsKey === 'classes' || colsKey === '4';
-  
-  let gridLayoutClass = 'grid grid-cols-5 gap-1 sm:gap-1.5';
-  if (colsKey === '3' || colsKey === 'books' || colsKey === 'personal' || colsKey === 'classes') {
-    gridLayoutClass = 'grid grid-cols-3 gap-1.5 sm:gap-2';
-  } else if (colsKey === '4') {
-    gridLayoutClass = 'grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-2';
-  } else if (colsKey === '5' || colsKey === 'quran') {
-    gridLayoutClass = 'grid grid-cols-5 gap-1 sm:gap-1.5';
-  } else if (colsKey === '6') {
-    gridLayoutClass = 'grid grid-cols-6 gap-1 sm:gap-1.5';
+  const isBooksMode =
+    colsKey === "3" ||
+    colsKey === "books" ||
+    colsKey === "personal" ||
+    colsKey === "classes" ||
+    colsKey === "4";
+
+  let gridLayoutClass = "grid grid-cols-5 gap-1 sm:gap-1.5";
+  if (
+    colsKey === "3" ||
+    colsKey === "books" ||
+    colsKey === "personal" ||
+    colsKey === "classes"
+  ) {
+    gridLayoutClass = "grid grid-cols-3 gap-1.5 sm:gap-2";
+  } else if (colsKey === "4") {
+    gridLayoutClass = "grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-2";
+  } else if (colsKey === "5" || colsKey === "quran") {
+    gridLayoutClass = "grid grid-cols-5 gap-1 sm:gap-1.5";
+  } else if (colsKey === "6") {
+    gridLayoutClass = "grid grid-cols-6 gap-1 sm:gap-1.5";
   }
 
   if (dueCount === 0) {
     return (
-      <div className={`neumorph-card px-4 py-3.5 rounded-3xl flex items-center justify-between gap-3 transition-all ${className}`}>
+      <div
+        className={`neumorph-card px-4 py-3.5 rounded-3xl flex items-center justify-between gap-3 transition-all ${className}`}
+      >
         <div className="inline-flex items-center gap-3 text-xs sm:text-sm font-bold text-[#10B981]">
           <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#10B981] to-[#059669] flex items-center justify-center shrink-0 shadow-xs">
             <CheckCircle2 className="w-4 h-4 text-white" />
@@ -72,11 +93,17 @@ export const UnifiedDueCard: React.FC<UnifiedDueCardProps> = ({
           <button
             type="button"
             onClick={onOpenCalendar}
-            title={language === 'en' ? 'View Schedule Calendar' : 'Lihat Kalender Jadwal'}
+            title={
+              language === "en"
+                ? "View Schedule Calendar"
+                : "Lihat Kalender Jadwal"
+            }
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-2xl neumorph-card text-[#FF6F3D] text-xs font-bold transition-all cursor-pointer hover:scale-105 active:scale-95 shrink-0"
           >
             <Calendar className="w-3.5 h-3.5 text-[#FF6F3D]" />
-            <span className="hidden sm:inline">{language === 'en' ? 'Schedule' : 'Jadwal'}</span>
+            <span className="hidden sm:inline">
+              {language === "en" ? "Schedule" : "Jadwal"}
+            </span>
           </button>
         )}
       </div>
@@ -84,7 +111,9 @@ export const UnifiedDueCard: React.FC<UnifiedDueCardProps> = ({
   }
 
   return (
-    <div className={`neumorph-card p-4 sm:p-5 rounded-3xl space-y-3.5 transition-all ${className}`}>
+    <div
+      className={`neumorph-card p-4 sm:p-5 rounded-3xl space-y-3.5 transition-all ${className}`}
+    >
       {/* 1. Header Bar: Title, Calendar trigger, and Primary Action Button */}
       <div className="flex items-center justify-between gap-2.5 pb-3 border-b border-black/[0.04] dark:border-white/[0.04]">
         <div className="flex items-center gap-2.5 min-w-0">
@@ -98,7 +127,11 @@ export const UnifiedDueCard: React.FC<UnifiedDueCardProps> = ({
             <button
               type="button"
               onClick={onOpenCalendar}
-              title={language === 'en' ? 'View Schedule Calendar' : 'Lihat Kalender Jadwal'}
+              title={
+                language === "en"
+                  ? "View Schedule Calendar"
+                  : "Lihat Kalender Jadwal"
+              }
               className="w-8 h-8 rounded-xl neumorph-card text-[#FF6F3D] hover:scale-105 active:scale-95 flex items-center justify-center transition-all cursor-pointer shrink-0"
             >
               <Calendar className="w-4 h-4 text-[#FF6F3D]" />
@@ -113,7 +146,11 @@ export const UnifiedDueCard: React.FC<UnifiedDueCardProps> = ({
             e.stopPropagation();
             onStartAll();
           }}
-          title={language === 'en' ? `Review all due items (${dueCount})` : `Murajaah semua item tempo (${dueCount})`}
+          title={
+            language === "en"
+              ? `Review all due items (${dueCount})`
+              : `Murajaah semua item tempo (${dueCount})`
+          }
           className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-2xl bg-gradient-to-br from-[#FF7E4A] to-[#E65320] text-white text-xs font-bold cursor-pointer active:scale-95 transition-all shadow-[0_4px_12px_rgba(255,111,61,0.35)] shrink-0"
         >
           <Play className="w-3.5 h-3.5 fill-white text-white shrink-0" />

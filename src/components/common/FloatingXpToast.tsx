@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Sparkles, Zap, Trophy, Award, Star } from 'lucide-react';
-import { soundEffects } from '../../lib/soundFeedback';
+import React, { useState, useEffect, useCallback } from "react";
+import { Sparkles, Zap, Trophy, Award, Star } from "lucide-react";
+import { soundEffects } from "../../lib/soundFeedback";
 
 export interface XpRewardEventDetail {
   amount: number;
@@ -9,11 +9,11 @@ export interface XpRewardEventDetail {
 }
 
 export function triggerXpReward(amount: number, label?: string) {
-  if (typeof window !== 'undefined') {
+  if (typeof window !== "undefined") {
     window.dispatchEvent(
-      new CustomEvent<XpRewardEventDetail>('unlupa-xp-gain', {
+      new CustomEvent<XpRewardEventDetail>("unlupa-xp-gain", {
         detail: { amount, label, timestamp: Date.now() },
-      })
+      }),
     );
   }
 }
@@ -55,9 +55,9 @@ export const FloatingXpOverlay: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    window.addEventListener('unlupa-xp-gain', handleXpEvent);
+    window.addEventListener("unlupa-xp-gain", handleXpEvent);
     return () => {
-      window.removeEventListener('unlupa-xp-gain', handleXpEvent);
+      window.removeEventListener("unlupa-xp-gain", handleXpEvent);
     };
   }, [handleXpEvent]);
 
@@ -73,8 +73,8 @@ export const FloatingXpOverlay: React.FC = () => {
           key={toast.id}
           className={`flex items-center gap-1.5 sm:gap-2 rounded-full border shadow-lg backdrop-blur-md transition-all duration-300 animate-xp-float ${
             toast.isMajor
-              ? 'px-4 py-1.5 sm:py-2 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-500 text-white border-white/40 shadow-[0_10px_25px_rgba(16,185,129,0.45)] ring-2 ring-emerald-300/40'
-              : 'px-3.5 py-1 sm:py-1.5 bg-gradient-to-r from-[#FF7E4A] to-[#E65320] text-white border-white/30 shadow-[0_8px_20px_rgba(255,111,61,0.4)]'
+              ? "px-4 py-1.5 sm:py-2 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-500 text-white border-white/40 shadow-[0_10px_25px_rgba(16,185,129,0.45)] ring-2 ring-emerald-300/40"
+              : "px-3.5 py-1 sm:py-1.5 bg-gradient-to-r from-[#FF7E4A] to-[#E65320] text-white border-white/30 shadow-[0_8px_20px_rgba(255,111,61,0.4)]"
           }`}
         >
           {/* Animated Icon */}

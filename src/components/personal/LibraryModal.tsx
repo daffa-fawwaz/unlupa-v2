@@ -1,17 +1,17 @@
-import React, { useState } from 'react';
-import { useApp } from '../../context/AppContext';
-import { LibraryEntry } from '../../data/sampleBooks';
-import { BilingualCardText } from '../common/BilingualCardText';
-import { useSwipeGesture } from '../../hooks/useSwipeGesture';
-import { soundEffects } from '../../lib/soundFeedback';
-import { 
-  X, 
-  Search, 
-  Download, 
-  Star, 
-  CheckCircle2, 
-  BookOpen, 
-  Layers, 
+import React, { useState } from "react";
+import { useApp } from "../../context/AppContext";
+import { LibraryEntry } from "../../data/sampleBooks";
+import { BilingualCardText } from "../common/BilingualCardText";
+import { useSwipeGesture } from "../../hooks/useSwipeGesture";
+import { soundEffects } from "../../lib/soundFeedback";
+import {
+  X,
+  Search,
+  Download,
+  Star,
+  CheckCircle2,
+  BookOpen,
+  Layers,
   ShieldCheck,
   Tag,
   Eye,
@@ -24,8 +24,8 @@ import {
   Check,
   ExternalLink,
   ChevronRight,
-  ChevronDown
-} from 'lucide-react';
+  ChevronDown,
+} from "lucide-react";
 
 interface Props {
   isOpen: boolean;
@@ -33,22 +33,26 @@ interface Props {
 }
 
 export const LibraryModal: React.FC<Props> = ({ isOpen, onClose }) => {
-  const { 
-    library, 
-    books, 
-    importFromLibrary, 
-    duplicateBookAsEditable, 
-    language, 
+  const {
+    library,
+    books,
+    importFromLibrary,
+    duplicateBookAsEditable,
+    language,
     setActiveSpace,
     isBookPurchased,
-    openCheckoutModal
+    openCheckoutModal,
   } = useApp();
-  const [search, setSearch] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<string>('All');
-  const [sortBy, setSortBy] = useState<'popular' | 'rating' | 'cards' | 'newest'>('popular');
+  const [search, setSearch] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string>("All");
+  const [sortBy, setSortBy] = useState<
+    "popular" | "rating" | "cards" | "newest"
+  >("popular");
   const [isSortMenuOpen, setIsSortMenuOpen] = useState<boolean>(false);
   const [previewEntry, setPreviewEntry] = useState<LibraryEntry | null>(null);
-  const [previewSelectedChapterId, setPreviewSelectedChapterId] = useState<string | null>(null);
+  const [previewSelectedChapterId, setPreviewSelectedChapterId] = useState<
+    string | null
+  >(null);
   const [justImportedId, setJustImportedId] = useState<string | null>(null);
 
   useSwipeGesture(null, {
@@ -58,7 +62,7 @@ export const LibraryModal: React.FC<Props> = ({ isOpen, onClose }) => {
         setPreviewEntry(null);
         return;
       }
-      soundEffects.playCardFlip('backward');
+      soundEffects.playCardFlip("backward");
       onClose();
     },
     onSwipeDown: () => {
@@ -76,38 +80,65 @@ export const LibraryModal: React.FC<Props> = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
 
   const formatIDR = (num: number) => {
-    return new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
+    return new Intl.NumberFormat("id-ID", {
+      style: "currency",
+      currency: "IDR",
       maximumFractionDigits: 0,
     }).format(num);
   };
 
   const categories = [
-    { id: 'All', label: language === 'en' ? 'All Books' : 'Semua Kitab' },
-    { id: 'Bahasa Arab', label: language === 'en' ? 'Arabic Language' : 'Bahasa Arab' },
-    { id: 'Tajwid & Al-Qur\'an', label: language === 'en' ? 'Tajweed & Quran' : 'Tajwid & Al-Qur\'an' },
-    { id: 'Hadits & Sunnah', label: language === 'en' ? 'Hadith Studies' : 'Hadits & Sunnah' },
-    { id: 'Dzikir & Doa', label: language === 'en' ? 'Dhikr & Du\'a' : 'Dzikir & Doa' },
-    { id: 'Umum & Akademik', label: language === 'en' ? 'General & Academic' : 'Umum & Akademik' },
+    { id: "All", label: language === "en" ? "All Books" : "Semua Kitab" },
+    {
+      id: "Bahasa Arab",
+      label: language === "en" ? "Arabic Language" : "Bahasa Arab",
+    },
+    {
+      id: "Tajwid & Al-Qur'an",
+      label: language === "en" ? "Tajweed & Quran" : "Tajwid & Al-Qur'an",
+    },
+    {
+      id: "Hadits & Sunnah",
+      label: language === "en" ? "Hadith Studies" : "Hadits & Sunnah",
+    },
+    {
+      id: "Dzikir & Doa",
+      label: language === "en" ? "Dhikr & Du'a" : "Dzikir & Doa",
+    },
+    {
+      id: "Umum & Akademik",
+      label: language === "en" ? "General & Academic" : "Umum & Akademik",
+    },
   ];
 
   // Filtering & Sorting
   const filteredEntries = library
-    .filter(entry => {
-      const matchCategory = selectedCategory === 'All' || entry.book.category === selectedCategory;
-      const matchSearch = 
-        (entry.book?.title || '').toLowerCase().includes(search.toLowerCase()) ||
-        (entry.book?.description || '').toLowerCase().includes(search.toLowerCase()) ||
-        (entry.curator || '').toLowerCase().includes(search.toLowerCase()) ||
-        (entry.book?.authorName || '').toLowerCase().includes(search.toLowerCase());
+    .filter((entry) => {
+      const matchCategory =
+        selectedCategory === "All" || entry.book.category === selectedCategory;
+      const matchSearch =
+        (entry.book?.title || "")
+          .toLowerCase()
+          .includes(search.toLowerCase()) ||
+        (entry.book?.description || "")
+          .toLowerCase()
+          .includes(search.toLowerCase()) ||
+        (entry.curator || "").toLowerCase().includes(search.toLowerCase()) ||
+        (entry.book?.authorName || "")
+          .toLowerCase()
+          .includes(search.toLowerCase());
       return matchCategory && matchSearch;
     })
     .sort((a, b) => {
-      if (sortBy === 'popular') return (b.downloads || 0) - (a.downloads || 0);
-      if (sortBy === 'rating') return (b.rating || 0) - (a.rating || 0);
-      if (sortBy === 'cards') return (b.items?.length || 0) - (a.items?.length || 0);
-      if (sortBy === 'newest') return new Date(b.book.createdAt || 0).getTime() - new Date(a.book.createdAt || 0).getTime();
+      if (sortBy === "popular") return (b.downloads || 0) - (a.downloads || 0);
+      if (sortBy === "rating") return (b.rating || 0) - (a.rating || 0);
+      if (sortBy === "cards")
+        return (b.items?.length || 0) - (a.items?.length || 0);
+      if (sortBy === "newest")
+        return (
+          new Date(b.book.createdAt || 0).getTime() -
+          new Date(a.book.createdAt || 0).getTime()
+        );
       return 0;
     });
 
@@ -120,15 +151,16 @@ export const LibraryModal: React.FC<Props> = ({ isOpen, onClose }) => {
   };
 
   const selectedPreviewChapterCards = previewEntry
-    ? (previewSelectedChapterId
-        ? previewEntry.items.filter(i => i.chapterId === previewSelectedChapterId)
-        : previewEntry.items)
+    ? previewSelectedChapterId
+      ? previewEntry.items.filter(
+          (i) => i.chapterId === previewSelectedChapterId,
+        )
+      : previewEntry.items
     : [];
 
   return (
     <div className="fixed inset-0 z-[110] flex items-center justify-center p-2 sm:p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in">
       <div className="clay-card w-full max-w-5xl rounded-3xl shadow-2xl border border-black/[0.04] dark:border-white/[0.06] overflow-hidden flex flex-col max-h-[92vh]">
-        
         {/* Header Bar */}
         <div className="px-4 sm:px-6 py-4 border-b border-black/[0.04] dark:border-white/[0.05] flex items-center justify-between bg-[#FAFBFC]/80 dark:bg-[#141C2B]/80 shrink-0">
           <div className="flex items-center gap-3">
@@ -138,16 +170,19 @@ export const LibraryModal: React.FC<Props> = ({ isOpen, onClose }) => {
             <div>
               <div className="flex items-center gap-2 flex-wrap">
                 <h3 className="font-extrabold text-base sm:text-lg text-[#18234A] dark:text-[#F8FAFC] tracking-tight">
-                  {language === 'en' ? 'Public Knowledge Library' : 'Pustaka Kitab & Kurasi Publik'}
+                  {language === "en"
+                    ? "Public Knowledge Library"
+                    : "Pustaka Kitab & Kurasi Publik"}
                 </h3>
                 <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold clay-badge-orange text-white shadow-2xs">
-                  {library.length} {language === 'en' ? 'Curated Books' : 'Kitab Tersedia'}
+                  {library.length}{" "}
+                  {language === "en" ? "Curated Books" : "Kitab Tersedia"}
                 </span>
               </div>
               <p className="text-xs text-[#64748B] dark:text-[#94A3B8] mt-0.5 font-medium">
-                {language === 'en'
-                  ? 'Curated knowledge books ready to import.'
-                  : 'Koleksi kitab terkurasi siap dipelajari.'}
+                {language === "en"
+                  ? "Curated knowledge books ready to import."
+                  : "Koleksi kitab terkurasi siap dipelajari."}
               </p>
             </div>
           </div>
@@ -168,14 +203,18 @@ export const LibraryModal: React.FC<Props> = ({ isOpen, onClose }) => {
               <Search className="w-4 h-4 text-[#94A3B8] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
               <input
                 type="text"
-                placeholder={language === 'en' ? 'Search kitab title, author, or topic...' : 'Cari judul kitab, pengarang, materi...'}
+                placeholder={
+                  language === "en"
+                    ? "Search kitab title, author, or topic..."
+                    : "Cari judul kitab, pengarang, materi..."
+                }
                 value={search}
-                onChange={e => setSearch(e.target.value)}
+                onChange={(e) => setSearch(e.target.value)}
                 className="w-full pl-9 pr-8 py-2 rounded-2xl clay-inset text-xs sm:text-sm text-[#18234A] dark:text-[#F8FAFC] placeholder:text-[#94A3B8] focus:outline-none focus:ring-2 focus:ring-[#F27A3D]/30 transition-all"
               />
               {search && (
                 <button
-                  onClick={() => setSearch('')}
+                  onClick={() => setSearch("")}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94A3B8] hover:text-[#18234A] dark:hover:text-white cursor-pointer"
                 >
                   <X className="w-3.5 h-3.5" />
@@ -192,27 +231,56 @@ export const LibraryModal: React.FC<Props> = ({ isOpen, onClose }) => {
               >
                 <SlidersHorizontal className="w-3.5 h-3.5 text-[#F27A3D] shrink-0" />
                 <span className="truncate">
-                  {sortBy === 'popular'
-                    ? (language === 'en' ? 'Most Popular' : 'Terpopuler')
-                    : sortBy === 'rating'
-                    ? (language === 'en' ? 'Highest Rated' : 'Rating')
-                    : sortBy === 'cards'
-                    ? (language === 'en' ? 'Most Cards' : 'Kartu')
-                    : (language === 'en' ? 'Newest' : 'Terbaru')}
+                  {sortBy === "popular"
+                    ? language === "en"
+                      ? "Most Popular"
+                      : "Terpopuler"
+                    : sortBy === "rating"
+                      ? language === "en"
+                        ? "Highest Rated"
+                        : "Rating"
+                      : sortBy === "cards"
+                        ? language === "en"
+                          ? "Most Cards"
+                          : "Kartu"
+                        : language === "en"
+                          ? "Newest"
+                          : "Terbaru"}
                 </span>
-                <ChevronDown className={`w-3.5 h-3.5 text-[#64748B] dark:text-[#94A3B8] transition-transform shrink-0 ${isSortMenuOpen ? 'rotate-180' : ''}`} />
+                <ChevronDown
+                  className={`w-3.5 h-3.5 text-[#64748B] dark:text-[#94A3B8] transition-transform shrink-0 ${isSortMenuOpen ? "rotate-180" : ""}`}
+                />
               </button>
 
               {isSortMenuOpen && (
                 <>
-                  <div className="fixed inset-0 z-40" onClick={() => setIsSortMenuOpen(false)} />
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setIsSortMenuOpen(false)}
+                  />
                   <div className="absolute right-0 top-full mt-1.5 z-50 w-52 rounded-2xl clay-card p-2 shadow-2xl border border-black/[0.06] dark:border-white/[0.1] space-y-1 animate-in fade-in zoom-in-95 duration-150">
                     {[
-                      { id: 'popular', labelEn: 'Most Popular', labelId: 'Terpopuler' },
-                      { id: 'rating', labelEn: 'Highest Rated', labelId: 'Rating Tertinggi' },
-                      { id: 'cards', labelEn: 'Most Cards', labelId: 'Jumlah Kartu' },
-                      { id: 'newest', labelEn: 'Recently Added', labelId: 'Terbaru' },
-                    ].map(item => (
+                      {
+                        id: "popular",
+                        labelEn: "Most Popular",
+                        labelId: "Terpopuler",
+                      },
+                      {
+                        id: "rating",
+                        labelEn: "Highest Rated",
+                        labelId: "Rating Tertinggi",
+                      },
+                      {
+                        id: "cards",
+                        labelEn: "Most Cards",
+                        labelId: "Jumlah Kartu",
+                      },
+                      {
+                        id: "newest",
+                        labelEn: "Recently Added",
+                        labelId: "Terbaru",
+                      },
+                    ].map((item) => (
                       <button
                         key={item.id}
                         type="button"
@@ -222,12 +290,16 @@ export const LibraryModal: React.FC<Props> = ({ isOpen, onClose }) => {
                         }}
                         className={`w-full text-left px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-between cursor-pointer ${
                           sortBy === item.id
-                            ? 'clay-pill text-[#F27A3D] font-extrabold shadow-2xs'
-                            : 'hover:bg-black/[0.04] dark:hover:bg-white/[0.06] text-[#18234A] dark:text-[#F8FAFC]'
+                            ? "clay-pill text-[#F27A3D] font-extrabold shadow-2xs"
+                            : "hover:bg-black/[0.04] dark:hover:bg-white/[0.06] text-[#18234A] dark:text-[#F8FAFC]"
                         }`}
                       >
-                        <span>{language === 'en' ? item.labelEn : item.labelId}</span>
-                        {sortBy === item.id && <CheckCircle2 className="w-3.5 h-3.5 text-[#F27A3D] shrink-0" />}
+                        <span>
+                          {language === "en" ? item.labelEn : item.labelId}
+                        </span>
+                        {sortBy === item.id && (
+                          <CheckCircle2 className="w-3.5 h-3.5 text-[#F27A3D] shrink-0" />
+                        )}
                       </button>
                     ))}
                   </div>
@@ -239,7 +311,7 @@ export const LibraryModal: React.FC<Props> = ({ isOpen, onClose }) => {
 
         {/* Categories Horizontal Scroll */}
         <div className="px-4 sm:px-6 py-2.5 bg-[#FAFBFC]/40 dark:bg-[#141C2B]/40 border-b border-black/[0.03] dark:border-white/[0.04] flex items-center gap-2 overflow-x-auto scrollbar-none shrink-0">
-          {categories.map(cat => {
+          {categories.map((cat) => {
             const isSelected = selectedCategory === cat.id;
             return (
               <button
@@ -247,8 +319,8 @@ export const LibraryModal: React.FC<Props> = ({ isOpen, onClose }) => {
                 onClick={() => setSelectedCategory(cat.id)}
                 className={`px-3.5 py-1.5 rounded-2xl text-xs font-extrabold whitespace-nowrap transition-all cursor-pointer ${
                   isSelected
-                    ? 'clay-badge-orange text-white shadow-2xs scale-102'
-                    : 'clay-pill text-[#64748B] dark:text-[#94A3B8] hover:text-[#18234A] dark:hover:text-[#F8FAFC]'
+                    ? "clay-badge-orange text-white shadow-2xs scale-102"
+                    : "clay-pill text-[#64748B] dark:text-[#94A3B8] hover:text-[#18234A] dark:hover:text-[#F8FAFC]"
                 }`}
               >
                 {cat.label}
@@ -263,18 +335,22 @@ export const LibraryModal: React.FC<Props> = ({ isOpen, onClose }) => {
             <div className="text-center py-16 px-4">
               <BookOpen className="w-12 h-12 text-[#94A3B8] dark:text-slate-700 mx-auto mb-3" />
               <h4 className="font-bold text-[#18234A] dark:text-[#F8FAFC] text-base">
-                {language === 'en' ? 'No books found' : 'Tidak ada kitab yang cocok'}
+                {language === "en"
+                  ? "No books found"
+                  : "Tidak ada kitab yang cocok"}
               </h4>
               <p className="text-xs text-[#64748B] dark:text-[#94A3B8] mt-1 max-w-sm mx-auto font-medium">
-                {language === 'en' 
-                  ? 'Try searching with different keywords or switch the category filter.' 
-                  : 'Coba gunakan kata kunci lain atau pilih kategori kitab yang berbeda.'}
+                {language === "en"
+                  ? "Try searching with different keywords or switch the category filter."
+                  : "Coba gunakan kata kunci lain atau pilih kategori kitab yang berbeda."}
               </p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredEntries.map(entry => {
-                const isAlreadyImported = books.some(b => b.title === entry.book.title);
+              {filteredEntries.map((entry) => {
+                const isAlreadyImported = books.some(
+                  (b) => b.title === entry.book.title,
+                );
                 const isJustImported = justImportedId === entry.id;
                 const isPurchased = isBookPurchased(entry.id, entry.book);
                 const isPaid = (entry.book.price || 0) > 0;
@@ -313,7 +389,7 @@ export const LibraryModal: React.FC<Props> = ({ isOpen, onClose }) => {
                             <span className="px-2.5 py-0.5 rounded-full clay-pill text-[#B45309] dark:text-amber-300 text-[10px] font-extrabold">
                               {entry.book.category}
                             </span>
-                            
+
                             {/* Price / Free Badge */}
                             {isPaid ? (
                               <span className="px-2.5 py-0.5 rounded-full clay-badge-orange text-white text-[10px] font-extrabold shadow-2xs">
@@ -326,14 +402,17 @@ export const LibraryModal: React.FC<Props> = ({ isOpen, onClose }) => {
                             )}
 
                             {entry.verified && (
-                              <span className="inline-flex items-center gap-0.5 text-[10px] text-emerald-700 dark:text-emerald-400 font-extrabold" title="Kurasi Resmi Terverifikasi">
+                              <span
+                                className="inline-flex items-center gap-0.5 text-[10px] text-emerald-700 dark:text-emerald-400 font-extrabold"
+                                title="Kurasi Resmi Terverifikasi"
+                              >
                                 <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
                                 <span>Kurasi Resmi</span>
                               </span>
                             )}
                           </div>
 
-                          <h4 
+                          <h4
                             title={entry.book.title}
                             className="font-extrabold text-sm sm:text-base text-[#18234A] dark:text-[#F8FAFC] leading-snug line-clamp-2 group-hover:text-[#F27A3D] transition-colors"
                           >
@@ -351,12 +430,18 @@ export const LibraryModal: React.FC<Props> = ({ isOpen, onClose }) => {
                               {entry.rating}
                             </span>
                             <span>•</span>
-                            <span className="flex items-center gap-1" title="Jumlah unduhan">
+                            <span
+                              className="flex items-center gap-1"
+                              title="Jumlah unduhan"
+                            >
                               <Download className="w-3.5 h-3.5 text-[#94A3B8]" />
                               {(entry.downloads || 0).toLocaleString()}
                             </span>
                             <span>•</span>
-                            <span className="flex items-center gap-1" title="Jumlah kartu hafalan">
+                            <span
+                              className="flex items-center gap-1"
+                              title="Jumlah kartu hafalan"
+                            >
                               <Layers className="w-3.5 h-3.5 text-[#94A3B8]" />
                               {entry.items?.length || 0} kartu
                             </span>
@@ -381,25 +466,35 @@ export const LibraryModal: React.FC<Props> = ({ isOpen, onClose }) => {
                         className="px-3 py-1.5 rounded-xl clay-pill text-[#18234A] dark:text-[#F8FAFC] text-xs font-bold flex items-center gap-1.5 hover:scale-105 active:scale-95 transition-all cursor-pointer"
                       >
                         <Eye className="w-3.5 h-3.5 text-[#64748B]" />
-                        <span>{language === 'en' ? 'Preview' : 'Intip Isi'}</span>
+                        <span>
+                          {language === "en" ? "Preview" : "Intip Isi"}
+                        </span>
                       </button>
 
                       {isJustImported ? (
                         <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl clay-badge-emerald text-white text-xs font-extrabold animate-in fade-in shadow-2xs">
                           <Check className="w-4 h-4 text-white" />
-                          <span>{language === 'en' ? 'Installed!' : 'Berhasil Dipasang!'}</span>
+                          <span>
+                            {language === "en"
+                              ? "Installed!"
+                              : "Berhasil Dipasang!"}
+                          </span>
                         </span>
                       ) : isAlreadyImported ? (
                         <div className="flex items-center gap-1.5">
                           <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[#10B981]">
                             <CheckCircle2 className="w-3.5 h-3.5 text-[#10B981]" />
-                            {language === 'en' ? 'Installed' : 'Sudah Ada'}
+                            {language === "en" ? "Installed" : "Sudah Ada"}
                           </span>
                           <button
                             type="button"
                             onClick={() => handleImport(entry)}
                             className="px-2.5 py-1 rounded-lg clay-pill text-[#F27A3D] text-[10px] font-extrabold hover:scale-105 active:scale-95 transition-all cursor-pointer"
-                            title={language === 'en' ? 'Import again as fresh duplicate' : 'Pasang ulang sebagai salinan baru'}
+                            title={
+                              language === "en"
+                                ? "Import again as fresh duplicate"
+                                : "Pasang ulang sebagai salinan baru"
+                            }
                           >
                             + Salin
                           </button>
@@ -420,7 +515,11 @@ export const LibraryModal: React.FC<Props> = ({ isOpen, onClose }) => {
                           className="px-3.5 py-1.5 rounded-xl clay-btn-primary text-white font-extrabold text-xs hover:scale-105 active:scale-95 transition-all flex items-center gap-1.5 shadow-xs cursor-pointer"
                         >
                           <Download className="w-3.5 h-3.5" />
-                          <span>{language === 'en' ? '1-Click Import' : 'Pasang Kitab'}</span>
+                          <span>
+                            {language === "en"
+                              ? "1-Click Import"
+                              : "Pasang Kitab"}
+                          </span>
                         </button>
                       )}
                     </div>
@@ -435,7 +534,6 @@ export const LibraryModal: React.FC<Props> = ({ isOpen, onClose }) => {
         {previewEntry && (
           <div className="fixed inset-0 z-[110] flex items-center justify-center p-3 sm:p-6 bg-slate-900/70 backdrop-blur-md animate-in fade-in">
             <div className="clay-card w-full max-w-3xl rounded-3xl shadow-2xl border border-black/[0.04] dark:border-white/[0.06] overflow-hidden flex flex-col max-h-[88vh]">
-              
               {/* Preview Header */}
               <div className="p-4 sm:p-6 border-b border-black/[0.04] dark:border-white/[0.05] flex items-start justify-between gap-4 bg-[#FAFBFC]/80 dark:bg-[#141C2B]/80">
                 <div className="flex items-start gap-4">
@@ -460,7 +558,10 @@ export const LibraryModal: React.FC<Props> = ({ isOpen, onClose }) => {
                       {previewEntry.book.title}
                     </h3>
                     <p className="text-xs sm:text-sm text-[#64748B] dark:text-[#94A3B8] font-medium mt-1">
-                      {language === 'en' ? 'Author' : 'Pengarang'}: <strong>{previewEntry.book.authorName}</strong> • {language === 'en' ? 'Curated by' : 'Dikurasi oleh'} {previewEntry.curator}
+                      {language === "en" ? "Author" : "Pengarang"}:{" "}
+                      <strong>{previewEntry.book.authorName}</strong> •{" "}
+                      {language === "en" ? "Curated by" : "Dikurasi oleh"}{" "}
+                      {previewEntry.curator}
                     </p>
                     <p className="text-xs text-[#64748B] dark:text-[#94A3B8] font-medium mt-2 line-clamp-2 leading-relaxed">
                       {previewEntry.book.description}
@@ -482,21 +583,29 @@ export const LibraryModal: React.FC<Props> = ({ isOpen, onClose }) => {
                 <div>
                   <h5 className="text-xs font-extrabold text-[#64748B] dark:text-[#94A3B8] uppercase tracking-wider mb-2 flex items-center gap-1.5">
                     <Folder className="w-3.5 h-3.5 text-[#F27A3D]" />
-                    <span>{language === 'en' ? 'Table of Contents' : 'Daftar Bab & Materi'} ({previewEntry.chapters?.length || 0})</span>
+                    <span>
+                      {language === "en"
+                        ? "Table of Contents"
+                        : "Daftar Bab & Materi"}{" "}
+                      ({previewEntry.chapters?.length || 0})
+                    </span>
                   </h5>
                   <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pb-1">
                     <button
                       onClick={() => setPreviewSelectedChapterId(null)}
                       className={`px-3.5 py-1.5 rounded-2xl text-xs font-extrabold whitespace-nowrap transition-all cursor-pointer ${
                         previewSelectedChapterId === null
-                          ? 'clay-badge-orange text-white shadow-2xs'
-                          : 'clay-pill text-[#64748B] dark:text-[#94A3B8]'
+                          ? "clay-badge-orange text-white shadow-2xs"
+                          : "clay-pill text-[#64748B] dark:text-[#94A3B8]"
                       }`}
                     >
-                      {language === 'en' ? 'All Chapters' : 'Semua Bab'} ({previewEntry.items.length})
+                      {language === "en" ? "All Chapters" : "Semua Bab"} (
+                      {previewEntry.items.length})
                     </button>
-                    {(previewEntry.chapters || []).map(ch => {
-                      const chCardCount = previewEntry.items.filter(i => i.chapterId === ch.id).length;
+                    {(previewEntry.chapters || []).map((ch) => {
+                      const chCardCount = previewEntry.items.filter(
+                        (i) => i.chapterId === ch.id,
+                      ).length;
                       const isChSelected = previewSelectedChapterId === ch.id;
                       return (
                         <button
@@ -504,8 +613,8 @@ export const LibraryModal: React.FC<Props> = ({ isOpen, onClose }) => {
                           onClick={() => setPreviewSelectedChapterId(ch.id)}
                           className={`px-3.5 py-1.5 rounded-2xl text-xs font-extrabold whitespace-nowrap transition-all cursor-pointer ${
                             isChSelected
-                              ? 'clay-badge-orange text-white shadow-2xs'
-                              : 'clay-pill text-[#64748B] dark:text-[#94A3B8]'
+                              ? "clay-badge-orange text-white shadow-2xs"
+                              : "clay-pill text-[#64748B] dark:text-[#94A3B8]"
                           }`}
                         >
                           {ch.title} ({chCardCount})
@@ -519,7 +628,12 @@ export const LibraryModal: React.FC<Props> = ({ isOpen, onClose }) => {
                 <div className="space-y-3 pt-2">
                   <h5 className="text-xs font-extrabold text-[#64748B] dark:text-[#94A3B8] uppercase tracking-wider flex items-center gap-1.5">
                     <Sparkles className="w-3.5 h-3.5 text-[#F27A3D]" />
-                    <span>{language === 'en' ? 'Sample Flashcards' : 'Sampel Kartu Q&A'} ({selectedPreviewChapterCards.length})</span>
+                    <span>
+                      {language === "en"
+                        ? "Sample Flashcards"
+                        : "Sampel Kartu Q&A"}{" "}
+                      ({selectedPreviewChapterCards.length})
+                    </span>
                   </h5>
 
                   <div className="space-y-2.5">
@@ -533,7 +647,11 @@ export const LibraryModal: React.FC<Props> = ({ isOpen, onClose }) => {
                             Q
                           </span>
                           <div className="text-xs sm:text-sm font-bold text-[#18234A] dark:text-[#F8FAFC] leading-relaxed flex-1">
-                            <BilingualCardText text={card.question} type="question" variant="detail-modal" />
+                            <BilingualCardText
+                              text={card.question}
+                              type="question"
+                              variant="detail-modal"
+                            />
                           </div>
                         </div>
 
@@ -542,14 +660,21 @@ export const LibraryModal: React.FC<Props> = ({ isOpen, onClose }) => {
                             A
                           </span>
                           <div className="text-xs sm:text-sm text-[#18234A] dark:text-[#F8FAFC] leading-relaxed flex-1 font-medium">
-                            <BilingualCardText text={card.answer} type="answer" variant="detail-modal" />
+                            <BilingualCardText
+                              text={card.answer}
+                              type="answer"
+                              variant="detail-modal"
+                            />
                           </div>
                         </div>
 
                         {card.tags && card.tags.length > 0 && (
                           <div className="flex items-center gap-1.5 pt-1">
                             {card.tags.map((tag, tIdx) => (
-                              <span key={tIdx} className="px-2 py-0.5 rounded-lg clay-pill text-[#64748B] dark:text-[#94A3B8] text-[10px] font-bold">
+                              <span
+                                key={tIdx}
+                                className="px-2 py-0.5 rounded-lg clay-pill text-[#64748B] dark:text-[#94A3B8] text-[10px] font-bold"
+                              >
                                 #{tag}
                               </span>
                             ))}
@@ -568,10 +693,11 @@ export const LibraryModal: React.FC<Props> = ({ isOpen, onClose }) => {
                   onClick={() => setPreviewEntry(null)}
                   className="px-4 py-2 rounded-xl clay-pill text-[#18234A] dark:text-[#F8FAFC] text-xs font-bold hover:scale-105 active:scale-95 transition-all cursor-pointer"
                 >
-                  {language === 'en' ? 'Close Preview' : 'Tutup Pratinjau'}
+                  {language === "en" ? "Close Preview" : "Tutup Pratinjau"}
                 </button>
 
-                {!isBookPurchased(previewEntry.id, previewEntry.book) && (previewEntry.book.price || 0) > 0 ? (
+                {!isBookPurchased(previewEntry.id, previewEntry.book) &&
+                (previewEntry.book.price || 0) > 0 ? (
                   <button
                     type="button"
                     onClick={() => {
@@ -581,7 +707,9 @@ export const LibraryModal: React.FC<Props> = ({ isOpen, onClose }) => {
                     }}
                     className="px-5 py-2 rounded-xl clay-btn-primary text-white font-extrabold text-xs sm:text-sm shadow-xs hover:scale-105 active:scale-95 transition-all flex items-center gap-2 cursor-pointer"
                   >
-                    <span>Beli Kitab Ini ({formatIDR(previewEntry.book.price || 0)})</span>
+                    <span>
+                      Beli Kitab Ini ({formatIDR(previewEntry.book.price || 0)})
+                    </span>
                     <ArrowRight className="w-4 h-4" />
                   </button>
                 ) : (
@@ -594,15 +722,17 @@ export const LibraryModal: React.FC<Props> = ({ isOpen, onClose }) => {
                     className="px-5 py-2 rounded-xl clay-btn-primary text-white font-extrabold text-xs sm:text-sm shadow-xs hover:scale-105 active:scale-95 transition-all flex items-center gap-2 cursor-pointer"
                   >
                     <Download className="w-4 h-4" />
-                    <span>{language === 'en' ? 'Import Full Kitab (1-Click)' : 'Pasang Seluruh Kitab (1-Klik)'}</span>
+                    <span>
+                      {language === "en"
+                        ? "Import Full Kitab (1-Click)"
+                        : "Pasang Seluruh Kitab (1-Klik)"}
+                    </span>
                   </button>
                 )}
               </div>
-
             </div>
           </div>
         )}
-
       </div>
     </div>
   );

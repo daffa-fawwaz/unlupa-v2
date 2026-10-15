@@ -4,17 +4,17 @@
  * BackdropText, Loader, Overlay, Scene01Hero, and SceneManager into a unified lifecycle.
  */
 
-import { Engine } from './Engine';
-import { ScrollController } from './ScrollController';
-import { SceneManager } from './SceneManager';
-import { Environment } from '../world/Environment';
-import { Crystal } from '../world/Crystal';
-import { Dust } from '../world/Dust';
-import { BackdropText } from '../world/BackdropText';
-import { Overlay } from '../ui/Overlay';
-import { Loader } from '../ui/Loader';
-import { Scene01Hero, SceneContext } from '../scenes/Scene01Hero';
-import { Scene02Masalah } from '../scenes/Scene02Masalah';
+import { Engine } from "./Engine";
+import { ScrollController } from "./ScrollController";
+import { SceneManager } from "./SceneManager";
+import { Environment } from "../world/Environment";
+import { Crystal } from "../world/Crystal";
+import { Dust } from "../world/Dust";
+import { BackdropText } from "../world/BackdropText";
+import { Overlay } from "../ui/Overlay";
+import { Loader } from "../ui/Loader";
+import { Scene01Hero, SceneContext } from "../scenes/Scene01Hero";
+import { Scene02Masalah } from "../scenes/Scene02Masalah";
 
 export interface AppEngineOptions {
   canvasContainer: HTMLElement;
@@ -39,7 +39,8 @@ export class AppEngine {
   constructor(private options: AppEngineOptions) {}
 
   public async start() {
-    const { canvasContainer, scrollTrack, overlayContainer, onLaunchApp } = this.options;
+    const { canvasContainer, scrollTrack, overlayContainer, onLaunchApp } =
+      this.options;
 
     // 1. Mount minimal editorial loader (0.0-0.8s)
     this.loader = new Loader(overlayContainer);
@@ -54,7 +55,7 @@ export class AppEngine {
         if (this.scrollController) {
           this.scrollController.scrollTo(0, 1.0);
         }
-      }
+      },
     });
 
     // 3. Detect WebGL support
@@ -67,7 +68,7 @@ export class AppEngine {
     this.loader.setProgress(35);
 
     // 4. Initialize Core Engine & ScrollController
-    this.engine = new Engine(canvasContainer, 'HIGH');
+    this.engine = new Engine(canvasContainer, "HIGH");
     this.scrollController = new ScrollController(scrollTrack);
 
     this.loader.setProgress(55);
@@ -102,8 +103,12 @@ export class AppEngine {
     this.engine.setOnTick((dt, time) => {
       if (this.isDisposed) return;
 
-      const velocity = this.scrollController ? this.scrollController.velocity : 0;
-      const progress = this.scrollController ? this.scrollController.globalProgress : 0;
+      const velocity = this.scrollController
+        ? this.scrollController.velocity
+        : 0;
+      const progress = this.scrollController
+        ? this.scrollController.globalProgress
+        : 0;
 
       // Update 3D entities
       if (this.environment) this.environment.update(dt);
@@ -142,10 +147,10 @@ export class AppEngine {
 
   private checkWebGLSupport(): boolean {
     try {
-      const canvas = document.createElement('canvas');
+      const canvas = document.createElement("canvas");
       return !!(
         window.WebGLRenderingContext &&
-        (canvas.getContext('webgl') || canvas.getContext('experimental-webgl'))
+        (canvas.getContext("webgl") || canvas.getContext("experimental-webgl"))
       );
     } catch {
       return false;

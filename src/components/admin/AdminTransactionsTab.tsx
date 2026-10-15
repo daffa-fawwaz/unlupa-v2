@@ -1,54 +1,77 @@
-import React, { useState } from 'react';
-import { useApp } from '../../context/AppContext';
-import { BookTransaction, PaymentMethod, TransactionStatus } from '../../types';
-import { 
-  ReceiptText, 
-  DollarSign, 
-  TrendingUp, 
-  Users, 
-  Search, 
-  Filter, 
-  Download, 
-  CheckCircle2, 
-  Clock, 
-  AlertCircle, 
-  Building2, 
-  QrCode, 
-  CreditCard, 
+import React, { useState } from "react";
+import { useApp } from "../../context/AppContext";
+import { BookTransaction, PaymentMethod, TransactionStatus } from "../../types";
+import {
+  ReceiptText,
+  DollarSign,
+  TrendingUp,
+  Users,
+  Search,
+  Filter,
+  Download,
+  CheckCircle2,
+  Clock,
+  AlertCircle,
+  Building2,
+  QrCode,
+  CreditCard,
   Wallet,
   ArrowUpRight,
   ShieldCheck,
   Send,
-  ExternalLink
-} from 'lucide-react';
+  ExternalLink,
+} from "lucide-react";
 
 export const AdminTransactionsTab: React.FC = () => {
   const { transactions, language, userProfile } = useApp();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'success' | 'pending'>('all');
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<
+    "all" | "success" | "pending"
+  >("all");
   const [selectedTx, setSelectedTx] = useState<BookTransaction | null>(null);
-  const [disbursedAuthors, setDisbursedAuthors] = useState<Set<string>>(new Set());
+  const [disbursedAuthors, setDisbursedAuthors] = useState<Set<string>>(
+    new Set(),
+  );
 
   const formatIDR = (num: number) => {
-    return new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
+    return new Intl.NumberFormat("id-ID", {
+      style: "currency",
+      currency: "IDR",
       maximumFractionDigits: 0,
     }).format(num);
   };
 
   // Metrics Calculation
-  const successfulTx = transactions.filter(t => t.status === 'success');
+  const successfulTx = transactions.filter((t) => t.status === "success");
   const totalGMV = successfulTx.reduce((sum, t) => sum + (t.amount || 0), 0);
-  const totalPlatformRevenue = successfulTx.reduce((sum, t) => sum + (t.platformFee || 0), 0);
-  const totalAuthorRoyalties = successfulTx.reduce((sum, t) => sum + (t.authorRoyalty || 0), 0);
+  const totalPlatformRevenue = successfulTx.reduce(
+    (sum, t) => sum + (t.platformFee || 0),
+    0,
+  );
+  const totalAuthorRoyalties = successfulTx.reduce(
+    (sum, t) => sum + (t.authorRoyalty || 0),
+    0,
+  );
 
   // Author Royalties Breakdown
-  const authorEarningsMap = new Map<string, { name: string; totalSales: number; totalEarnings: number; transactionsCount: number }>();
-  successfulTx.forEach(t => {
-    if (t.type === 'book_purchase') {
-      const authorKey = t.authorName || 'Kurator Komunitas';
-      const existing = authorEarningsMap.get(authorKey) || { name: authorKey, totalSales: 0, totalEarnings: 0, transactionsCount: 0 };
+  const authorEarningsMap = new Map<
+    string,
+    {
+      name: string;
+      totalSales: number;
+      totalEarnings: number;
+      transactionsCount: number;
+    }
+  >();
+  successfulTx.forEach((t) => {
+    if (t.type === "book_purchase") {
+      const authorKey = t.authorName || "Kurator Komunitas";
+      const existing = authorEarningsMap.get(authorKey) || {
+        name: authorKey,
+        totalSales: 0,
+        totalEarnings: 0,
+        transactionsCount: 0,
+      };
       existing.totalSales += t.amount || 0;
       existing.totalEarnings += t.authorRoyalty || 0;
       existing.transactionsCount += 1;
@@ -59,37 +82,40 @@ export const AdminTransactionsTab: React.FC = () => {
   const authorEarningsList = Array.from(authorEarningsMap.values());
 
   // Filtered Transactions
-  const filteredTransactions = transactions.filter(t => {
-    const matchesStatus = statusFilter === 'all' || t.status === statusFilter;
+  const filteredTransactions = transactions.filter((t) => {
+    const matchesStatus = statusFilter === "all" || t.status === statusFilter;
     const q = searchQuery.toLowerCase().trim();
-    const matchesQuery = 
-      (t.id || '').toLowerCase().includes(q) ||
-      (t.bookTitle || '').toLowerCase().includes(q) ||
-      (t.userName || '').toLowerCase().includes(q) ||
-      (t.userEmail || '').toLowerCase().includes(q) ||
-      (t.authorName || '').toLowerCase().includes(q);
+    const matchesQuery =
+      (t.id || "").toLowerCase().includes(q) ||
+      (t.bookTitle || "").toLowerCase().includes(q) ||
+      (t.userName || "").toLowerCase().includes(q) ||
+      (t.userEmail || "").toLowerCase().includes(q) ||
+      (t.authorName || "").toLowerCase().includes(q);
     return matchesStatus && matchesQuery;
   });
 
   const handleDisburseRoyalty = (authorName: string) => {
-    setDisbursedAuthors(prev => new Set(prev).add(authorName));
+    setDisbursedAuthors((prev) => new Set(prev).add(authorName));
   };
 
   const getPaymentIcon = (method: PaymentMethod) => {
     switch (method) {
-      case 'qris': return <QrCode className="w-3.5 h-3.5 text-indigo-500" />;
-      case 'bca_va':
-      case 'mandiri_va':
-      case 'bri_va': return <Building2 className="w-3.5 h-3.5 text-blue-500" />;
-      case 'gopay':
-      case 'shopeepay': return <Wallet className="w-3.5 h-3.5 text-emerald-500" />;
-      default: return <CreditCard className="w-3.5 h-3.5 text-purple-500" />;
+      case "qris":
+        return <QrCode className="w-3.5 h-3.5 text-indigo-500" />;
+      case "bca_va":
+      case "mandiri_va":
+      case "bri_va":
+        return <Building2 className="w-3.5 h-3.5 text-blue-500" />;
+      case "gopay":
+      case "shopeepay":
+        return <Wallet className="w-3.5 h-3.5 text-emerald-500" />;
+      default:
+        return <CreditCard className="w-3.5 h-3.5 text-purple-500" />;
     }
   };
 
   return (
     <div className="space-y-6 animate-in fade-in">
-      
       {/* Top 4 Metric Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* GMV Card */}
@@ -150,7 +176,10 @@ export const AdminTransactionsTab: React.FC = () => {
             </div>
           </div>
           <div className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">
-            {transactions.length > 0 ? Math.round((successfulTx.length / transactions.length) * 100) : 100}%
+            {transactions.length > 0
+              ? Math.round((successfulTx.length / transactions.length) * 100)
+              : 100}
+            %
           </div>
           <div className="text-[11px] text-slate-500 dark:text-slate-400">
             Instant settlement via QRIS & VA
@@ -166,7 +195,8 @@ export const AdminTransactionsTab: React.FC = () => {
               Bagi Hasil & Royalti Penulis Kitab
             </h3>
             <p className="text-xs text-slate-500">
-              Rekapitulasi penjualan karya kurasi dan penyaluran bagi hasil kepada ustadz/lembaga
+              Rekapitulasi penjualan karya kurasi dan penyaluran bagi hasil
+              kepada ustadz/lembaga
             </p>
           </div>
           <span className="px-2.5 py-1 rounded-full bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 text-xs font-bold">
@@ -190,7 +220,10 @@ export const AdminTransactionsTab: React.FC = () => {
                 authorEarningsList.map((author, idx) => {
                   const isDisbursed = disbursedAuthors.has(author.name);
                   return (
-                    <tr key={idx} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition-colors">
+                    <tr
+                      key={idx}
+                      className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition-colors"
+                    >
                       <td className="px-5 py-3.5 font-bold text-slate-900 dark:text-white">
                         {author.name}
                         <span className="block text-[11px] font-normal text-slate-500">
@@ -223,12 +256,14 @@ export const AdminTransactionsTab: React.FC = () => {
                           onClick={() => handleDisburseRoyalty(author.name)}
                           className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all inline-flex items-center gap-1.5 cursor-pointer ${
                             isDisbursed
-                              ? 'bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-not-allowed'
-                              : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-2xs'
+                              ? "bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-not-allowed"
+                              : "bg-indigo-600 hover:bg-indigo-700 text-white shadow-2xs"
                           }`}
                         >
                           <Send className="w-3.5 h-3.5" />
-                          <span>{isDisbursed ? 'Sudah Ditransfer' : 'Kirim Royalti'}</span>
+                          <span>
+                            {isDisbursed ? "Sudah Ditransfer" : "Kirim Royalti"}
+                          </span>
                         </button>
                       </td>
                     </tr>
@@ -236,7 +271,10 @@ export const AdminTransactionsTab: React.FC = () => {
                 })
               ) : (
                 <tr>
-                  <td colSpan={5} className="text-center py-8 text-slate-400 text-xs">
+                  <td
+                    colSpan={5}
+                    className="text-center py-8 text-slate-400 text-xs"
+                  >
                     Belum ada data penjualan kitab berbayar saat ini.
                   </td>
                 </tr>
@@ -254,7 +292,8 @@ export const AdminTransactionsTab: React.FC = () => {
               Buku Kas & Log Transaksi Sistem
             </h3>
             <p className="text-xs text-slate-500">
-              Audit menyeluruh setiap pembayaran, metode gateway, dan pembagian royalti
+              Audit menyeluruh setiap pembayaran, metode gateway, dan pembagian
+              royalti
             </p>
           </div>
 
@@ -263,22 +302,22 @@ export const AdminTransactionsTab: React.FC = () => {
             <div className="flex rounded-xl bg-slate-100 dark:bg-slate-800 p-1 border border-slate-200/60 dark:border-slate-700">
               <button
                 type="button"
-                onClick={() => setStatusFilter('all')}
+                onClick={() => setStatusFilter("all")}
                 className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                  statusFilter === 'all'
-                    ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-2xs'
-                    : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                  statusFilter === "all"
+                    ? "bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-2xs"
+                    : "text-slate-500 hover:text-slate-900 dark:hover:text-white"
                 }`}
               >
                 Semua
               </button>
               <button
                 type="button"
-                onClick={() => setStatusFilter('success')}
+                onClick={() => setStatusFilter("success")}
                 className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                  statusFilter === 'success'
-                    ? 'bg-white dark:bg-slate-900 text-emerald-600 dark:text-emerald-400 shadow-2xs'
-                    : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                  statusFilter === "success"
+                    ? "bg-white dark:bg-slate-900 text-emerald-600 dark:text-emerald-400 shadow-2xs"
+                    : "text-slate-500 hover:text-slate-900 dark:hover:text-white"
                 }`}
               >
                 Lunas ({successfulTx.length})
@@ -292,7 +331,7 @@ export const AdminTransactionsTab: React.FC = () => {
                 type="text"
                 placeholder="Cari invoice / pembeli..."
                 value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
+                onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-8 pr-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
             </div>
@@ -317,22 +356,33 @@ export const AdminTransactionsTab: React.FC = () => {
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {filteredTransactions.length > 0 ? (
                 filteredTransactions.map((tx) => (
-                  <tr key={tx.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition-colors">
+                  <tr
+                    key={tx.id}
+                    className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition-colors"
+                  >
                     <td className="px-4 py-3 font-mono font-bold text-indigo-600 dark:text-indigo-400">
                       {tx.id}
                     </td>
                     <td className="px-4 py-3">
-                      <div className="font-semibold text-slate-900 dark:text-white">{tx.userName}</div>
-                      <div className="text-[10px] text-slate-400">{tx.userEmail}</div>
+                      <div className="font-semibold text-slate-900 dark:text-white">
+                        {tx.userName}
+                      </div>
+                      <div className="text-[10px] text-slate-400">
+                        {tx.userEmail}
+                      </div>
                     </td>
                     <td className="px-4 py-3">
-                      <div className="font-medium text-slate-800 dark:text-slate-200">{tx.bookTitle}</div>
-                      <div className="text-[10px] text-slate-400">{tx.authorName}</div>
+                      <div className="font-medium text-slate-800 dark:text-slate-200">
+                        {tx.bookTitle}
+                      </div>
+                      <div className="text-[10px] text-slate-400">
+                        {tx.authorName}
+                      </div>
                     </td>
                     <td className="px-4 py-3">
                       <span className="inline-flex items-center gap-1 uppercase font-semibold text-[10px] px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
                         {getPaymentIcon(tx.paymentMethod)}
-                        <span>{tx.paymentMethod.replace('_', ' ')}</span>
+                        <span>{tx.paymentMethod.replace("_", " ")}</span>
                       </span>
                     </td>
                     <td className="px-4 py-3 font-bold text-slate-900 dark:text-white">
@@ -348,13 +398,21 @@ export const AdminTransactionsTab: React.FC = () => {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-[11px] text-slate-500 whitespace-nowrap">
-                      {new Date(tx.paidAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                      {new Date(tx.paidAt).toLocaleDateString("id-ID", {
+                        day: "numeric",
+                        month: "short",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
                     </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan={8} className="text-center py-8 text-slate-400 text-xs">
+                  <td
+                    colSpan={8}
+                    className="text-center py-8 text-slate-400 text-xs"
+                  >
                     Tidak ada catatan transaksi yang sesuai filter.
                   </td>
                 </tr>
@@ -363,7 +421,6 @@ export const AdminTransactionsTab: React.FC = () => {
           </table>
         </div>
       </div>
-
     </div>
   );
 };

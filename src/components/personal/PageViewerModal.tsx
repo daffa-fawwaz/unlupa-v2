@@ -1,10 +1,10 @@
-import React from 'react';
-import { X, BookOpen } from 'lucide-react';
-import { PageDocument } from '../../types';
-import { BlockViewer } from './blocks/BlockViewer';
-import { useApp } from '../../context/AppContext';
-import { useSwipeGesture } from '../../hooks/useSwipeGesture';
-import { soundEffects } from '../../lib/soundFeedback';
+import React from "react";
+import { X, BookOpen } from "lucide-react";
+import { PageDocument } from "../../types";
+import { BlockViewer } from "./blocks/BlockViewer";
+import { useApp } from "../../context/AppContext";
+import { useSwipeGesture } from "../../hooks/useSwipeGesture";
+import { soundEffects } from "../../lib/soundFeedback";
 
 interface PageViewerModalProps {
   isOpen: boolean;
@@ -12,13 +12,17 @@ interface PageViewerModalProps {
   page: PageDocument | null;
 }
 
-export const PageViewerModal: React.FC<PageViewerModalProps> = ({ isOpen, onClose, page }) => {
+export const PageViewerModal: React.FC<PageViewerModalProps> = ({
+  isOpen,
+  onClose,
+  page,
+}) => {
   const { language } = useApp();
 
   useSwipeGesture(null, {
     disabled: !isOpen,
     onSwipeRight: () => {
-      soundEffects.playCardFlip('backward');
+      soundEffects.playCardFlip("backward");
       onClose();
     },
     onSwipeDown: () => {
@@ -42,7 +46,7 @@ export const PageViewerModal: React.FC<PageViewerModalProps> = ({ isOpen, onClos
             {page.title}
           </h2>
         </div>
-        <button 
+        <button
           onClick={onClose}
           className="w-9 h-9 rounded-2xl clay-icon-pod-neutral flex items-center justify-center text-[#5E6D88] hover:text-[#18234A] dark:hover:text-[#F8FAFC] transition-colors cursor-pointer"
           title="Tutup"
@@ -57,7 +61,7 @@ export const PageViewerModal: React.FC<PageViewerModalProps> = ({ isOpen, onClos
             <h1 className="text-2xl sm:text-3xl font-black text-[#18234A] dark:text-[#F8FAFC] tracking-tight border-b border-black/[0.04] dark:border-white/[0.04] pb-4">
               {page.title}
             </h1>
-            
+
             <BlockViewer blocks={page.blocks || []} />
           </div>
         </div>

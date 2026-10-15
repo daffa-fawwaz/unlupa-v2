@@ -1,7 +1,7 @@
 /**
  * JWT Token Storage & Management
  */
-const TOKEN_STORAGE_KEY = 'unlupa_jwt_token';
+const TOKEN_STORAGE_KEY = "unlupa_jwt_token";
 let inMemoryJwtToken: string | null = null;
 
 export function setAuthToken(token: string | null) {
@@ -41,9 +41,14 @@ export class ApiError extends Error {
   public code: string;
   public data?: unknown;
 
-  constructor(message: string, status: number, code: string = 'API_ERROR', data?: unknown) {
+  constructor(
+    message: string,
+    status: number,
+    code: string = "API_ERROR",
+    data?: unknown,
+  ) {
     super(message);
-    this.name = 'ApiError';
+    this.name = "ApiError";
     this.status = status;
     this.code = code;
     this.data = data;
@@ -62,15 +67,17 @@ export class ApiError extends Error {
   }
 
   get isNetworkError(): boolean {
-    return this.status === 0 && this.code !== 'TIMEOUT' && this.code !== 'ABORTED';
+    return (
+      this.status === 0 && this.code !== "TIMEOUT" && this.code !== "ABORTED"
+    );
   }
 
   get isTimeout(): boolean {
-    return this.code === 'TIMEOUT';
+    return this.code === "TIMEOUT";
   }
 
   get isAborted(): boolean {
-    return this.code === 'ABORTED';
+    return this.code === "ABORTED";
   }
 
   get isValidationError(): boolean {
@@ -82,7 +89,7 @@ export class ApiError extends Error {
   }
 }
 
-export interface RequestOptions extends Omit<RequestInit, 'body'> {
+export interface RequestOptions extends Omit<RequestInit, "body"> {
   body?: unknown;
   timeoutMs?: number;
   skipAuth?: boolean;
@@ -95,8 +102,8 @@ export interface BackendUserResponse {
   fullName: string | null;
   avatarUrl: string | null;
   quranSpaceCode: string;
-  role: 'USER' | 'ADMIN' | 'SUPERADMIN';
-  plan: 'FREE' | 'PREMIUM' | 'INSTITUTIONAL';
+  role: "USER" | "ADMIN" | "SUPERADMIN";
+  plan: "FREE" | "PREMIUM" | "INSTITUTIONAL";
   onboardingPreferences?: any | null;
   createdAt: string;
   updatedAt: string;
@@ -117,8 +124,8 @@ export class ApiClient {
   private baseUrl: string;
 
   constructor(baseUrl?: string) {
-    const defaultUrl = (import.meta as any).env?.VITE_API_BASE_URL ?? '';
-    this.baseUrl = (baseUrl ?? defaultUrl).replace(/\/$/, '');
+    const defaultUrl = (import.meta as any).env?.VITE_API_BASE_URL ?? "";
+    this.baseUrl = (baseUrl ?? defaultUrl).replace(/\/$/, "");
   }
 
   public getBaseUrl(): string {
@@ -128,7 +135,10 @@ export class ApiClient {
   /**
    * Generic request method handling JSON serialization, JWT auth headers, timeouts, and errors.
    */
-  async request<T>(path: string, options: RequestOptions = {}): Promise<ApiResponse<T>> {
+  async request<T>(
+    path: string,
+    options: RequestOptions = {},
+  ): Promise<ApiResponse<T>> {
     const {
       body,
       timeoutMs = 15000,
@@ -138,29 +148,31 @@ export class ApiClient {
       ...fetchInit
     } = options;
 
-    const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+    const normalizedPath = path.startsWith("/") ? path : `/${path}`;
     const targetUrl = `${this.baseUrl}${normalizedPath}`;
 
     const headers: Record<string, string> = {
-      'Accept': 'application/json',
+      Accept: "application/json",
       ...(customHeaders as Record<string, string>),
     };
 
     // Auto-inject JWT access token unless explicitly skipped or already specified
-    const hasAuth = Object.keys(headers).some(k => k.toLowerCase() === 'authorization');
+    const hasAuth = Object.keys(headers).some(
+      (k) => k.toLowerCase() === "authorization",
+    );
     if (!skipAuth && !hasAuth) {
       const token = getAuthToken();
       if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
+        headers["Authorization"] = `Bearer ${token}`;
       }
     }
 
     let serializedBody: BodyInit | undefined;
     if (body !== undefined && body !== null) {
-      if (body instanceof FormData || typeof body === 'string') {
+      if (body instanceof FormData || typeof body === "string") {
         serializedBody = body;
       } else {
-        headers['Content-Type'] = 'application/json';
+        headers["Content-Type"] = "application/json";
         serializedBody = JSON.stringify(body);
       }
     }
@@ -171,7 +183,7 @@ export class ApiClient {
 
     if (timeoutMs > 0) {
       timeoutId = setTimeout(() => {
-        controller.abort(new Error('TIMEOUT'));
+        controller.abort(new Error("TIMEOUT"));
       }, timeoutMs);
     }
 
@@ -180,7 +192,7 @@ export class ApiClient {
       if (externalSignal.aborted) {
         controller.abort(externalSignal.reason);
       } else {
-        externalSignal.addEventListener('abort', () => {
+        externalSignal.addEventListener("abort", () => {
           controller.abort(externalSignal.reason);
         });
       }
@@ -198,8 +210,8 @@ export class ApiClient {
 
       // Parse JSON response safely
       let responseData: any;
-      const contentType = response.headers.get('content-type') || '';
-      if (contentType.includes('application/json')) {
+      const contentType = response.headers.get("content-type") || "";
+      if (contentType.includes("application/json")) {
         try {
           responseData = await response.json();
         } catch (jsonErr) {
@@ -230,8 +242,16 @@ export class ApiClient {
           clearAuthToken();
         }
 
-        const errorDetails = responseData?.error?.details !== undefined ? responseData.error.details : responseData;
-        throw new ApiError(errorMessage, response.status, errorCode, errorDetails);
+        const errorDetails =
+          responseData?.error?.details !== undefined
+            ? responseData.error.details
+            : responseData;
+        throw new ApiError(
+          errorMessage,
+          response.status,
+          errorCode,
+          errorDetails,
+        );
       }
 
       return responseData as ApiResponse<T>;
@@ -243,48 +263,75 @@ export class ApiClient {
       }
 
       // Distinguish Abort / Timeout from general network failures
-      if (err.name === 'AbortError' || controller.signal.aborted) {
-        if (err.message === 'TIMEOUT' || controller.signal.reason?.message === 'TIMEOUT') {
-          throw new ApiError('Waktu tunggu koneksi server habis (timeout).', 0, 'TIMEOUT');
+      if (err.name === "AbortError" || controller.signal.aborted) {
+        if (
+          err.message === "TIMEOUT" ||
+          controller.signal.reason?.message === "TIMEOUT"
+        ) {
+          throw new ApiError(
+            "Waktu tunggu koneksi server habis (timeout).",
+            0,
+            "TIMEOUT",
+          );
         }
-        throw new ApiError('Permintaan dibatalkan.', 0, 'ABORTED');
+        throw new ApiError("Permintaan dibatalkan.", 0, "ABORTED");
       }
 
       // Network unreachable or CORS failure
       throw new ApiError(
-        'Tidak dapat terhubung ke server backend. Periksa koneksi internet Anda.',
+        "Tidak dapat terhubung ke server backend. Periksa koneksi internet Anda.",
         0,
-        'NETWORK_ERROR',
-        err
+        "NETWORK_ERROR",
+        err,
       );
     }
   }
 
   get<T>(path: string, options?: RequestOptions): Promise<ApiResponse<T>> {
-    return this.request<T>(path, { ...options, method: 'GET' });
+    return this.request<T>(path, { ...options, method: "GET" });
   }
 
-  post<T>(path: string, body?: unknown, options?: RequestOptions): Promise<ApiResponse<T>> {
-    return this.request<T>(path, { ...options, method: 'POST', body });
+  post<T>(
+    path: string,
+    body?: unknown,
+    options?: RequestOptions,
+  ): Promise<ApiResponse<T>> {
+    return this.request<T>(path, { ...options, method: "POST", body });
   }
 
-  put<T>(path: string, body?: unknown, options?: RequestOptions): Promise<ApiResponse<T>> {
-    return this.request<T>(path, { ...options, method: 'PUT', body });
+  put<T>(
+    path: string,
+    body?: unknown,
+    options?: RequestOptions,
+  ): Promise<ApiResponse<T>> {
+    return this.request<T>(path, { ...options, method: "PUT", body });
   }
 
-  patch<T>(path: string, body?: unknown, options?: RequestOptions): Promise<ApiResponse<T>> {
-    return this.request<T>(path, { ...options, method: 'PATCH', body });
+  patch<T>(
+    path: string,
+    body?: unknown,
+    options?: RequestOptions,
+  ): Promise<ApiResponse<T>> {
+    return this.request<T>(path, { ...options, method: "PATCH", body });
   }
 
   delete<T>(path: string, options?: RequestOptions): Promise<ApiResponse<T>> {
-    return this.request<T>(path, { ...options, method: 'DELETE' });
+    return this.request<T>(path, { ...options, method: "DELETE" });
   }
 
   /**
    * Register a new user via native backend API
    */
-  async register(payload: { name: string; email: string; password: string }): Promise<{ user: BackendUserResponse; token: string }> {
-    const res = await this.post<{ user: BackendUserResponse; token: string }>('/api/v1/auth/register', payload, { skipAuth: true });
+  async register(payload: {
+    name: string;
+    email: string;
+    password: string;
+  }): Promise<{ user: BackendUserResponse; token: string }> {
+    const res = await this.post<{ user: BackendUserResponse; token: string }>(
+      "/api/v1/auth/register",
+      payload,
+      { skipAuth: true },
+    );
     if (res.data?.token) {
       setAuthToken(res.data.token);
     }
@@ -294,8 +341,15 @@ export class ApiClient {
   /**
    * Log in user via native backend API
    */
-  async login(payload: { email: string; password: string }): Promise<{ user: BackendUserResponse; token: string }> {
-    const res = await this.post<{ user: BackendUserResponse; token: string }>('/api/v1/auth/login', payload, { skipAuth: true });
+  async login(payload: {
+    email: string;
+    password: string;
+  }): Promise<{ user: BackendUserResponse; token: string }> {
+    const res = await this.post<{ user: BackendUserResponse; token: string }>(
+      "/api/v1/auth/login",
+      payload,
+      { skipAuth: true },
+    );
     if (res.data?.token) {
       setAuthToken(res.data.token);
     }
@@ -307,7 +361,7 @@ export class ApiClient {
    */
   async logout(): Promise<void> {
     try {
-      await this.post('/api/v1/auth/logout');
+      await this.post("/api/v1/auth/logout");
     } catch {
       // Ignore network errors on logout
     } finally {
@@ -320,7 +374,9 @@ export class ApiClient {
    * Retrieves verified user profile from PostgreSQL via backend
    */
   async getMe(signal?: AbortSignal): Promise<BackendUserResponse> {
-    const res = await this.get<BackendUserResponse>('/api/v1/auth/me', { signal });
+    const res = await this.get<BackendUserResponse>("/api/v1/auth/me", {
+      signal,
+    });
     return res.data;
   }
 
@@ -328,7 +384,7 @@ export class ApiClient {
    * Quran Page API Endpoints
    */
   async getQuranPages(): Promise<any[]> {
-    const res = await this.get<any[]>('/api/v1/quran/pages');
+    const res = await this.get<any[]>("/api/v1/quran/pages");
     return res.data || [];
   }
 
@@ -338,20 +394,33 @@ export class ApiClient {
   }
 
   async activateQuranPage(pageNumber: number): Promise<any> {
-    const res = await this.post<any>(`/api/v1/quran/pages/${pageNumber}/activate`);
+    const res = await this.post<any>(
+      `/api/v1/quran/pages/${pageNumber}/activate`,
+    );
     return res.data;
   }
 
   async deactivateQuranPage(pageNumber: number): Promise<any> {
-    const res = await this.post<any>(`/api/v1/quran/pages/${pageNumber}/deactivate`);
+    const res = await this.post<any>(
+      `/api/v1/quran/pages/${pageNumber}/deactivate`,
+    );
     return res.data;
   }
 
   async reviewQuranPage(
-    pageNumber: number, 
-    payload: { rating: 1 | 2 | 3; notes?: string; issueTypes?: string[]; problemAyahs?: string | string[]; reviewerName?: string }
+    pageNumber: number,
+    payload: {
+      rating: 1 | 2 | 3;
+      notes?: string;
+      issueTypes?: string[];
+      problemAyahs?: string | string[];
+      reviewerName?: string;
+    },
   ): Promise<any> {
-    const res = await this.post<any>(`/api/v1/quran/pages/${pageNumber}/review`, payload);
+    const res = await this.post<any>(
+      `/api/v1/quran/pages/${pageNumber}/review`,
+      payload,
+    );
     return res.data;
   }
 }

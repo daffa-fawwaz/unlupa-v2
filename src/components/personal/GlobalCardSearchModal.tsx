@@ -1,22 +1,22 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { 
-  Search, 
-  X, 
-  BookOpen, 
-  FolderTree, 
-  ExternalLink, 
-  Sparkles, 
-  CheckCircle2, 
-  Clock, 
-  Tag, 
+import React, { useState, useMemo, useEffect } from "react";
+import {
+  Search,
+  X,
+  BookOpen,
+  FolderTree,
+  ExternalLink,
+  Sparkles,
+  CheckCircle2,
+  Clock,
+  Tag,
   ChevronRight,
-  Layers
-} from 'lucide-react';
-import { Book, BookItem, Chapter } from '../../types';
-import { BilingualCardText } from '../common/BilingualCardText';
-import { getNonQuranIntervalDays } from '../../lib/fsrs';
-import { useSwipeGesture } from '../../hooks/useSwipeGesture';
-import { soundEffects } from '../../lib/soundFeedback';
+  Layers,
+} from "lucide-react";
+import { Book, BookItem, Chapter } from "../../types";
+import { BilingualCardText } from "../common/BilingualCardText";
+import { getNonQuranIntervalDays } from "../../lib/fsrs";
+import { useSwipeGesture } from "../../hooks/useSwipeGesture";
+import { soundEffects } from "../../lib/soundFeedback";
 
 interface Props {
   isOpen: boolean;
@@ -35,15 +35,15 @@ export const GlobalCardSearchModal: React.FC<Props> = ({
   items,
   chapters,
   language,
-  onSelectCard
+  onSelectCard,
 }) => {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedBookFilter, setSelectedBookFilter] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedBookFilter, setSelectedBookFilter] = useState<string>("all");
 
   useSwipeGesture(null, {
     disabled: !isOpen,
     onSwipeRight: () => {
-      soundEffects.playCardFlip('backward');
+      soundEffects.playCardFlip("backward");
       onClose();
     },
     onSwipeDown: () => {
@@ -57,30 +57,30 @@ export const GlobalCardSearchModal: React.FC<Props> = ({
   // Handle escape key
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen) {
+      if (e.key === "Escape" && isOpen) {
         onClose();
       }
     };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, onClose]);
 
   // Reset query on open
   useEffect(() => {
     if (isOpen) {
-      setSearchQuery('');
+      setSearchQuery("");
     }
   }, [isOpen]);
 
   const bookMap = useMemo(() => {
     const map = new Map<string, Book>();
-    books.forEach(b => map.set(b.id, b));
+    books.forEach((b) => map.set(b.id, b));
     return map;
   }, [books]);
 
   const chapterMap = useMemo(() => {
     const map = new Map<string, Chapter>();
-    chapters.forEach(c => map.set(c.id, c));
+    chapters.forEach((c) => map.set(c.id, c));
     return map;
   }, [chapters]);
 
@@ -90,15 +90,17 @@ export const GlobalCardSearchModal: React.FC<Props> = ({
 
     const q = searchQuery.toLowerCase().trim();
 
-    return (items || []).filter(item => {
-      if (selectedBookFilter !== 'all' && item.bookId !== selectedBookFilter) {
+    return (items || []).filter((item) => {
+      if (selectedBookFilter !== "all" && item.bookId !== selectedBookFilter) {
         return false;
       }
 
-      const matchQ = (item.question || '').toLowerCase().includes(q);
-      const matchA = (item.answer || '').toLowerCase().includes(q);
-      const matchExpl = (item.explanation || '').toLowerCase().includes(q);
-      const matchTags = (item.tags || []).some(t => t.toLowerCase().includes(q));
+      const matchQ = (item.question || "").toLowerCase().includes(q);
+      const matchA = (item.answer || "").toLowerCase().includes(q);
+      const matchExpl = (item.explanation || "").toLowerCase().includes(q);
+      const matchTags = (item.tags || []).some((t) =>
+        t.toLowerCase().includes(q),
+      );
 
       return matchQ || matchA || matchExpl || matchTags;
     });
@@ -118,10 +120,12 @@ export const GlobalCardSearchModal: React.FC<Props> = ({
               </div>
               <div>
                 <h3 className="text-sm sm:text-base font-bold text-[#18234A] dark:text-[#F8FAFC]">
-                  {language === 'en' ? 'Global Flashcard Search' : 'Pencarian Kartu Seluruh Kitab'}
+                  {language === "en"
+                    ? "Global Flashcard Search"
+                    : "Pencarian Kartu Seluruh Kitab"}
                 </h3>
                 <p className="text-[11px] text-[#5E6D88] dark:text-[#94A3B8]">
-                  {language === 'en'
+                  {language === "en"
                     ? `Searching across ${books.length} books and ${items.length} flashcards`
                     : `Mencari di antara ${books.length} buku dan ${items.length} kartu materi`}
                 </p>
@@ -144,9 +148,9 @@ export const GlobalCardSearchModal: React.FC<Props> = ({
               type="text"
               autoFocus
               placeholder={
-                language === 'en'
-                  ? 'Search questions, answers, Arabic terms, or tags...'
-                  : 'Cari pertanyaan, jawaban, istilah Arab, atau tag...'
+                language === "en"
+                  ? "Search questions, answers, Arabic terms, or tags..."
+                  : "Cari pertanyaan, jawaban, istilah Arab, atau tag..."
               }
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -155,7 +159,7 @@ export const GlobalCardSearchModal: React.FC<Props> = ({
             {searchQuery && (
               <button
                 type="button"
-                onClick={() => setSearchQuery('')}
+                onClick={() => setSearchQuery("")}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-[#8493AB] hover:text-[#18234A] dark:hover:text-[#F8FAFC]"
               >
                 <X className="w-4 h-4" />
@@ -166,28 +170,28 @@ export const GlobalCardSearchModal: React.FC<Props> = ({
           {/* Book filter pills */}
           <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs no-scrollbar">
             <span className="text-[11px] font-bold text-[#5E6D88] dark:text-[#94A3B8] shrink-0 mr-1">
-              {language === 'en' ? 'Filter:' : 'Buku:'}
+              {language === "en" ? "Filter:" : "Buku:"}
             </span>
             <button
               type="button"
-              onClick={() => setSelectedBookFilter('all')}
+              onClick={() => setSelectedBookFilter("all")}
               className={`px-3 py-1.5 rounded-xl text-xs font-bold shrink-0 transition-all cursor-pointer ${
-                selectedBookFilter === 'all'
-                  ? 'clay-btn-primary text-white shadow-xs'
-                  : 'clay-card-subtle text-[#5E6D88] dark:text-[#94A3B8] hover:text-[#18234A]'
+                selectedBookFilter === "all"
+                  ? "clay-btn-primary text-white shadow-xs"
+                  : "clay-card-subtle text-[#5E6D88] dark:text-[#94A3B8] hover:text-[#18234A]"
               }`}
             >
-              {language === 'en' ? 'All Books' : 'Semua Kitab'}
+              {language === "en" ? "All Books" : "Semua Kitab"}
             </button>
-            {books.map(b => (
+            {books.map((b) => (
               <button
                 key={b.id}
                 type="button"
                 onClick={() => setSelectedBookFilter(b.id)}
                 className={`px-3 py-1.5 rounded-xl text-xs font-bold shrink-0 transition-all cursor-pointer max-w-[160px] truncate ${
                   selectedBookFilter === b.id
-                    ? 'clay-btn-primary text-white shadow-xs'
-                    : 'clay-card-subtle text-[#5E6D88] dark:text-[#94A3B8] hover:text-[#18234A]'
+                    ? "clay-btn-primary text-white shadow-xs"
+                    : "clay-card-subtle text-[#5E6D88] dark:text-[#94A3B8] hover:text-[#18234A]"
                 }`}
               >
                 {b.title}
@@ -202,19 +206,23 @@ export const GlobalCardSearchModal: React.FC<Props> = ({
             <div className="text-center py-12 px-4 space-y-2">
               <BookOpen className="w-10 h-10 text-[#8493AB] mx-auto opacity-50" />
               <h4 className="text-sm font-bold text-[#18234A] dark:text-[#F8FAFC]">
-                {language === 'en' ? 'Type to search flashcards' : 'Ketik kata kunci untuk mencari kartu'}
+                {language === "en"
+                  ? "Type to search flashcards"
+                  : "Ketik kata kunci untuk mencari kartu"}
               </h4>
               <p className="text-xs text-[#5E6D88] dark:text-[#94A3B8] max-w-sm mx-auto">
-                {language === 'en'
-                  ? 'Find cards by question text, Arabic phrases, Indonesian meanings, or specific tags.'
-                  : 'Temukan kartu berdasarkan pertanyaan, lafadz Arab, makna terjemahan, atau tag bab.'}
+                {language === "en"
+                  ? "Find cards by question text, Arabic phrases, Indonesian meanings, or specific tags."
+                  : "Temukan kartu berdasarkan pertanyaan, lafadz Arab, makna terjemahan, atau tag bab."}
               </p>
             </div>
           ) : searchResults.length === 0 ? (
             <div className="text-center py-12 px-4 space-y-2">
               <Search className="w-10 h-10 text-[#8493AB] mx-auto opacity-50" />
               <h4 className="text-sm font-bold text-[#18234A] dark:text-[#F8FAFC]">
-                {language === 'en' ? 'No cards match your query' : 'Tidak ada kartu yang cocok'}
+                {language === "en"
+                  ? "No cards match your query"
+                  : "Tidak ada kartu yang cocok"}
               </h4>
               <p className="text-xs text-[#5E6D88] dark:text-[#94A3B8]">
                 "{searchQuery}"
@@ -224,20 +232,25 @@ export const GlobalCardSearchModal: React.FC<Props> = ({
             <div className="space-y-2.5">
               <div className="flex items-center justify-between text-xs font-bold text-[#5E6D88] dark:text-[#94A3B8] px-1">
                 <span>
-                  {language === 'en'
+                  {language === "en"
                     ? `Found ${searchResults.length} cards`
                     : `Ditemukan ${searchResults.length} kartu`}
                 </span>
                 <span className="text-[11px] font-normal text-[#8493AB]">
-                  {language === 'en' ? 'Click card to view details' : 'Klik kartu untuk membuka rincian'}
+                  {language === "en"
+                    ? "Click card to view details"
+                    : "Klik kartu untuk membuka rincian"}
                 </span>
               </div>
 
-              {searchResults.map(item => {
+              {searchResults.map((item) => {
                 const book = bookMap.get(item.bookId);
-                const chapter = item.chapterId ? chapterMap.get(item.chapterId) : null;
+                const chapter = item.chapterId
+                  ? chapterMap.get(item.chapterId)
+                  : null;
                 const intervalDays = getNonQuranIntervalDays(item.fsrsData);
-                const isMapan = item.status === 'mastered' || intervalDays >= 30;
+                const isMapan =
+                  item.status === "mastered" || intervalDays >= 30;
 
                 return (
                   <div
@@ -255,7 +268,7 @@ export const GlobalCardSearchModal: React.FC<Props> = ({
                       <div className="flex items-center gap-1.5 min-w-0">
                         <BookOpen className="w-3.5 h-3.5 text-[#FF6F3D] shrink-0" />
                         <span className="font-bold text-[#18234A] dark:text-[#F8FAFC] truncate">
-                          {book?.title || 'Kitab'}
+                          {book?.title || "Kitab"}
                         </span>
                         {chapter && (
                           <>
@@ -287,12 +300,18 @@ export const GlobalCardSearchModal: React.FC<Props> = ({
 
                     {/* Question (Pristine Bilingual Formatting) */}
                     <div className="text-xs sm:text-sm font-semibold text-[#18234A] dark:text-[#F8FAFC] line-clamp-2">
-                      <BilingualCardText text={item.question} className="text-xs sm:text-sm" />
+                      <BilingualCardText
+                        text={item.question}
+                        className="text-xs sm:text-sm"
+                      />
                     </div>
 
                     {/* Answer Preview */}
                     <div className="text-xs text-[#5E6D88] dark:text-[#94A3B8] line-clamp-2 clay-inset p-2.5 rounded-xl">
-                      <BilingualCardText text={item.answer} className="text-xs" />
+                      <BilingualCardText
+                        text={item.answer}
+                        className="text-xs"
+                      />
                     </div>
 
                     {/* Tags */}

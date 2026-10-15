@@ -1,22 +1,22 @@
-import React, { useState, useMemo } from 'react';
-import { Book, BookItem, Chapter } from '../../types';
-import { getNonQuranIntervalDays } from '../../lib/fsrs';
-import { BilingualCardText } from '../common/BilingualCardText';
-import { 
-  ShieldCheck, 
-  Clock, 
-  Flame, 
-  Search, 
-  ChevronDown, 
+import React, { useState, useMemo } from "react";
+import { Book, BookItem, Chapter } from "../../types";
+import { getNonQuranIntervalDays } from "../../lib/fsrs";
+import { BilingualCardText } from "../common/BilingualCardText";
+import {
+  ShieldCheck,
+  Clock,
+  Flame,
+  Search,
+  ChevronDown,
   CheckCircle2,
   AlertTriangle,
   Sparkles,
   ArrowRight,
   X,
   Activity,
-  Play
-} from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+  Play,
+} from "lucide-react";
+import { motion, AnimatePresence } from "motion/react";
 
 interface BookInteractionTrackerProps {
   book: Book;
@@ -39,18 +39,20 @@ export const BookInteractionTracker: React.FC<BookInteractionTrackerProps> = ({
   onSelectCard,
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [filterMode, setFilterMode] = useState<'all' | 'due' | 'high_freq' | 'mastered'>('all');
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterMode, setFilterMode] = useState<
+    "all" | "due" | "high_freq" | "mastered"
+  >("all");
 
   // Chapter lookup map
   const chapterMap = useMemo(() => {
     const map = new Map<string, string>();
-    chapters.forEach(c => map.set(c.id, c.title));
+    chapters.forEach((c) => map.set(c.id, c.title));
     return map;
   }, [chapters]);
 
   // Active items calculation
-  const activeItems = useMemo(() => items.filter(i => i.isActive), [items]);
+  const activeItems = useMemo(() => items.filter((i) => i.isActive), [items]);
   const totalActive = activeItems.length;
 
   const todayStr = useMemo(() => new Date().toDateString(), []);
@@ -84,18 +86,24 @@ export const BookInteractionTracker: React.FC<BookInteractionTrackerProps> = ({
       totalFreq += freq;
 
       const intervalDays = getNonQuranIntervalDays(item.fsrsData);
-      const isMastered = intervalDays >= 30 || item.status === 'mastered';
+      const isMastered = intervalDays >= 30 || item.status === "mastered";
       if (isMastered) {
         mastered++;
       }
 
-      const lastRevDate = item.fsrsData?.lastReview ? new Date(item.fsrsData.lastReview) : null;
-      const isReviewedToday = lastRevDate ? lastRevDate.toDateString() === todayStr : false;
+      const lastRevDate = item.fsrsData?.lastReview
+        ? new Date(item.fsrsData.lastReview)
+        : null;
+      const isReviewedToday = lastRevDate
+        ? lastRevDate.toDateString() === todayStr
+        : false;
       if (isReviewedToday) {
         completedToday++;
       }
 
-      const nextRevDate = item.fsrsData?.nextReview ? new Date(item.fsrsData.nextReview) : null;
+      const nextRevDate = item.fsrsData?.nextReview
+        ? new Date(item.fsrsData.nextReview)
+        : null;
       let isDue = false;
       let isOverdue = false;
       let overdueDays = 0;
@@ -123,21 +131,28 @@ export const BookInteractionTracker: React.FC<BookInteractionTrackerProps> = ({
         }
       }
 
-      let lastReviewLabel = language === 'en' ? 'Never' : 'Belum pernah';
+      let lastReviewLabel = language === "en" ? "Never" : "Belum pernah";
       if (lastRevDate) {
         const lastCopy = new Date(lastRevDate);
         lastCopy.setHours(0, 0, 0, 0);
-        const pastDiff = Math.round((today.getTime() - lastCopy.getTime()) / (1000 * 60 * 60 * 24));
-        if (pastDiff === 0) lastReviewLabel = language === 'en' ? 'Today' : 'Hari ini';
-        else if (pastDiff === 1) lastReviewLabel = language === 'en' ? 'Yesterday' : 'Kemarin';
-        else lastReviewLabel = `${pastDiff} ${language === 'en' ? 'd ago' : 'h lalu'}`;
+        const pastDiff = Math.round(
+          (today.getTime() - lastCopy.getTime()) / (1000 * 60 * 60 * 24),
+        );
+        if (pastDiff === 0)
+          lastReviewLabel = language === "en" ? "Today" : "Hari ini";
+        else if (pastDiff === 1)
+          lastReviewLabel = language === "en" ? "Yesterday" : "Kemarin";
+        else
+          lastReviewLabel = `${pastDiff} ${language === "en" ? "d ago" : "h lalu"}`;
       }
 
       return {
         id: item.id,
         itemIndex: (item as any).index || index + 1,
         title: item.question || `Kartu #${index + 1}`,
-        chapterTitle: item.chapterId ? chapterMap.get(item.chapterId) : undefined,
+        chapterTitle: item.chapterId
+          ? chapterMap.get(item.chapterId)
+          : undefined,
         rawItem: item,
         frequency: freq,
         reps,
@@ -153,9 +168,12 @@ export const BookInteractionTracker: React.FC<BookInteractionTrackerProps> = ({
       };
     });
 
-    const onTime = totalActive > 0 ? Math.max(0, totalActive - overdue) : totalActive;
-    const rate = totalActive > 0 ? Math.round((onTime / totalActive) * 100) : 100;
-    const mRate = totalActive > 0 ? Math.round((mastered / totalActive) * 100) : 0;
+    const onTime =
+      totalActive > 0 ? Math.max(0, totalActive - overdue) : totalActive;
+    const rate =
+      totalActive > 0 ? Math.round((onTime / totalActive) * 100) : 100;
+    const mRate =
+      totalActive > 0 ? Math.round((mastered / totalActive) * 100) : 0;
 
     return {
       totalFrequency: totalFreq,
@@ -176,19 +194,20 @@ export const BookInteractionTracker: React.FC<BookInteractionTrackerProps> = ({
 
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase().trim();
-      list = list.filter(i => 
-        (i.title || '').toLowerCase().includes(q) ||
-        (i.chapterTitle || '').toLowerCase().includes(q)
+      list = list.filter(
+        (i) =>
+          (i.title || "").toLowerCase().includes(q) ||
+          (i.chapterTitle || "").toLowerCase().includes(q),
       );
     }
 
-    if (filterMode === 'due') {
-      list = list.filter(i => i.isOverdue || i.isDue);
+    if (filterMode === "due") {
+      list = list.filter((i) => i.isOverdue || i.isDue);
       list.sort((a, b) => b.overdueDays - a.overdueDays);
-    } else if (filterMode === 'high_freq') {
+    } else if (filterMode === "high_freq") {
       list.sort((a, b) => b.frequency - a.frequency);
-    } else if (filterMode === 'mastered') {
-      list = list.filter(i => i.isMastered);
+    } else if (filterMode === "mastered") {
+      list = list.filter((i) => i.isMastered);
       list.sort((a, b) => b.intervalDays - a.intervalDays);
     } else {
       list.sort((a, b) => {
@@ -204,7 +223,7 @@ export const BookInteractionTracker: React.FC<BookInteractionTrackerProps> = ({
   }, [itemRecords, searchQuery, filterMode]);
 
   return (
-    <div 
+    <div
       data-no-swipe="true"
       className="clay-card-subtle bg-white/80 dark:bg-[#181D28]/80 border border-slate-200/60 dark:border-slate-800/60 rounded-3xl p-3.5 sm:p-5 space-y-3.5 transition-all duration-300 shadow-xs"
     >
@@ -217,10 +236,13 @@ export const BookInteractionTracker: React.FC<BookInteractionTrackerProps> = ({
           </div>
           <div className="min-w-0">
             <h3 className="text-xs sm:text-sm font-black text-[#18234A] dark:text-[#F8FAFC] tracking-tight truncate">
-              {language === 'en' ? 'Study Frequency & Schedule Adherence' : 'Pelacakan Belajar & Ketepatan Jadwal'}
+              {language === "en"
+                ? "Study Frequency & Schedule Adherence"
+                : "Pelacakan Belajar & Ketepatan Jadwal"}
             </h3>
             <p className="text-[10px] sm:text-[11px] text-[#5E6D88] dark:text-[#94A3B8] font-semibold truncate">
-              {book.title} • {totalActive} {language === 'en' ? 'active cards' : 'kartu aktif'}
+              {book.title} • {totalActive}{" "}
+              {language === "en" ? "active cards" : "kartu aktif"}
             </p>
           </div>
         </div>
@@ -234,7 +256,11 @@ export const BookInteractionTracker: React.FC<BookInteractionTrackerProps> = ({
               className="inline-flex items-center gap-1.5 px-3.5 py-1.5 clay-btn-gold text-white font-black text-xs shadow-xs transition-all cursor-pointer hover:scale-105 active:scale-95"
             >
               <Play className="w-3.5 h-3.5 fill-white" />
-              <span>{language === 'en' ? `Review (${dueCount})` : `Review (${dueCount})`}</span>
+              <span>
+                {language === "en"
+                  ? `Review (${dueCount})`
+                  : `Review (${dueCount})`}
+              </span>
             </button>
           ) : null}
 
@@ -243,8 +269,16 @@ export const BookInteractionTracker: React.FC<BookInteractionTrackerProps> = ({
             onClick={() => setIsExpanded(!isExpanded)}
             className="px-3 py-1.5 rounded-xl neumorph-card text-[#18234A] dark:text-[#F8FAFC] hover:text-[#FF6F3D] hover:scale-105 active:scale-95 text-[11px] font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs"
           >
-            <span>{isExpanded ? (language === 'en' ? 'Close' : 'Tutup Rincian') : `${language === 'en' ? 'Details' : 'Rincian'} (${itemRecords.length})`}</span>
-            <ChevronDown className={`w-3.5 h-3.5 text-[#5E6D88] transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+            <span>
+              {isExpanded
+                ? language === "en"
+                  ? "Close"
+                  : "Tutup Rincian"
+                : `${language === "en" ? "Details" : "Rincian"} (${itemRecords.length})`}
+            </span>
+            <ChevronDown
+              className={`w-3.5 h-3.5 text-[#5E6D88] transition-transform ${isExpanded ? "rotate-180" : ""}`}
+            />
           </button>
         </div>
       </div>
@@ -258,18 +292,45 @@ export const BookInteractionTracker: React.FC<BookInteractionTrackerProps> = ({
         <div className="neumorph-card p-3 sm:p-4 rounded-3xl flex flex-col items-center justify-between text-center transition-all shadow-sm relative overflow-hidden">
           {/* Top: Dual Concentric Circular Gauge with Raised Tactile Knob */}
           <div className="relative w-22 h-22 sm:w-26 sm:h-26 shrink-0 my-1 flex items-center justify-center">
-            <svg viewBox="0 0 100 100" className="w-full h-full transform -rotate-90">
+            <svg
+              viewBox="0 0 100 100"
+              className="w-full h-full transform -rotate-90"
+            >
               <defs>
-                <linearGradient id="jadwalOuterGradCompact" x1="0%" y1="0%" x2="100%" y2="100%">
+                <linearGradient
+                  id="jadwalOuterGradCompact"
+                  x1="0%"
+                  y1="0%"
+                  x2="100%"
+                  y2="100%"
+                >
                   <stop offset="0%" stopColor="#10B981" />
                   <stop offset="100%" stopColor="#34D399" />
                 </linearGradient>
-                <linearGradient id="jadwalInnerGradCompact" x1="0%" y1="0%" x2="100%" y2="100%">
+                <linearGradient
+                  id="jadwalInnerGradCompact"
+                  x1="0%"
+                  y1="0%"
+                  x2="100%"
+                  y2="100%"
+                >
                   <stop offset="0%" stopColor="#FF6F3D" />
                   <stop offset="100%" stopColor="#FFA180" />
                 </linearGradient>
-                <filter id="jadwalGlow" x="-20%" y="-20%" width="140%" height="140%">
-                  <feDropShadow dx="0" dy="2" stdDeviation="2.5" floodColor="#10B981" floodOpacity="0.4" />
+                <filter
+                  id="jadwalGlow"
+                  x="-20%"
+                  y="-20%"
+                  width="140%"
+                  height="140%"
+                >
+                  <feDropShadow
+                    dx="0"
+                    dy="2"
+                    stdDeviation="2.5"
+                    floodColor="#10B981"
+                    floodOpacity="0.4"
+                  />
                 </filter>
               </defs>
 
@@ -292,7 +353,11 @@ export const BookInteractionTracker: React.FC<BookInteractionTrackerProps> = ({
                 strokeWidth="7"
                 fill="transparent"
                 strokeDasharray={2 * Math.PI * 40}
-                strokeDashoffset={(2 * Math.PI * 40) - ((2 * Math.PI * 40) * Math.min(100, Math.max(0, onTimeRate)) / 100)}
+                strokeDashoffset={
+                  2 * Math.PI * 40 -
+                  (2 * Math.PI * 40 * Math.min(100, Math.max(0, onTimeRate))) /
+                    100
+                }
                 strokeLinecap="round"
                 filter="url(#jadwalGlow)"
                 className="transition-all duration-1000 ease-out"
@@ -317,7 +382,22 @@ export const BookInteractionTracker: React.FC<BookInteractionTrackerProps> = ({
                 strokeWidth="5"
                 fill="transparent"
                 strokeDasharray={2 * Math.PI * 30}
-                strokeDashoffset={(2 * Math.PI * 30) - ((2 * Math.PI * 30) * Math.min(100, Math.max(0, totalActive > 0 ? (overdueCount / totalActive) * 100 : 0)) / 100)}
+                strokeDashoffset={
+                  2 * Math.PI * 30 -
+                  (2 *
+                    Math.PI *
+                    30 *
+                    Math.min(
+                      100,
+                      Math.max(
+                        0,
+                        totalActive > 0
+                          ? (overdueCount / totalActive) * 100
+                          : 0,
+                      ),
+                    )) /
+                    100
+                }
                 strokeLinecap="round"
                 className="transition-all duration-1000 ease-out"
               />
@@ -353,7 +433,10 @@ export const BookInteractionTracker: React.FC<BookInteractionTrackerProps> = ({
                   <span>Tepat Waktu</span>
                 </span>
                 <span className="font-mono font-bold text-[#10B981]">
-                  {onTimeCount} <span className="font-sans font-normal text-[9px] text-[#8493AB]">/ {totalActive}</span>
+                  {onTimeCount}{" "}
+                  <span className="font-sans font-normal text-[9px] text-[#8493AB]">
+                    / {totalActive}
+                  </span>
                 </span>
               </div>
 
@@ -363,7 +446,10 @@ export const BookInteractionTracker: React.FC<BookInteractionTrackerProps> = ({
                   <span>Terlambat</span>
                 </span>
                 <span className="font-mono font-bold text-[#FF6F3D]">
-                  {overdueCount} <span className="font-sans font-normal text-[9px] text-[#8493AB]">kartu</span>
+                  {overdueCount}{" "}
+                  <span className="font-sans font-normal text-[9px] text-[#8493AB]">
+                    kartu
+                  </span>
                 </span>
               </div>
             </div>
@@ -374,18 +460,45 @@ export const BookInteractionTracker: React.FC<BookInteractionTrackerProps> = ({
         <div className="neumorph-card p-3 sm:p-4 rounded-3xl flex flex-col items-center justify-between text-center transition-all shadow-sm relative overflow-hidden">
           {/* Top: Dual Concentric Circular Gauge with Raised Tactile Knob */}
           <div className="relative w-22 h-22 sm:w-26 sm:h-26 shrink-0 my-1 flex items-center justify-center">
-            <svg viewBox="0 0 100 100" className="w-full h-full transform -rotate-90">
+            <svg
+              viewBox="0 0 100 100"
+              className="w-full h-full transform -rotate-90"
+            >
               <defs>
-                <linearGradient id="masteryOuterGradCompact" x1="0%" y1="0%" x2="100%" y2="100%">
+                <linearGradient
+                  id="masteryOuterGradCompact"
+                  x1="0%"
+                  y1="0%"
+                  x2="100%"
+                  y2="100%"
+                >
                   <stop offset="0%" stopColor="#38BDF8" />
                   <stop offset="100%" stopColor="#0284C7" />
                 </linearGradient>
-                <linearGradient id="masteryInnerGradCompact" x1="0%" y1="0%" x2="100%" y2="100%">
+                <linearGradient
+                  id="masteryInnerGradCompact"
+                  x1="0%"
+                  y1="0%"
+                  x2="100%"
+                  y2="100%"
+                >
                   <stop offset="0%" stopColor="#10B981" />
                   <stop offset="100%" stopColor="#34D399" />
                 </linearGradient>
-                <filter id="masteryGlow" x="-20%" y="-20%" width="140%" height="140%">
-                  <feDropShadow dx="0" dy="2" stdDeviation="2.5" floodColor="#38BDF8" floodOpacity="0.4" />
+                <filter
+                  id="masteryGlow"
+                  x="-20%"
+                  y="-20%"
+                  width="140%"
+                  height="140%"
+                >
+                  <feDropShadow
+                    dx="0"
+                    dy="2"
+                    stdDeviation="2.5"
+                    floodColor="#38BDF8"
+                    floodOpacity="0.4"
+                  />
                 </filter>
               </defs>
 
@@ -406,7 +519,11 @@ export const BookInteractionTracker: React.FC<BookInteractionTrackerProps> = ({
                 strokeWidth="7"
                 fill="transparent"
                 strokeDasharray={2 * Math.PI * 40}
-                strokeDashoffset={(2 * Math.PI * 40) - ((2 * Math.PI * 40) * Math.min(100, Math.max(0, masteryRate)) / 100)}
+                strokeDashoffset={
+                  2 * Math.PI * 40 -
+                  (2 * Math.PI * 40 * Math.min(100, Math.max(0, masteryRate))) /
+                    100
+                }
                 strokeLinecap="round"
                 filter="url(#masteryGlow)"
                 className="transition-all duration-1000 ease-out"
@@ -429,7 +546,11 @@ export const BookInteractionTracker: React.FC<BookInteractionTrackerProps> = ({
                 strokeWidth="5"
                 fill="transparent"
                 strokeDasharray={2 * Math.PI * 30}
-                strokeDashoffset={(2 * Math.PI * 30) - ((2 * Math.PI * 30) * Math.min(100, Math.max(0, masteryRate)) / 100)}
+                strokeDashoffset={
+                  2 * Math.PI * 30 -
+                  (2 * Math.PI * 30 * Math.min(100, Math.max(0, masteryRate))) /
+                    100
+                }
                 strokeLinecap="round"
                 className="transition-all duration-1000 ease-out"
               />
@@ -464,7 +585,10 @@ export const BookInteractionTracker: React.FC<BookInteractionTrackerProps> = ({
                   <span>Perlu Review</span>
                 </span>
                 <span className="font-mono font-bold text-[#FF6F3D]">
-                  {dueTodayCount} <span className="font-sans font-normal text-[9px] text-[#8493AB]">/ {totalActive}</span>
+                  {dueTodayCount}{" "}
+                  <span className="font-sans font-normal text-[9px] text-[#8493AB]">
+                    / {totalActive}
+                  </span>
                 </span>
               </div>
 
@@ -474,7 +598,10 @@ export const BookInteractionTracker: React.FC<BookInteractionTrackerProps> = ({
                   <span>Mapan</span>
                 </span>
                 <span className="font-mono font-bold text-[#10B981]">
-                  {masteredCount} <span className="font-sans font-normal text-[9px] text-[#8493AB]">({masteryRate}%)</span>
+                  {masteredCount}{" "}
+                  <span className="font-sans font-normal text-[9px] text-[#8493AB]">
+                    ({masteryRate}%)
+                  </span>
                 </span>
               </div>
             </div>
@@ -489,7 +616,7 @@ export const BookInteractionTracker: React.FC<BookInteractionTrackerProps> = ({
         {isExpanded && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
+            animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.2 }}
             className="p-3.5 sm:p-4 space-y-3 neumorph-inset border-t border-black/[0.04] dark:border-white/[0.04]"
@@ -501,14 +628,14 @@ export const BookInteractionTracker: React.FC<BookInteractionTrackerProps> = ({
                 <input
                   type="text"
                   value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
+                  onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Cari kartu materi atau bab..."
                   className="w-full pl-8 pr-7 py-1.5 text-xs rounded-xl neumorph-card text-[#18234A] dark:text-[#F8FAFC] placeholder-[#5E6D88] focus:outline-none focus:ring-1 focus:ring-[#FF6F3D]/40 transition-all shadow-2xs"
                 />
                 {searchQuery && (
                   <button
                     type="button"
-                    onClick={() => setSearchQuery('')}
+                    onClick={() => setSearchQuery("")}
                     className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#5E6D88] hover:text-[#18234A] dark:hover:text-white cursor-pointer"
                   >
                     <X className="w-3.5 h-3.5" />
@@ -519,11 +646,11 @@ export const BookInteractionTracker: React.FC<BookInteractionTrackerProps> = ({
               <div className="flex items-center gap-1 overflow-x-auto pb-0.5 scrollbar-none">
                 <button
                   type="button"
-                  onClick={() => setFilterMode('all')}
+                  onClick={() => setFilterMode("all")}
                   className={`px-2.5 py-1 rounded-xl text-[11px] font-bold cursor-pointer transition-all shrink-0 ${
-                    filterMode === 'all'
-                      ? 'bg-gradient-to-r from-[#FF7E4A] to-[#E65320] text-white shadow-2xs'
-                      : 'neumorph-card text-[#5E6D88] dark:text-[#94A3B8] hover:text-[#18234A]'
+                    filterMode === "all"
+                      ? "bg-gradient-to-r from-[#FF7E4A] to-[#E65320] text-white shadow-2xs"
+                      : "neumorph-card text-[#5E6D88] dark:text-[#94A3B8] hover:text-[#18234A]"
                   }`}
                 >
                   Semua ({itemRecords.length})
@@ -531,11 +658,11 @@ export const BookInteractionTracker: React.FC<BookInteractionTrackerProps> = ({
 
                 <button
                   type="button"
-                  onClick={() => setFilterMode('due')}
+                  onClick={() => setFilterMode("due")}
                   className={`px-2.5 py-1 rounded-xl text-[11px] font-bold cursor-pointer transition-all shrink-0 flex items-center gap-1 ${
-                    filterMode === 'due'
-                      ? 'bg-gradient-to-r from-[#FF7E4A] to-[#E65320] text-white shadow-2xs'
-                      : 'neumorph-card text-[#5E6D88] dark:text-[#94A3B8] hover:text-[#18234A]'
+                    filterMode === "due"
+                      ? "bg-gradient-to-r from-[#FF7E4A] to-[#E65320] text-white shadow-2xs"
+                      : "neumorph-card text-[#5E6D88] dark:text-[#94A3B8] hover:text-[#18234A]"
                   }`}
                 >
                   <Clock className="w-3 h-3" />
@@ -544,11 +671,11 @@ export const BookInteractionTracker: React.FC<BookInteractionTrackerProps> = ({
 
                 <button
                   type="button"
-                  onClick={() => setFilterMode('high_freq')}
+                  onClick={() => setFilterMode("high_freq")}
                   className={`px-2.5 py-1 rounded-xl text-[11px] font-bold cursor-pointer transition-all shrink-0 flex items-center gap-1 ${
-                    filterMode === 'high_freq'
-                      ? 'bg-gradient-to-r from-[#FF7E4A] to-[#E65320] text-white shadow-2xs'
-                      : 'neumorph-card text-[#5E6D88] dark:text-[#94A3B8] hover:text-[#18234A]'
+                    filterMode === "high_freq"
+                      ? "bg-gradient-to-r from-[#FF7E4A] to-[#E65320] text-white shadow-2xs"
+                      : "neumorph-card text-[#5E6D88] dark:text-[#94A3B8] hover:text-[#18234A]"
                   }`}
                 >
                   <Flame className="w-3 h-3" />
@@ -557,11 +684,11 @@ export const BookInteractionTracker: React.FC<BookInteractionTrackerProps> = ({
 
                 <button
                   type="button"
-                  onClick={() => setFilterMode('mastered')}
+                  onClick={() => setFilterMode("mastered")}
                   className={`px-2.5 py-1 rounded-xl text-[11px] font-bold cursor-pointer transition-all shrink-0 flex items-center gap-1 ${
-                    filterMode === 'mastered'
-                      ? 'bg-gradient-to-r from-[#FF7E4A] to-[#E65320] text-white shadow-2xs'
-                      : 'neumorph-card text-[#5E6D88] dark:text-[#94A3B8] hover:text-[#18234A]'
+                    filterMode === "mastered"
+                      ? "bg-gradient-to-r from-[#FF7E4A] to-[#E65320] text-white shadow-2xs"
+                      : "neumorph-card text-[#5E6D88] dark:text-[#94A3B8] hover:text-[#18234A]"
                   }`}
                 >
                   <Sparkles className="w-3 h-3" />
@@ -576,15 +703,23 @@ export const BookInteractionTracker: React.FC<BookInteractionTrackerProps> = ({
                 <table className="w-full text-left border-collapse">
                   <thead className="sticky top-0 bg-white/95 dark:bg-[#182236]/95 backdrop-blur-xs border-b border-black/[0.04] dark:border-white/[0.04] text-[10px] font-bold text-[#5E6D88] dark:text-[#94A3B8] uppercase tracking-wider z-10">
                     <tr>
-                      <th scope="col" className="py-2 px-3 w-[45%]">Kartu Materi & Bab</th>
-                      <th scope="col" className="py-2 px-3 w-[15%] text-center">Interval</th>
-                      <th scope="col" className="py-2 px-3 w-[18%] text-center">Frekuensi</th>
-                      <th scope="col" className="py-2 px-3 w-[22%] text-right">Status Jadwal</th>
+                      <th scope="col" className="py-2 px-3 w-[45%]">
+                        Kartu Materi & Bab
+                      </th>
+                      <th scope="col" className="py-2 px-3 w-[15%] text-center">
+                        Interval
+                      </th>
+                      <th scope="col" className="py-2 px-3 w-[18%] text-center">
+                        Frekuensi
+                      </th>
+                      <th scope="col" className="py-2 px-3 w-[22%] text-right">
+                        Status Jadwal
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-black/[0.03] dark:divide-white/[0.03] text-xs">
                     {filteredItems.length > 0 ? (
-                      filteredItems.map(item => (
+                      filteredItems.map((item) => (
                         <tr
                           key={item.id}
                           onClick={() => onSelectCard?.(item.rawItem)}
@@ -626,7 +761,8 @@ export const BookInteractionTracker: React.FC<BookInteractionTrackerProps> = ({
                               {item.frequency}x diulang
                             </div>
                             <div className="text-[9px] text-emerald-600 dark:text-emerald-400 font-semibold">
-                              {item.reps} lancar {item.lapses > 0 ? `• ${item.lapses} ulang` : ''}
+                              {item.reps} lancar{" "}
+                              {item.lapses > 0 ? `• ${item.lapses} ulang` : ""}
                             </div>
                           </td>
 
@@ -653,7 +789,11 @@ export const BookInteractionTracker: React.FC<BookInteractionTrackerProps> = ({
                               </span>
                             ) : (
                               <span className="inline-flex items-center gap-1 px-2 py-0.2 rounded-full neumorph-card text-[#5E6D88] dark:text-[#94A3B8] text-[9px] font-semibold">
-                                <span>{item.diffDays > 0 ? `${item.diffDays}h lagi` : 'Terjadwal'}</span>
+                                <span>
+                                  {item.diffDays > 0
+                                    ? `${item.diffDays}h lagi`
+                                    : "Terjadwal"}
+                                </span>
                               </span>
                             )}
                           </td>
@@ -661,7 +801,10 @@ export const BookInteractionTracker: React.FC<BookInteractionTrackerProps> = ({
                       ))
                     ) : (
                       <tr>
-                        <td colSpan={4} className="py-6 text-center text-xs text-[#5E6D88] dark:text-[#94A3B8]">
+                        <td
+                          colSpan={4}
+                          className="py-6 text-center text-xs text-[#5E6D88] dark:text-[#94A3B8]"
+                        >
                           Tidak ada kartu yang cocok dengan kriteria pencarian.
                         </td>
                       </tr>
@@ -674,7 +817,7 @@ export const BookInteractionTracker: React.FC<BookInteractionTrackerProps> = ({
             {/* Mobile Cards View (< md) */}
             <div className="md:hidden space-y-2 max-h-72 overflow-y-auto pr-0.5 scrollbar-thin">
               {filteredItems.length > 0 ? (
-                filteredItems.map(item => (
+                filteredItems.map((item) => (
                   <div
                     key={item.id}
                     onClick={() => onSelectCard?.(item.rawItem)}
@@ -720,15 +863,28 @@ export const BookInteractionTracker: React.FC<BookInteractionTrackerProps> = ({
                           </span>
                         ) : (
                           <span className="px-1.5 py-0.2 rounded-full neumorph-card text-[#5E6D88] text-[8px] font-semibold">
-                            {item.diffDays > 0 ? `${item.diffDays}h lagi` : 'Terjadwal'}
+                            {item.diffDays > 0
+                              ? `${item.diffDays}h lagi`
+                              : "Terjadwal"}
                           </span>
                         )}
                       </div>
                     </div>
 
                     <div className="flex items-center justify-between text-[9px] text-[#5E6D88] dark:text-[#94A3B8] pt-1 border-t border-black/[0.03] dark:border-white/[0.04]">
-                      <span>Interval: <strong className="text-[#18234A] dark:text-[#F8FAFC]">{item.intervalDays} hari</strong> ({item.lastReviewLabel})</span>
-                      <span>Diulang: <strong className="text-[#18234A] dark:text-[#F8FAFC]">{item.frequency}x</strong></span>
+                      <span>
+                        Interval:{" "}
+                        <strong className="text-[#18234A] dark:text-[#F8FAFC]">
+                          {item.intervalDays} hari
+                        </strong>{" "}
+                        ({item.lastReviewLabel})
+                      </span>
+                      <span>
+                        Diulang:{" "}
+                        <strong className="text-[#18234A] dark:text-[#F8FAFC]">
+                          {item.frequency}x
+                        </strong>
+                      </span>
                     </div>
                   </div>
                 ))

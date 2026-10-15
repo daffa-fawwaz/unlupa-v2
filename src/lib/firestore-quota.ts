@@ -1,4 +1,4 @@
-const QUOTA_STORAGE_KEY = 'hifdz_firestore_quota_until';
+const QUOTA_STORAGE_KEY = "hifdz_firestore_quota_until";
 
 /**
  * Checks if Firestore write quota is currently marked as exceeded.

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef } from "react";
 
 interface PurpleStrikeFlameProps {
   number: number;
@@ -11,7 +11,7 @@ export const PurpleStrikeFlame: React.FC<PurpleStrikeFlameProps> = ({
   number,
   isActive,
   isCurrent,
-  size = 48
+  size = 48,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -21,7 +21,7 @@ export const PurpleStrikeFlame: React.FC<PurpleStrikeFlameProps> = ({
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
     let animId: number;
@@ -59,9 +59,9 @@ export const PurpleStrikeFlame: React.FC<PurpleStrikeFlameProps> = ({
         vy: -1.2 - Math.random() * 1.8,
         life: 1,
         decay: 0.018 + Math.random() * 0.022,
-        size: (size * 0.22 * dpr) + Math.random() * (size * 0.28 * dpr),
+        size: size * 0.22 * dpr + Math.random() * (size * 0.28 * dpr),
         wobble: Math.random() * Math.PI * 2,
-        wobbleSpeed: 0.05 + Math.random() * 0.05
+        wobbleSpeed: 0.05 + Math.random() * 0.05,
       });
     }
 
@@ -70,7 +70,7 @@ export const PurpleStrikeFlame: React.FC<PurpleStrikeFlameProps> = ({
 
       // Fully transparent clear rect - no dark trail artifacts
       ctx.clearRect(0, 0, W, H);
-      ctx.globalCompositeOperation = 'source-over';
+      ctx.globalCompositeOperation = "source-over";
 
       for (let i = 0; i < 3; i++) {
         spawnParticle();
@@ -96,20 +96,26 @@ export const PurpleStrikeFlame: React.FC<PurpleStrikeFlameProps> = ({
 
         if (t < 0.3) {
           r = 255;
-          g = 200 - (100 * (t / 0.3));
+          g = 200 - 100 * (t / 0.3);
           b = 255;
           a = p.life * 0.8;
         } else {
           const k = (t - 0.3) / 0.7;
-          r = 180 - (80 * k);
-          g = 100 - (80 * k);
+          r = 180 - 80 * k;
+          g = 100 - 80 * k;
           b = 255;
           a = p.life * 0.6 * (1 - k);
         }
 
         const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size);
-        grad.addColorStop(0, `rgba(${Math.floor(r)}, ${Math.floor(g)}, ${Math.floor(b)}, ${a})`);
-        grad.addColorStop(1, `rgba(${Math.floor(r)}, ${Math.floor(g)}, ${Math.floor(b)}, 0)`);
+        grad.addColorStop(
+          0,
+          `rgba(${Math.floor(r)}, ${Math.floor(g)}, ${Math.floor(b)}, ${a})`,
+        );
+        grad.addColorStop(
+          1,
+          `rgba(${Math.floor(r)}, ${Math.floor(g)}, ${Math.floor(b)}, 0)`,
+        );
 
         ctx.fillStyle = grad;
         ctx.beginPath();
@@ -131,12 +137,18 @@ export const PurpleStrikeFlame: React.FC<PurpleStrikeFlameProps> = ({
   return (
     <div
       className={`relative flex items-center justify-center shrink-0 transition-transform duration-300 ${
-        isCurrent ? 'scale-110 z-10' : isActive ? 'scale-105' : 'scale-95 opacity-35 grayscale'
+        isCurrent
+          ? "scale-110 z-10"
+          : isActive
+            ? "scale-105"
+            : "scale-95 opacity-35 grayscale"
       }`}
       style={{
         width: `${size}px`,
         height: `${size}px`,
-        filter: isActive ? 'drop-shadow(0px 8px 12px rgba(160, 32, 240, 0.25))' : 'none'
+        filter: isActive
+          ? "drop-shadow(0px 8px 12px rgba(160, 32, 240, 0.25))"
+          : "none",
       }}
       title={`Strike ${number}`}
     >
@@ -152,8 +164,8 @@ export const PurpleStrikeFlame: React.FC<PurpleStrikeFlameProps> = ({
       <svg
         className={`absolute inset-0 w-full h-full pointer-events-none transition-all ${
           isActive
-            ? 'drop-shadow-[0_0_12px_rgba(168,85,247,0.8)]'
-            : 'text-slate-400 dark:text-slate-700 opacity-40'
+            ? "drop-shadow-[0_0_12px_rgba(168,85,247,0.8)]"
+            : "text-slate-400 dark:text-slate-700 opacity-40"
         }`}
         viewBox="0 0 24 24"
         fill="none"
@@ -175,12 +187,24 @@ export const PurpleStrikeFlame: React.FC<PurpleStrikeFlameProps> = ({
               opacity="0.9"
             />
             <defs>
-              <linearGradient id="purpleFlameGradTransparent" x1="0%" y1="0%" x2="100%" y2="100%">
+              <linearGradient
+                id="purpleFlameGradTransparent"
+                x1="0%"
+                y1="0%"
+                x2="100%"
+                y2="100%"
+              >
                 <stop offset="0%" stopColor="#F0ABFC" />
                 <stop offset="50%" stopColor="#C084FC" />
                 <stop offset="100%" stopColor="#8A2BE2" />
               </linearGradient>
-              <linearGradient id="purpleFlameInnerTransparent" x1="0%" y1="0%" x2="100%" y2="100%">
+              <linearGradient
+                id="purpleFlameInnerTransparent"
+                x1="0%"
+                y1="0%"
+                x2="100%"
+                y2="100%"
+              >
                 <stop offset="0%" stopColor="#FFFFFF" />
                 <stop offset="100%" stopColor="#E8B3FF" />
               </linearGradient>
@@ -200,19 +224,19 @@ export const PurpleStrikeFlame: React.FC<PurpleStrikeFlameProps> = ({
       {/* Pure White Glowing Number Centered inside Flame */}
       <span
         className={`relative z-10 font-black font-mono tracking-tighter select-none ${
-          isCurrent ? 'animate-pulse' : ''
+          isCurrent ? "animate-pulse" : ""
         }`}
         style={{
           fontSize: `${Math.round(size * 0.42)}px`,
           ...(isActive
             ? {
-                color: '#ffffff',
+                color: "#ffffff",
                 textShadow:
-                  '0 0 6px #ffffff, 0 0 14px #d18aff, 0 0 28px #a020f0, 0 0 50px #6a0dad'
+                  "0 0 6px #ffffff, 0 0 14px #d18aff, 0 0 28px #a020f0, 0 0 50px #6a0dad",
               }
             : {
-                color: '#94A3B8'
-              })
+                color: "#94A3B8",
+              }),
         }}
       >
         {number}

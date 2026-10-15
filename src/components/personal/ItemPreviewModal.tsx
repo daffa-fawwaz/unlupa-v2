@@ -1,11 +1,24 @@
-import React, { useState, useEffect } from 'react';
-import { BookItem, Language } from '../../types';
-import { X, CheckCircle2, ChevronLeft, ChevronRight, BookOpen, ChevronDown, ChevronUp, FileText, Maximize2, Power, Layers, Play } from 'lucide-react';
-import { AudioRecorderPlayer } from '../shared/AudioRecorderPlayer';
-import { useSwipeGesture } from '../../hooks/useSwipeGesture';
-import { BilingualCardText } from '../common/BilingualCardText';
-import { ImageLightboxModal } from '../common/ImageLightboxModal';
-import { AdaptiveFlashcardImage } from '../common/AdaptiveFlashcardImage';
+import React, { useState, useEffect } from "react";
+import { BookItem, Language } from "../../types";
+import {
+  X,
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  BookOpen,
+  ChevronDown,
+  ChevronUp,
+  FileText,
+  Maximize2,
+  Power,
+  Layers,
+  Play,
+} from "lucide-react";
+import { AudioRecorderPlayer } from "../shared/AudioRecorderPlayer";
+import { useSwipeGesture } from "../../hooks/useSwipeGesture";
+import { BilingualCardText } from "../common/BilingualCardText";
+import { ImageLightboxModal } from "../common/ImageLightboxModal";
+import { AdaptiveFlashcardImage } from "../common/AdaptiveFlashcardImage";
 
 interface Props {
   item: BookItem | null;
@@ -29,10 +42,14 @@ export const ItemPreviewModal: React.FC<Props> = ({
   language,
 }) => {
   const [showExplanation, setShowExplanation] = useState(false);
-  const [lightbox, setLightbox] = useState<{ isOpen: boolean; url: string | null; title: string }>({
+  const [lightbox, setLightbox] = useState<{
+    isOpen: boolean;
+    url: string | null;
+    title: string;
+  }>({
     isOpen: false,
     url: null,
-    title: ''
+    title: "",
   });
 
   useEffect(() => {
@@ -41,7 +58,12 @@ export const ItemPreviewModal: React.FC<Props> = ({
 
   // Swipe to navigate between flashcards inside modal preview or dismiss
   useSwipeGesture(null, {
-    disabled: !isOpen || Boolean(typeof document !== 'undefined' && document.body.getAttribute('data-annotation-open') === 'true'),
+    disabled:
+      !isOpen ||
+      Boolean(
+        typeof document !== "undefined" &&
+        document.body.getAttribute("data-annotation-open") === "true",
+      ),
     onSwipeLeft: () => {
       if (onNavigateNext) onNavigateNext();
     },
@@ -72,14 +94,24 @@ export const ItemPreviewModal: React.FC<Props> = ({
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <span className="text-xs sm:text-sm font-bold text-[#18234A] dark:text-[#F8FAFC] truncate">
-                  {language === "en" ? "Flashcard Detail" : "Detail Kartu Materi"}
+                  {language === "en"
+                    ? "Flashcard Detail"
+                    : "Detail Kartu Materi"}
                 </span>
-                <span className={`text-[10px] font-bold shrink-0 ${
-                  item.isActive 
-                    ? "text-sky-600 dark:text-sky-400" 
-                    : "text-[#8493AB]"
-                }`}>
-                  {item.isActive ? (language === "en" ? "● Active" : "● Aktif") : (language === "en" ? "○ Inactive" : "○ Nonaktif")}
+                <span
+                  className={`text-[10px] font-bold shrink-0 ${
+                    item.isActive
+                      ? "text-sky-600 dark:text-sky-400"
+                      : "text-[#8493AB]"
+                  }`}
+                >
+                  {item.isActive
+                    ? language === "en"
+                      ? "● Active"
+                      : "● Aktif"
+                    : language === "en"
+                      ? "○ Inactive"
+                      : "○ Nonaktif"}
                 </span>
               </div>
             </div>
@@ -92,7 +124,11 @@ export const ItemPreviewModal: React.FC<Props> = ({
                   disabled={!onNavigatePrev}
                   onClick={onNavigatePrev}
                   className="p-1 rounded-lg text-[#5E6D88] dark:text-[#94A3B8] hover:text-[#18234A] dark:hover:text-[#F8FAFC] disabled:opacity-30 transition-colors cursor-pointer disabled:cursor-not-allowed"
-                  title={language === "en" ? "Previous Card (Swipe Right)" : "Kartu Sebelumnya (Usap Kanan)"}
+                  title={
+                    language === "en"
+                      ? "Previous Card (Swipe Right)"
+                      : "Kartu Sebelumnya (Usap Kanan)"
+                  }
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </button>
@@ -100,7 +136,11 @@ export const ItemPreviewModal: React.FC<Props> = ({
                   disabled={!onNavigateNext}
                   onClick={onNavigateNext}
                   className="p-1 rounded-lg text-[#5E6D88] dark:text-[#94A3B8] hover:text-[#18234A] dark:hover:text-[#F8FAFC] disabled:opacity-30 transition-colors cursor-pointer disabled:cursor-not-allowed"
-                  title={language === "en" ? "Next Card (Swipe Left)" : "Kartu Berikutnya (Usap Kiri)"}
+                  title={
+                    language === "en"
+                      ? "Next Card (Swipe Left)"
+                      : "Kartu Berikutnya (Usap Kiri)"
+                  }
                 >
                   <ChevronRight className="w-4 h-4" />
                 </button>
@@ -118,11 +158,11 @@ export const ItemPreviewModal: React.FC<Props> = ({
 
         {/* Audio Recording Strip (Dedicated Clean Sub-Bar) */}
         <div className="px-5 py-2 bg-black/[0.015] dark:bg-white/[0.015] border-b border-black/[0.04] dark:border-white/[0.04] shrink-0">
-          <AudioRecorderPlayer 
+          <AudioRecorderPlayer
             itemId={item.id}
             itemType="book"
             itemLabel={language === "en" ? "Voice Note" : "Setoran Suara"}
-            language={language} 
+            language={language}
             compact={true}
             variant="mushaf-dock"
           />
@@ -132,24 +172,35 @@ export const ItemPreviewModal: React.FC<Props> = ({
           {/* Question */}
           <div>
             <span className="text-[11px] font-bold uppercase tracking-wider text-[#FF6F3D] block mb-1.5">
-              {language === 'en' ? 'Question' : 'Pertanyaan'}
+              {language === "en" ? "Question" : "Pertanyaan"}
             </span>
             {item.imageQ && (
               <div className="mb-3">
                 <AdaptiveFlashcardImage
                   src={item.imageQ}
                   alt="Question visual"
-                  title={language === 'en' ? 'Question Visual' : 'Gambar Pertanyaan'}
+                  title={
+                    language === "en" ? "Question Visual" : "Gambar Pertanyaan"
+                  }
                   language={language}
-                  onEnlarge={() => setLightbox({ isOpen: true, url: item.imageQ || null, title: language === 'en' ? 'Question Visual' : 'Gambar Pertanyaan' })}
+                  onEnlarge={() =>
+                    setLightbox({
+                      isOpen: true,
+                      url: item.imageQ || null,
+                      title:
+                        language === "en"
+                          ? "Question Visual"
+                          : "Gambar Pertanyaan",
+                    })
+                  }
                 />
               </div>
             )}
             {item.question?.trim() && (
               <div className="clay-card-subtle p-4 sm:p-5 rounded-2xl select-text">
-                <BilingualCardText 
-                  text={item.question} 
-                  type="question" 
+                <BilingualCardText
+                  text={item.question}
+                  type="question"
                   variant="detail-modal"
                   language={language}
                 />
@@ -160,24 +211,31 @@ export const ItemPreviewModal: React.FC<Props> = ({
           {/* Answer */}
           <div>
             <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 block mb-1.5">
-              {language === 'en' ? 'Answer' : 'Jawaban'}
+              {language === "en" ? "Answer" : "Jawaban"}
             </span>
             {item.imageA && (
               <div className="mb-3">
                 <AdaptiveFlashcardImage
                   src={item.imageA}
                   alt="Answer visual"
-                  title={language === 'en' ? 'Answer Visual' : 'Gambar Jawaban'}
+                  title={language === "en" ? "Answer Visual" : "Gambar Jawaban"}
                   language={language}
-                  onEnlarge={() => setLightbox({ isOpen: true, url: item.imageA || null, title: language === 'en' ? 'Answer Visual' : 'Gambar Jawaban' })}
+                  onEnlarge={() =>
+                    setLightbox({
+                      isOpen: true,
+                      url: item.imageA || null,
+                      title:
+                        language === "en" ? "Answer Visual" : "Gambar Jawaban",
+                    })
+                  }
                 />
               </div>
             )}
             {item.answer?.trim() && (
               <div className="clay-card-subtle p-4 sm:p-5 rounded-2xl select-text">
-                <BilingualCardText 
-                  text={item.answer} 
-                  type="answer" 
+                <BilingualCardText
+                  text={item.answer}
+                  type="answer"
                   variant="detail-modal"
                   language={language}
                 />
@@ -205,9 +263,9 @@ export const ItemPreviewModal: React.FC<Props> = ({
                     </button>
                   </div>
                   <div className="clay-inset p-4 sm:p-5 rounded-2xl select-text animate-in fade-in duration-150">
-                    <BilingualCardText 
-                      text={item.explanation} 
-                      type="general" 
+                    <BilingualCardText
+                      text={item.explanation}
+                      type="general"
                       variant="detail-modal"
                     />
                   </div>
@@ -219,7 +277,9 @@ export const ItemPreviewModal: React.FC<Props> = ({
                   className="w-full py-2.5 px-3 rounded-2xl clay-inset text-[#5E6D88] dark:text-[#94A3B8] hover:text-[#FF6F3D] dark:hover:text-[#FF6F3D] text-xs font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer shadow-xs hover:scale-[1.01] active:scale-[0.99]"
                 >
                   <BookOpen className="w-4 h-4 text-[#FF6F3D]" />
-                  <span>{language === "en" ? "Explanation / Notes" : "Penjelasan"}</span>
+                  <span>
+                    {language === "en" ? "Explanation / Notes" : "Penjelasan"}
+                  </span>
                   <ChevronDown className="w-3.5 h-3.5 opacity-60" />
                 </button>
               )}
@@ -237,7 +297,9 @@ export const ItemPreviewModal: React.FC<Props> = ({
                 className="px-4 py-2 rounded-2xl bg-sky-600 hover:bg-sky-700 text-white font-bold text-xs shadow-xs transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer"
               >
                 <Play className="w-3.5 h-3.5 fill-white text-white" />
-                <span>{language === 'en' ? 'Activate Card' : 'Aktifkan Kartu'}</span>
+                <span>
+                  {language === "en" ? "Activate Card" : "Aktifkan Kartu"}
+                </span>
               </button>
             ) : item.isActive && onDeactivate ? (
               <button
@@ -245,7 +307,9 @@ export const ItemPreviewModal: React.FC<Props> = ({
                 onClick={onDeactivate}
                 className="px-4 py-2 rounded-2xl clay-card-subtle text-[#5E6D88] hover:text-rose-600 font-bold text-xs transition-all cursor-pointer"
               >
-                <span>{language === 'en' ? 'Deactivate Card' : 'Nonaktifkan Kartu'}</span>
+                <span>
+                  {language === "en" ? "Deactivate Card" : "Nonaktifkan Kartu"}
+                </span>
               </button>
             ) : null}
           </div>
@@ -255,17 +319,17 @@ export const ItemPreviewModal: React.FC<Props> = ({
             onClick={onClose}
             className="px-4 py-2 rounded-2xl clay-card-subtle text-[#18234A] dark:text-[#F8FAFC] font-bold text-xs hover:scale-105 active:scale-95 transition-all cursor-pointer shadow-xs"
           >
-            {language === 'en' ? 'Close' : 'Tutup'}
+            {language === "en" ? "Close" : "Tutup"}
           </button>
         </div>
       </div>
 
       {/* Lightbox Zoom Viewer */}
-      <ImageLightboxModal 
+      <ImageLightboxModal
         isOpen={lightbox.isOpen}
         imageUrl={lightbox.url}
         title={lightbox.title}
-        onClose={() => setLightbox({ isOpen: false, url: null, title: '' })}
+        onClose={() => setLightbox({ isOpen: false, url: null, title: "" })}
       />
     </div>
   );

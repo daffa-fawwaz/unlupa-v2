@@ -5,13 +5,17 @@
  * Respects 'prefers-reduced-motion' and provides lock/unlock capabilities during intro.
  */
 
-import Lenis from 'lenis';
-import gsap from 'gsap';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import Lenis from "lenis";
+import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 
 gsap.registerPlugin(ScrollTrigger);
 
-export type ProgressCallback = (progress: number, velocity: number, direction: number) => void;
+export type ProgressCallback = (
+  progress: number,
+  velocity: number,
+  direction: number,
+) => void;
 
 export class ScrollController {
   public lenis: Lenis | null = null;
@@ -29,15 +33,15 @@ export class ScrollController {
     this.scrollContainer = scrollContainer;
 
     // Check system prefers-reduced-motion
-    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
     this.isReducedMotion = mediaQuery.matches;
 
     // Initialize Lenis smooth scroll
     this.lenis = new Lenis({
       duration: this.isReducedMotion ? 0.0 : 1.2,
       easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
-      orientation: 'vertical',
-      gestureOrientation: 'vertical',
+      orientation: "vertical",
+      gestureOrientation: "vertical",
       smoothWheel: !this.isReducedMotion,
       touchMultiplier: 1.5,
     });
@@ -51,13 +55,16 @@ export class ScrollController {
     gsap.ticker.add(this.tickerFunction);
 
     // Bind scroll updates
-    this.lenis.on('scroll', (e: any) => {
+    this.lenis.on("scroll", (e: any) => {
       if (this.isLocked) return;
 
-      const maxScroll = (this.scrollContainer?.offsetHeight || window.innerHeight * 6) - window.innerHeight;
+      const maxScroll =
+        (this.scrollContainer?.offsetHeight || window.innerHeight * 6) -
+        window.innerHeight;
       const currentScroll = Math.max(0, e.scroll || 0);
 
-      this.globalProgress = maxScroll > 0 ? Math.min(1.0, currentScroll / maxScroll) : 0;
+      this.globalProgress =
+        maxScroll > 0 ? Math.min(1.0, currentScroll / maxScroll) : 0;
       this.velocity = e.velocity || 0;
       this.direction = e.direction || 1;
 
@@ -77,7 +84,7 @@ export class ScrollController {
     if (this.lenis) {
       this.lenis.stop();
     }
-    document.body.style.overflow = 'hidden';
+    document.body.style.overflow = "hidden";
   }
 
   public unlock() {
@@ -85,7 +92,7 @@ export class ScrollController {
     if (this.lenis) {
       this.lenis.start();
     }
-    document.body.style.overflow = '';
+    document.body.style.overflow = "";
   }
 
   public scrollTo(progress: number, duration: number = 1.2) {
@@ -104,6 +111,6 @@ export class ScrollController {
       this.lenis = null;
     }
     this.progressCallbacks = [];
-    document.body.style.overflow = '';
+    document.body.style.overflow = "";
   }
 }

@@ -1,14 +1,14 @@
-import React, { useState, useMemo } from 'react';
-import { createPortal } from 'react-dom';
-import { useApp } from '../../context/AppContext';
-import { 
-  Calendar as CalendarIcon, 
-  ChevronLeft, 
-  ChevronRight, 
-  BookOpen, 
-  Library, 
-  Eye, 
-  Play, 
+import React, { useState, useMemo } from "react";
+import { createPortal } from "react-dom";
+import { useApp } from "../../context/AppContext";
+import {
+  Calendar as CalendarIcon,
+  ChevronLeft,
+  ChevronRight,
+  BookOpen,
+  Library,
+  Eye,
+  Play,
   CalendarCheck,
   ChevronDown,
   FolderPlus,
@@ -16,11 +16,11 @@ import {
   Layers,
   X,
   Check,
-  Search
-} from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
-import { QuranPageItem, BookItem, Book } from '../../types';
-import { isDue } from '../../lib/fsrs';
+  Search,
+} from "lucide-react";
+import { motion, AnimatePresence } from "motion/react";
+import { QuranPageItem, BookItem, Book } from "../../types";
+import { isDue } from "../../lib/fsrs";
 
 interface Props {
   onOpenQuranReview: (juzNumber?: number) => void;
@@ -28,20 +28,20 @@ interface Props {
   onOpenMushafViewer: (pageNumber: number) => void;
 }
 
-export type MaterialFilter = 'all' | 'quran' | 'personal' | 'library' | 'class';
+export type MaterialFilter = "all" | "quran" | "personal" | "library" | "class";
 
 // Helper to format Date as local YYYY-MM-DD
 function formatLocalDate(d: Date | string | number | null | undefined): string {
-  if (!d) return '';
+  if (!d) return "";
   try {
     const dateObj = d instanceof Date ? d : new Date(d);
-    if (isNaN(dateObj.getTime())) return '';
+    if (isNaN(dateObj.getTime())) return "";
     const year = dateObj.getFullYear();
-    const month = String(dateObj.getMonth() + 1).padStart(2, '0');
-    const day = String(dateObj.getDate()).padStart(2, '0');
+    const month = String(dateObj.getMonth() + 1).padStart(2, "0");
+    const day = String(dateObj.getDate()).padStart(2, "0");
     return `${year}-${month}-${day}`;
   } catch (e) {
-    return '';
+    return "";
   }
 }
 
@@ -50,14 +50,8 @@ export const VisualReviewCalendar: React.FC<Props> = ({
   onOpenPersonalReview,
   onOpenMushafViewer,
 }) => {
-  const { 
-    quranPages, 
-    items, 
-    books, 
-    myClasses,
-    teachingClasses,
-    language, 
-  } = useApp();
+  const { quranPages, items, books, myClasses, teachingClasses, language } =
+    useApp();
 
   const today = useMemo(() => new Date(), []);
   const todayStr = useMemo(() => formatLocalDate(today), [today]);
@@ -65,85 +59,130 @@ export const VisualReviewCalendar: React.FC<Props> = ({
   const [currentYear, setCurrentYear] = useState<number>(today.getFullYear());
   const [currentMonth, setCurrentMonth] = useState<number>(today.getMonth()); // 0 - 11
   const [selectedDateStr, setSelectedDateStr] = useState<string>(todayStr);
-  const [filterType, setFilterType] = useState<MaterialFilter>('all');
+  const [filterType, setFilterType] = useState<MaterialFilter>("all");
   const [selectedBookId, setSelectedBookId] = useState<string | null>(null);
   const [isDetailsExpanded, setIsDetailsExpanded] = useState<boolean>(true);
   const [isBookDropdownOpen, setIsBookDropdownOpen] = useState<boolean>(false);
   const [isMonthPickerOpen, setIsMonthPickerOpen] = useState<boolean>(false);
 
   // Classify Books into 3 Ruang Buku Categories
-  const activeTeachingClasses = useMemo(() => (teachingClasses || []).filter(c => c.status !== 'closed'), [teachingClasses]);
-  const activeJoinedClasses = useMemo(() => (myClasses || []).filter(c => c.status !== 'closed'), [myClasses]);
-  
-  const activeClassIds = useMemo(() => new Set<string>([
-    ...activeTeachingClasses.map(c => c.id),
-    ...activeJoinedClasses.map(c => c.id)
-  ]), [activeTeachingClasses, activeJoinedClasses]);
+  const activeTeachingClasses = useMemo(
+    () => (teachingClasses || []).filter((c) => c.status !== "closed"),
+    [teachingClasses],
+  );
+  const activeJoinedClasses = useMemo(
+    () => (myClasses || []).filter((c) => c.status !== "closed"),
+    [myClasses],
+  );
+
+  const activeClassIds = useMemo(
+    () =>
+      new Set<string>([
+        ...activeTeachingClasses.map((c) => c.id),
+        ...activeJoinedClasses.map((c) => c.id),
+      ]),
+    [activeTeachingClasses, activeJoinedClasses],
+  );
 
   const assignedBookIds = useMemo(() => {
     const set = new Set<string>();
-    activeTeachingClasses.forEach(c => {
-      c.assignedBookIds?.forEach(id => set.add(id));
+    activeTeachingClasses.forEach((c) => {
+      c.assignedBookIds?.forEach((id) => set.add(id));
     });
     return set;
   }, [activeTeachingClasses]);
 
   const joinedBookIds = useMemo(() => {
     const set = new Set<string>();
-    activeJoinedClasses.forEach(c => {
-      c.assignedBookIds?.forEach(id => set.add(id));
+    activeJoinedClasses.forEach((c) => {
+      c.assignedBookIds?.forEach((id) => set.add(id));
     });
     return set;
   }, [activeJoinedClasses]);
 
-  const isBookInActiveClass = useMemo(() => (b: Book): boolean => {
-    if (b.classId) return activeClassIds.has(b.classId);
-    if (b.id.startsWith('class-book-')) {
-      return Array.from(activeClassIds).some(cid => b.id.startsWith(`class-book-${cid}-`));
-    }
-    if (joinedBookIds.has(b.id) && b.isReadonly) {
-      return true;
-    }
-    return false;
-  }, [activeClassIds, joinedBookIds]);
+  const isBookInActiveClass = useMemo(
+    () =>
+      (b: Book): boolean => {
+        if (b.classId) return activeClassIds.has(b.classId);
+        if (b.id.startsWith("class-book-")) {
+          return Array.from(activeClassIds).some((cid) =>
+            b.id.startsWith(`class-book-${cid}-`),
+          );
+        }
+        if (joinedBookIds.has(b.id) && b.isReadonly) {
+          return true;
+        }
+        return false;
+      },
+    [activeClassIds, joinedBookIds],
+  );
 
   // Specific categorized lists
-  const isImportedOrLibraryBook = (b: any) => Boolean(b.isReadonly || b.isImported || b.libraryEntryId || b.category === 'imported');
-  const personalBooks = useMemo(() => (books || []).filter(b => !isBookInActiveClass(b) && !isImportedOrLibraryBook(b)), [books, isBookInActiveClass]);
-  const libraryBooks = useMemo(() => (books || []).filter(b => !isBookInActiveClass(b) && isImportedOrLibraryBook(b)), [books, isBookInActiveClass]);
-  const classBooks = useMemo(() => (books || []).filter(b => isBookInActiveClass(b)), [books, isBookInActiveClass]);
+  const isImportedOrLibraryBook = (b: any) =>
+    Boolean(
+      b.isReadonly ||
+      b.isImported ||
+      b.libraryEntryId ||
+      b.category === "imported",
+    );
+  const personalBooks = useMemo(
+    () =>
+      (books || []).filter(
+        (b) => !isBookInActiveClass(b) && !isImportedOrLibraryBook(b),
+      ),
+    [books, isBookInActiveClass],
+  );
+  const libraryBooks = useMemo(
+    () =>
+      (books || []).filter(
+        (b) => !isBookInActiveClass(b) && isImportedOrLibraryBook(b),
+      ),
+    [books, isBookInActiveClass],
+  );
+  const classBooks = useMemo(
+    () => (books || []).filter((b) => isBookInActiveClass(b)),
+    [books, isBookInActiveClass],
+  );
 
-  const personalBookIdSet = useMemo(() => new Set(personalBooks.map(b => b.id)), [personalBooks]);
-  const libraryBookIdSet = useMemo(() => new Set(libraryBooks.map(b => b.id)), [libraryBooks]);
-  const classBookIdSet = useMemo(() => new Set(classBooks.map(b => b.id)), [classBooks]);
+  const personalBookIdSet = useMemo(
+    () => new Set(personalBooks.map((b) => b.id)),
+    [personalBooks],
+  );
+  const libraryBookIdSet = useMemo(
+    () => new Set(libraryBooks.map((b) => b.id)),
+    [libraryBooks],
+  );
+  const classBookIdSet = useMemo(
+    () => new Set(classBooks.map((b) => b.id)),
+    [classBooks],
+  );
 
   // Books available under current filter
   const currentCategoryBooks = useMemo(() => {
-    if (filterType === 'personal') return personalBooks;
-    if (filterType === 'library') return libraryBooks;
-    if (filterType === 'class') return classBooks;
+    if (filterType === "personal") return personalBooks;
+    if (filterType === "library") return libraryBooks;
+    if (filterType === "class") return classBooks;
     return books || [];
   }, [filterType, personalBooks, libraryBooks, classBooks, books]);
 
   // Active book object if a specific book is selected
   const activeSelectedBook = useMemo(() => {
     if (!selectedBookId) return null;
-    return (books || []).find(b => b.id === selectedBookId) || null;
+    return (books || []).find((b) => b.id === selectedBookId) || null;
   }, [books, selectedBookId]);
 
   // When switching filter type, reset selectedBookId if not in category
   const handleFilterChange = (newFilter: MaterialFilter) => {
     setFilterType(newFilter);
     setIsBookDropdownOpen(false);
-    if (newFilter === 'quran') {
+    if (newFilter === "quran") {
       setSelectedBookId(null);
     } else if (selectedBookId) {
-      const isStillAvailable = (
-        (newFilter === 'personal' && personalBookIdSet.has(selectedBookId)) ||
-        (newFilter === 'library' && libraryBookIdSet.has(selectedBookId)) ||
-        (newFilter === 'class' && classBookIdSet.has(selectedBookId)) ||
-        newFilter === 'all'
-      );
+      const isStillAvailable =
+        (newFilter === "personal" && personalBookIdSet.has(selectedBookId)) ||
+        (newFilter === "library" && libraryBookIdSet.has(selectedBookId)) ||
+        (newFilter === "class" && classBookIdSet.has(selectedBookId)) ||
+        newFilter === "all";
       if (!isStillAvailable) {
         setSelectedBookId(null);
       }
@@ -154,18 +193,18 @@ export const VisualReviewCalendar: React.FC<Props> = ({
   const handlePrevMonth = () => {
     if (currentMonth === 0) {
       setCurrentMonth(11);
-      setCurrentYear(y => y - 1);
+      setCurrentYear((y) => y - 1);
     } else {
-      setCurrentMonth(m => m - 1);
+      setCurrentMonth((m) => m - 1);
     }
   };
 
   const handleNextMonth = () => {
     if (currentMonth === 11) {
       setCurrentMonth(0);
-      setCurrentYear(y => y + 1);
+      setCurrentYear((y) => y + 1);
     } else {
-      setCurrentMonth(m => m + 1);
+      setCurrentMonth((m) => m + 1);
     }
   };
 
@@ -188,21 +227,41 @@ export const VisualReviewCalendar: React.FC<Props> = ({
 
   // Month and Day labels
   const monthNamesId = [
-    'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-    'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+    "Januari",
+    "Februari",
+    "Maret",
+    "April",
+    "Mei",
+    "Juni",
+    "Juli",
+    "Agustus",
+    "September",
+    "Oktober",
+    "November",
+    "Desember",
   ];
   const monthNamesEn = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December'
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
   ];
 
-  const currentMonthName = language === 'en' 
-    ? monthNamesEn[currentMonth] 
-    : monthNamesId[currentMonth];
+  const currentMonthName =
+    language === "en" ? monthNamesEn[currentMonth] : monthNamesId[currentMonth];
 
-  const weekDayLabels = language === 'en'
-    ? ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-    : ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Ahd'];
+  const weekDayLabels =
+    language === "en"
+      ? ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+      : ["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Ahd"];
 
   // Calculate days in the displayed month and grid structure
   const calendarDays = useMemo(() => {
@@ -214,10 +273,10 @@ export const VisualReviewCalendar: React.FC<Props> = ({
     let startingDayOfWeek = firstDayOfMonth.getDay() - 1;
     if (startingDayOfWeek === -1) startingDayOfWeek = 6;
 
-    const days: { 
-      dateStr: string; 
-      dayNumber: number; 
-      isCurrentMonth: boolean; 
+    const days: {
+      dateStr: string;
+      dayNumber: number;
+      isCurrentMonth: boolean;
       isToday: boolean;
       dateObj: Date;
     }[] = [];
@@ -232,7 +291,7 @@ export const VisualReviewCalendar: React.FC<Props> = ({
         dayNumber: dNum,
         isCurrentMonth: false,
         isToday: formatLocalDate(dObj) === todayStr,
-        dateObj: dObj
+        dateObj: dObj,
       });
     }
 
@@ -245,7 +304,7 @@ export const VisualReviewCalendar: React.FC<Props> = ({
         dayNumber: i,
         isCurrentMonth: true,
         isToday: dStr === todayStr,
-        dateObj: dObj
+        dateObj: dObj,
       });
     }
 
@@ -259,7 +318,7 @@ export const VisualReviewCalendar: React.FC<Props> = ({
           dayNumber: i,
           isCurrentMonth: false,
           isToday: formatLocalDate(dObj) === todayStr,
-          dateObj: dObj
+          dateObj: dObj,
         });
       }
     }
@@ -269,19 +328,23 @@ export const VisualReviewCalendar: React.FC<Props> = ({
 
   // Aggregate planned review sessions by date
   const scheduleData = useMemo(() => {
-    const plannedMap = new Map<string, {
-      quran: QuranPageItem[];
-      personal: { item: BookItem; bookTitle: string }[];
-    }>();
+    const plannedMap = new Map<
+      string,
+      {
+        quran: QuranPageItem[];
+        personal: { item: BookItem; bookTitle: string }[];
+      }
+    >();
 
     const booksMap = new Map<string, string>();
-    (books || []).forEach(b => booksMap.set(b.id, b.title));
+    (books || []).forEach((b) => booksMap.set(b.id, b.title));
 
     // 1. Process Active Quran Pages (only if filter is 'all' or 'quran' and no specific book selected)
-    const shouldIncludeQuran = (filterType === 'all' || filterType === 'quran') && !selectedBookId;
-    
+    const shouldIncludeQuran =
+      (filterType === "all" || filterType === "quran") && !selectedBookId;
+
     if (shouldIncludeQuran) {
-      (quranPages || []).forEach(p => {
+      (quranPages || []).forEach((p) => {
         if (!p.isActive) return;
 
         // Check planned next review
@@ -312,31 +375,43 @@ export const VisualReviewCalendar: React.FC<Props> = ({
         }
 
         // Check recurrent weekly or monthly Mapan schedule
-        if (p.mapanSchedule && p.mapanSchedule.mode !== 'fsrs') {
-          if (p.mapanSchedule.mode === 'weekly' && typeof p.mapanSchedule.weeklyDay === 'number') {
+        if (p.mapanSchedule && p.mapanSchedule.mode !== "fsrs") {
+          if (
+            p.mapanSchedule.mode === "weekly" &&
+            typeof p.mapanSchedule.weeklyDay === "number"
+          ) {
             const targetDay = p.mapanSchedule.weeklyDay;
-            calendarDays.forEach(calDay => {
+            calendarDays.forEach((calDay) => {
               if (calDay.isCurrentMonth && calDay.dateObj > today) {
                 if (calDay.dateObj.getDay() === targetDay) {
                   if (!plannedMap.has(calDay.dateStr)) {
                     plannedMap.set(calDay.dateStr, { quran: [], personal: [] });
                   }
                   const entry = plannedMap.get(calDay.dateStr)!;
-                  if (!entry.quran.some(qp => qp.pageNumber === p.pageNumber)) {
+                  if (
+                    !entry.quran.some((qp) => qp.pageNumber === p.pageNumber)
+                  ) {
                     entry.quran.push(p);
                   }
                 }
               }
             });
-          } else if (p.mapanSchedule.mode === 'monthly' && typeof p.mapanSchedule.monthlyDate === 'number') {
+          } else if (
+            p.mapanSchedule.mode === "monthly" &&
+            typeof p.mapanSchedule.monthlyDate === "number"
+          ) {
             const targetDateNum = p.mapanSchedule.monthlyDate;
-            calendarDays.forEach(calDay => {
-              if (calDay.isCurrentMonth && calDay.dayNumber === targetDateNum && calDay.dateObj > today) {
+            calendarDays.forEach((calDay) => {
+              if (
+                calDay.isCurrentMonth &&
+                calDay.dayNumber === targetDateNum &&
+                calDay.dateObj > today
+              ) {
                 if (!plannedMap.has(calDay.dateStr)) {
                   plannedMap.set(calDay.dateStr, { quran: [], personal: [] });
                 }
                 const entry = plannedMap.get(calDay.dateStr)!;
-                if (!entry.quran.some(qp => qp.pageNumber === p.pageNumber)) {
+                if (!entry.quran.some((qp) => qp.pageNumber === p.pageNumber)) {
                   entry.quran.push(p);
                 }
               }
@@ -347,8 +422,8 @@ export const VisualReviewCalendar: React.FC<Props> = ({
     }
 
     // 2. Process Personal Items
-    if (filterType !== 'quran') {
-      (items || []).forEach(it => {
+    if (filterType !== "quran") {
+      (items || []).forEach((it) => {
         if (!it.isActive) return;
 
         // Specific book filtering
@@ -358,12 +433,16 @@ export const VisualReviewCalendar: React.FC<Props> = ({
 
         // Category filtering if no single book selected
         if (!selectedBookId) {
-          if (filterType === 'personal' && !personalBookIdSet.has(it.bookId)) return;
-          if (filterType === 'library' && !libraryBookIdSet.has(it.bookId)) return;
-          if (filterType === 'class' && !classBookIdSet.has(it.bookId)) return;
+          if (filterType === "personal" && !personalBookIdSet.has(it.bookId))
+            return;
+          if (filterType === "library" && !libraryBookIdSet.has(it.bookId))
+            return;
+          if (filterType === "class" && !classBookIdSet.has(it.bookId)) return;
         }
 
-        const bTitle = booksMap.get(it.bookId) || (language === 'en' ? 'Book Card' : 'Kartu Kitab');
+        const bTitle =
+          booksMap.get(it.bookId) ||
+          (language === "en" ? "Book Card" : "Kartu Kitab");
         const nextReview = it.fsrsData?.nextReview;
 
         if (nextReview) {
@@ -374,56 +453,68 @@ export const VisualReviewCalendar: React.FC<Props> = ({
             if (!plannedMap.has(todayStr)) {
               plannedMap.set(todayStr, { quran: [], personal: [] });
             }
-            plannedMap.get(todayStr)!.personal.push({ item: it, bookTitle: bTitle });
+            plannedMap
+              .get(todayStr)!
+              .personal.push({ item: it, bookTitle: bTitle });
           } else {
             if (!plannedMap.has(nextStr)) {
               plannedMap.set(nextStr, { quran: [], personal: [] });
             }
-            plannedMap.get(nextStr)!.personal.push({ item: it, bookTitle: bTitle });
+            plannedMap
+              .get(nextStr)!
+              .personal.push({ item: it, bookTitle: bTitle });
           }
         } else {
           if (!plannedMap.has(todayStr)) {
             plannedMap.set(todayStr, { quran: [], personal: [] });
           }
-          plannedMap.get(todayStr)!.personal.push({ item: it, bookTitle: bTitle });
+          plannedMap
+            .get(todayStr)!
+            .personal.push({ item: it, bookTitle: bTitle });
         }
       });
     }
 
     return { plannedMap };
   }, [
-    quranPages, 
-    items, 
-    books, 
-    language, 
-    today, 
-    todayStr, 
-    calendarDays, 
-    filterType, 
+    quranPages,
+    items,
+    books,
+    language,
+    today,
+    todayStr,
+    calendarDays,
+    filterType,
     selectedBookId,
     personalBookIdSet,
     libraryBookIdSet,
-    classBookIdSet
+    classBookIdSet,
   ]);
 
   // Selected date details
   const selectedDateDetails = useMemo(() => {
-    const planned = scheduleData.plannedMap.get(selectedDateStr) || { quran: [], personal: [] };
+    const planned = scheduleData.plannedMap.get(selectedDateStr) || {
+      quran: [],
+      personal: [],
+    };
 
     const totalPlanned = planned.quran.length + planned.personal.length;
     const isDateToday = selectedDateStr === todayStr;
-    const selectedObj = new Date(selectedDateStr + 'T00:00:00');
-    const isPast = selectedObj < new Date(todayStr + 'T00:00:00');
-    const isFuture = selectedObj > new Date(todayStr + 'T00:00:00');
+    const selectedObj = new Date(selectedDateStr + "T00:00:00");
+    const isPast = selectedObj < new Date(todayStr + "T00:00:00");
+    const isFuture = selectedObj > new Date(todayStr + "T00:00:00");
 
     let formattedTitle = selectedDateStr;
     try {
-      formattedTitle = selectedObj.toLocaleDateString(language === 'en' ? 'en-US' : 'id-ID', {
-        weekday: 'long',
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric'
-      });
+      formattedTitle = selectedObj.toLocaleDateString(
+        language === "en" ? "en-US" : "id-ID",
+        {
+          weekday: "long",
+          day: "numeric",
+          month: "long",
+          year: "numeric",
+        },
+      );
     } catch {
       // fallback
     }
@@ -440,9 +531,7 @@ export const VisualReviewCalendar: React.FC<Props> = ({
   }, [selectedDateStr, scheduleData, todayStr, language]);
 
   return (
-    <section 
-      className="neumorph-card p-3.5 sm:p-5 space-y-3.5 rounded-3xl"
-    >
+    <section className="neumorph-card p-3.5 sm:p-5 space-y-3.5 rounded-3xl">
       {/* 1. HEADER: TITLE WITH MONTH NAV ON THE RIGHT + FILTER TABS */}
       <div className="flex flex-col gap-2.5 pb-2.5 border-b border-black/[0.04] dark:border-white/[0.04]">
         {/* Row 1: Title (Left) + Month Switcher Capsule (Right) - Perfect Single Line Alignment */}
@@ -454,11 +543,12 @@ export const VisualReviewCalendar: React.FC<Props> = ({
             </div>
             <div className="min-w-0">
               <h3 className="text-sm sm:text-base font-black text-[#18234A] dark:text-[#F8FAFC] tracking-tight truncate">
-                {language === 'en' ? 'Forecast' : 'Prediksi'}
+                {language === "en" ? "Forecast" : "Prediksi"}
               </h3>
               {activeSelectedBook && (
                 <p className="text-[10px] sm:text-[11px] font-semibold text-[#FF6F3D] truncate max-w-[140px] sm:max-w-xs leading-none mt-0.5">
-                  {language === 'en' ? 'Filtering: ' : 'Memfilter: '} {activeSelectedBook.title}
+                  {language === "en" ? "Filtering: " : "Memfilter: "}{" "}
+                  {activeSelectedBook.title}
                 </p>
               )}
             </div>
@@ -472,7 +562,7 @@ export const VisualReviewCalendar: React.FC<Props> = ({
                 e.stopPropagation();
                 handlePrevMonth();
               }}
-              title={language === 'en' ? 'Previous Month' : 'Bulan Sebelumnya'}
+              title={language === "en" ? "Previous Month" : "Bulan Sebelumnya"}
               className="w-6.5 h-6.5 rounded-xl hover:bg-black/[0.04] dark:hover:bg-white/[0.05] flex items-center justify-center text-[#18234A] dark:text-[#F8FAFC] transition-colors cursor-pointer"
             >
               <ChevronLeft className="w-3.5 h-3.5" />
@@ -483,14 +573,22 @@ export const VisualReviewCalendar: React.FC<Props> = ({
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
-                setIsMonthPickerOpen(prev => !prev);
+                setIsMonthPickerOpen((prev) => !prev);
               }}
               className="px-2 py-0.5 text-xs font-black text-[#18234A] dark:text-[#F8FAFC] hover:text-[#FF6F3D] transition-colors cursor-pointer whitespace-nowrap flex items-center gap-1 active:scale-95"
-              title={language === 'en' ? 'Click to jump to any month or year' : 'Klik untuk lompat ke bulan atau tahun tertentu'}
+              title={
+                language === "en"
+                  ? "Click to jump to any month or year"
+                  : "Klik untuk lompat ke bulan atau tahun tertentu"
+              }
             >
               <CalendarIcon className="w-3.5 h-3.5 text-[#FF6F3D]" />
-              <span>{currentMonthName} {currentYear}</span>
-              <ChevronDown className={`w-3 h-3 text-[#5E6D88] transition-transform ${isMonthPickerOpen ? 'rotate-180' : ''}`} />
+              <span>
+                {currentMonthName} {currentYear}
+              </span>
+              <ChevronDown
+                className={`w-3 h-3 text-[#5E6D88] transition-transform ${isMonthPickerOpen ? "rotate-180" : ""}`}
+              />
             </button>
 
             <button
@@ -499,29 +597,35 @@ export const VisualReviewCalendar: React.FC<Props> = ({
                 e.stopPropagation();
                 handleNextMonth();
               }}
-              title={language === 'en' ? 'Next Month' : 'Bulan Berikutnya'}
+              title={language === "en" ? "Next Month" : "Bulan Berikutnya"}
               className="w-6.5 h-6.5 rounded-xl hover:bg-black/[0.04] dark:hover:bg-white/[0.05] flex items-center justify-center text-[#18234A] dark:text-[#F8FAFC] transition-colors cursor-pointer"
             >
               <ChevronRight className="w-3.5 h-3.5" />
             </button>
 
             {/* Dynamic Month & Year & Quick Date Search Portal Modal */}
-            {isMonthPickerOpen && typeof document !== 'undefined' && createPortal(
-              <div 
-                className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-4 bg-slate-950/65 backdrop-blur-xs animate-in fade-in duration-200"
-                role="dialog"
-                aria-modal="true"
-                aria-label={language === 'en' ? 'Quick Date Search & Jump' : 'Pencarian Cepat Tanggal'}
-              >
-                {/* Backdrop */}
-                <div 
-                  className="fixed inset-0 -z-10" 
-                  onClick={() => setIsMonthPickerOpen(false)} 
-                />
+            {isMonthPickerOpen &&
+              typeof document !== "undefined" &&
+              createPortal(
                 <div
-                  className="relative w-full max-w-sm sm:max-w-md rounded-3xl p-4 sm:p-5 shadow-2xl space-y-4 border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-[#151B28] text-[#18234A] dark:text-[#F8FAFC] max-h-[90vh] overflow-y-auto"
-                  onClick={(e) => e.stopPropagation()}
+                  className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-4 bg-slate-950/65 backdrop-blur-xs animate-in fade-in duration-200"
+                  role="dialog"
+                  aria-modal="true"
+                  aria-label={
+                    language === "en"
+                      ? "Quick Date Search & Jump"
+                      : "Pencarian Cepat Tanggal"
+                  }
                 >
+                  {/* Backdrop */}
+                  <div
+                    className="fixed inset-0 -z-10"
+                    onClick={() => setIsMonthPickerOpen(false)}
+                  />
+                  <div
+                    className="relative w-full max-w-sm sm:max-w-md rounded-3xl p-4 sm:p-5 shadow-2xl space-y-4 border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-[#151B28] text-[#18234A] dark:text-[#F8FAFC] max-h-[90vh] overflow-y-auto"
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     {/* Header: Pencarian Cepat Tanggal */}
                     <div className="flex items-center justify-between pb-2.5 border-b border-black/[0.06] dark:border-white/5">
                       <div className="flex items-center gap-2.5">
@@ -530,10 +634,14 @@ export const VisualReviewCalendar: React.FC<Props> = ({
                         </div>
                         <div className="min-w-0">
                           <h4 className="text-xs sm:text-sm font-black text-[#18234A] dark:text-[#F8FAFC] truncate">
-                            {language === 'en' ? 'Quick Date Search & Jump' : 'Pencarian Cepat Tanggal'}
+                            {language === "en"
+                              ? "Quick Date Search & Jump"
+                              : "Pencarian Cepat Tanggal"}
                           </h4>
                           <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
-                            {language === 'en' ? 'Navigate instantly to any date, month, or year' : 'Lompat langsung ke tanggal, bulan, atau tahun'}
+                            {language === "en"
+                              ? "Navigate instantly to any date, month, or year"
+                              : "Lompat langsung ke tanggal, bulan, atau tahun"}
                           </p>
                         </div>
                       </div>
@@ -550,7 +658,9 @@ export const VisualReviewCalendar: React.FC<Props> = ({
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
                         <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 dark:text-slate-400">
-                          {language === 'en' ? '1. Direct Date Input:' : '1. Masukkan Tanggal Langsung:'}
+                          {language === "en"
+                            ? "1. Direct Date Input:"
+                            : "1. Masukkan Tanggal Langsung:"}
                         </span>
                         <span className="text-[10px] font-black font-mono px-2 py-0.5 rounded-md bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
                           {selectedDateStr}
@@ -563,7 +673,7 @@ export const VisualReviewCalendar: React.FC<Props> = ({
                           onChange={(e) => {
                             const val = e.target.value;
                             if (val) {
-                              const [y, m, d] = val.split('-').map(Number);
+                              const [y, m, d] = val.split("-").map(Number);
                               if (y && m && d) {
                                 const newDate = new Date(y, m - 1, d);
                                 handleJumpToDate(newDate);
@@ -581,10 +691,16 @@ export const VisualReviewCalendar: React.FC<Props> = ({
                           type="button"
                           onClick={() => handleJumpToDate(today)}
                           className="py-1.5 px-1.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-800 dark:text-emerald-200 border border-emerald-500/40 text-[10px] font-black transition-all flex items-center justify-center gap-1 cursor-pointer shadow-2xs hover:scale-102 active:scale-98"
-                          title={language === 'en' ? 'Jump to Today' : 'Lompat ke Hari Ini'}
+                          title={
+                            language === "en"
+                              ? "Jump to Today"
+                              : "Lompat ke Hari Ini"
+                          }
                         >
                           <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0"></span>
-                          <span className="truncate">{language === 'en' ? 'Today' : 'Hari Ini'}</span>
+                          <span className="truncate">
+                            {language === "en" ? "Today" : "Hari Ini"}
+                          </span>
                         </button>
 
                         {/* Besok (Sky Blue) */}
@@ -596,10 +712,16 @@ export const VisualReviewCalendar: React.FC<Props> = ({
                             handleJumpToDate(d);
                           }}
                           className="py-1.5 px-1.5 rounded-xl bg-sky-500/15 hover:bg-sky-500/25 text-sky-800 dark:text-sky-200 border border-sky-500/40 text-[10px] font-black transition-all flex items-center justify-center gap-1 cursor-pointer shadow-2xs hover:scale-102 active:scale-98"
-                          title={language === 'en' ? 'Jump to Tomorrow' : 'Lompat ke Besok'}
+                          title={
+                            language === "en"
+                              ? "Jump to Tomorrow"
+                              : "Lompat ke Besok"
+                          }
                         >
                           <span className="w-2 h-2 rounded-full bg-sky-500 shrink-0"></span>
-                          <span className="truncate">{language === 'en' ? 'Tmrw' : 'Besok'}</span>
+                          <span className="truncate">
+                            {language === "en" ? "Tmrw" : "Besok"}
+                          </span>
                         </button>
 
                         {/* +7 Hari (Violet/Purple) */}
@@ -611,7 +733,11 @@ export const VisualReviewCalendar: React.FC<Props> = ({
                             handleJumpToDate(d);
                           }}
                           className="py-1.5 px-1.5 rounded-xl bg-purple-500/15 hover:bg-purple-500/25 text-purple-800 dark:text-purple-200 border border-purple-500/40 text-[10px] font-black transition-all flex items-center justify-center gap-1 cursor-pointer shadow-2xs hover:scale-102 active:scale-98"
-                          title={language === 'en' ? 'Jump +7 Days' : 'Lompat +7 Hari ke Depan'}
+                          title={
+                            language === "en"
+                              ? "Jump +7 Days"
+                              : "Lompat +7 Hari ke Depan"
+                          }
                         >
                           <span className="w-2 h-2 rounded-full bg-purple-500 shrink-0"></span>
                           <span className="truncate">+7 Hari</span>
@@ -621,14 +747,24 @@ export const VisualReviewCalendar: React.FC<Props> = ({
                         <button
                           type="button"
                           onClick={() => {
-                            const lastDay = new Date(currentYear, currentMonth + 1, 0);
+                            const lastDay = new Date(
+                              currentYear,
+                              currentMonth + 1,
+                              0,
+                            );
                             handleJumpToDate(lastDay);
                           }}
                           className="py-1.5 px-1.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-900 dark:text-amber-200 border border-amber-500/40 text-[10px] font-black transition-all flex items-center justify-center gap-1 cursor-pointer shadow-2xs hover:scale-102 active:scale-98"
-                          title={language === 'en' ? 'Jump to End of Month' : 'Lompat ke Akhir Bulan Ini'}
+                          title={
+                            language === "en"
+                              ? "Jump to End of Month"
+                              : "Lompat ke Akhir Bulan Ini"
+                          }
                         >
                           <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0"></span>
-                          <span className="truncate">{language === 'en' ? 'End Mth' : 'Akhir Bln'}</span>
+                          <span className="truncate">
+                            {language === "en" ? "End Mth" : "Akhir Bln"}
+                          </span>
                         </button>
                       </div>
                     </div>
@@ -637,7 +773,9 @@ export const VisualReviewCalendar: React.FC<Props> = ({
                     <div className="space-y-1.5 pt-1 border-t border-black/[0.04] dark:border-white/5">
                       <div className="flex items-center justify-between">
                         <span className="text-[10px] font-extrabold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
-                          {language === 'en' ? '2. Select Year (Indigo):' : '2. Pilih Tahun (Indigo):'}
+                          {language === "en"
+                            ? "2. Select Year (Indigo):"
+                            : "2. Pilih Tahun (Indigo):"}
                         </span>
                         <span className="text-[10px] font-black font-mono text-slate-700 dark:text-slate-300">
                           {currentYear}
@@ -647,22 +785,28 @@ export const VisualReviewCalendar: React.FC<Props> = ({
                       <div className="flex items-center justify-between bg-indigo-50/60 dark:bg-slate-900/70 p-1 rounded-xl border border-indigo-100 dark:border-indigo-900/30">
                         <button
                           type="button"
-                          onClick={() => setCurrentYear(y => y - 1)}
+                          onClick={() => setCurrentYear((y) => y - 1)}
                           className="w-7 h-7 rounded-lg neumorph-card flex items-center justify-center text-xs font-black text-[#18234A] dark:text-[#F8FAFC] hover:text-indigo-600 cursor-pointer"
-                          title={language === 'en' ? 'Previous Year' : 'Tahun Sebelumnya'}
+                          title={
+                            language === "en"
+                              ? "Previous Year"
+                              : "Tahun Sebelumnya"
+                          }
                         >
                           <ChevronLeft className="w-4 h-4" />
                         </button>
-                        
+
                         <span className="text-xs font-black font-mono text-indigo-700 dark:text-indigo-300">
-                          {language === 'en' ? 'Year' : 'Tahun'} {currentYear}
+                          {language === "en" ? "Year" : "Tahun"} {currentYear}
                         </span>
 
                         <button
                           type="button"
-                          onClick={() => setCurrentYear(y => y + 1)}
+                          onClick={() => setCurrentYear((y) => y + 1)}
                           className="w-7 h-7 rounded-lg neumorph-card flex items-center justify-center text-xs font-black text-[#18234A] dark:text-[#F8FAFC] hover:text-indigo-600 cursor-pointer"
-                          title={language === 'en' ? 'Next Year' : 'Tahun Berikutnya'}
+                          title={
+                            language === "en" ? "Next Year" : "Tahun Berikutnya"
+                          }
                         >
                           <ChevronRight className="w-4 h-4" />
                         </button>
@@ -670,15 +814,15 @@ export const VisualReviewCalendar: React.FC<Props> = ({
 
                       {/* Quick Year Presets Row - DEEP INDIGO GRADIENT FOR ACTIVE */}
                       <div className="flex items-center justify-center gap-1 pt-0.5">
-                        {[2024, 2025, 2026, 2027, 2028].map(yr => (
+                        {[2024, 2025, 2026, 2027, 2028].map((yr) => (
                           <button
                             key={yr}
                             type="button"
                             onClick={() => setCurrentYear(yr)}
                             className={`flex-1 py-1 rounded-lg text-[10px] font-extrabold transition-all cursor-pointer text-center ${
                               currentYear === yr
-                                ? 'bg-gradient-to-r from-indigo-600 to-blue-600 text-white shadow-xs font-black ring-1 ring-indigo-400/40'
-                                : 'neumorph-card text-slate-600 dark:text-slate-400 hover:text-indigo-600'
+                                ? "bg-gradient-to-r from-indigo-600 to-blue-600 text-white shadow-xs font-black ring-1 ring-indigo-400/40"
+                                : "neumorph-card text-slate-600 dark:text-slate-400 hover:text-indigo-600"
                             }`}
                           >
                             {yr}
@@ -691,7 +835,9 @@ export const VisualReviewCalendar: React.FC<Props> = ({
                     <div className="space-y-1.5 pt-1 border-t border-black/[0.04] dark:border-white/5">
                       <div className="flex items-center justify-between">
                         <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#FF6F3D]">
-                          {language === 'en' ? '3. Select Month (Orange):' : '3. Pilih Bulan (Oranye):'}
+                          {language === "en"
+                            ? "3. Select Month (Orange):"
+                            : "3. Pilih Bulan (Oranye):"}
                         </span>
                         <div className="flex items-center gap-2 text-[9px]">
                           <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-bold">
@@ -707,12 +853,40 @@ export const VisualReviewCalendar: React.FC<Props> = ({
 
                       {/* 12-Month Grid */}
                       <div className="grid grid-cols-3 gap-1.5 pt-0.5">
-                        {(language === 'en'
-                          ? ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-                          : ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Ags', 'Sep', 'Okt', 'Nov', 'Des']
+                        {(language === "en"
+                          ? [
+                              "Jan",
+                              "Feb",
+                              "Mar",
+                              "Apr",
+                              "May",
+                              "Jun",
+                              "Jul",
+                              "Aug",
+                              "Sep",
+                              "Oct",
+                              "Nov",
+                              "Dec",
+                            ]
+                          : [
+                              "Jan",
+                              "Feb",
+                              "Mar",
+                              "Apr",
+                              "Mei",
+                              "Jun",
+                              "Jul",
+                              "Ags",
+                              "Sep",
+                              "Okt",
+                              "Nov",
+                              "Des",
+                            ]
                         ).map((mName, mIdx) => {
                           const isSelectedMonth = currentMonth === mIdx;
-                          const isCurrentRealMonth = today.getFullYear() === currentYear && today.getMonth() === mIdx;
+                          const isCurrentRealMonth =
+                            today.getFullYear() === currentYear &&
+                            today.getMonth() === mIdx;
 
                           return (
                             <button
@@ -724,25 +898,28 @@ export const VisualReviewCalendar: React.FC<Props> = ({
                               }}
                               className={`py-2 px-1 rounded-xl text-xs font-black text-center transition-all cursor-pointer relative ${
                                 isSelectedMonth
-                                  ? 'bg-gradient-to-br from-[#FF7E4A] to-[#E65320] text-white shadow-xs scale-102 ring-2 ring-orange-300 dark:ring-orange-600'
+                                  ? "bg-gradient-to-br from-[#FF7E4A] to-[#E65320] text-white shadow-xs scale-102 ring-2 ring-orange-300 dark:ring-orange-600"
                                   : isCurrentRealMonth
-                                  ? 'ring-2 ring-emerald-500 text-emerald-700 dark:text-emerald-300 bg-emerald-500/10 neumorph-card font-black'
-                                  : 'neumorph-card text-[#18234A] dark:text-[#F8FAFC] hover:scale-102 hover:text-[#FF6F3D]'
+                                    ? "ring-2 ring-emerald-500 text-emerald-700 dark:text-emerald-300 bg-emerald-500/10 neumorph-card font-black"
+                                    : "neumorph-card text-[#18234A] dark:text-[#F8FAFC] hover:scale-102 hover:text-[#FF6F3D]"
                               }`}
                             >
                               <span>{mName}</span>
                               {isCurrentRealMonth && !isSelectedMonth && (
-                                <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-emerald-500" title="Bulan Ini"></span>
+                                <span
+                                  className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-emerald-500"
+                                  title="Bulan Ini"
+                                ></span>
                               )}
                             </button>
                           );
                         })}
                       </div>
                     </div>
-                </div>
-              </div>,
-              document.body
-            )}
+                  </div>
+                </div>,
+                document.body,
+              )}
           </div>
         </div>
 
@@ -751,55 +928,59 @@ export const VisualReviewCalendar: React.FC<Props> = ({
           {/* 1. SEMUA */}
           <button
             type="button"
-            onClick={() => handleFilterChange('all')}
+            onClick={() => handleFilterChange("all")}
             className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap shrink-0 ${
-              filterType === 'all'
-                ? 'bg-gradient-to-br from-[#FF7E4A] to-[#E65320] text-white shadow-xs'
-                : 'text-[#5E6D88] hover:text-[#18234A] dark:text-[#94A3B8] dark:hover:text-[#F8FAFC]'
+              filterType === "all"
+                ? "bg-gradient-to-br from-[#FF7E4A] to-[#E65320] text-white shadow-xs"
+                : "text-[#5E6D88] hover:text-[#18234A] dark:text-[#94A3B8] dark:hover:text-[#F8FAFC]"
             }`}
           >
             <Layers className="w-3.5 h-3.5 shrink-0" />
-            <span>{language === 'en' ? 'All' : 'Semua'}</span>
+            <span>{language === "en" ? "All" : "Semua"}</span>
           </button>
 
           {/* 2. AL-QUR'AN */}
           <button
             type="button"
-            onClick={() => handleFilterChange('quran')}
+            onClick={() => handleFilterChange("quran")}
             className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap shrink-0 ${
-              filterType === 'quran'
-                ? 'bg-gradient-to-br from-[#FF7E4A] to-[#E65320] text-white shadow-xs'
-                : 'text-[#5E6D88] hover:text-[#18234A] dark:text-[#94A3B8] dark:hover:text-[#F8FAFC]'
+              filterType === "quran"
+                ? "bg-gradient-to-br from-[#FF7E4A] to-[#E65320] text-white shadow-xs"
+                : "text-[#5E6D88] hover:text-[#18234A] dark:text-[#94A3B8] dark:hover:text-[#F8FAFC]"
             }`}
           >
             <BookOpen className="w-3.5 h-3.5 shrink-0" />
-            <span>{language === 'en' ? "Quran" : "Al-Qur'an"}</span>
-            <span className={`px-1.5 py-0.2 text-[9px] font-black rounded-full leading-none shrink-0 ${
-              filterType === 'quran'
-                ? 'bg-white/20 text-white'
-                : 'bg-black/5 dark:bg-white/10 text-[#64748B] dark:text-[#94A3B8]'
-            }`}>
-              {(quranPages || []).filter(p => p.isActive).length}
+            <span>{language === "en" ? "Quran" : "Al-Qur'an"}</span>
+            <span
+              className={`px-1.5 py-0.2 text-[9px] font-black rounded-full leading-none shrink-0 ${
+                filterType === "quran"
+                  ? "bg-white/20 text-white"
+                  : "bg-black/5 dark:bg-white/10 text-[#64748B] dark:text-[#94A3B8]"
+              }`}
+            >
+              {(quranPages || []).filter((p) => p.isActive).length}
             </span>
           </button>
 
           {/* 3. PRIBADI (Kitab Mandiri) */}
           <button
             type="button"
-            onClick={() => handleFilterChange('personal')}
+            onClick={() => handleFilterChange("personal")}
             className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap shrink-0 ${
-              filterType === 'personal'
-                ? 'bg-gradient-to-br from-[#FF7E4A] to-[#E65320] text-white shadow-xs'
-                : 'text-[#5E6D88] hover:text-[#18234A] dark:text-[#94A3B8] dark:hover:text-[#F8FAFC]'
+              filterType === "personal"
+                ? "bg-gradient-to-br from-[#FF7E4A] to-[#E65320] text-white shadow-xs"
+                : "text-[#5E6D88] hover:text-[#18234A] dark:text-[#94A3B8] dark:hover:text-[#F8FAFC]"
             }`}
           >
             <BookMarked className="w-3.5 h-3.5 shrink-0" />
-            <span>{language === 'en' ? 'Personal' : 'Pribadi'}</span>
-            <span className={`px-1.5 py-0.2 text-[9px] font-black rounded-full leading-none shrink-0 ${
-              filterType === 'personal'
-                ? 'bg-white/20 text-white'
-                : 'bg-black/5 dark:bg-white/10 text-[#64748B] dark:text-[#94A3B8]'
-            }`}>
+            <span>{language === "en" ? "Personal" : "Pribadi"}</span>
+            <span
+              className={`px-1.5 py-0.2 text-[9px] font-black rounded-full leading-none shrink-0 ${
+                filterType === "personal"
+                  ? "bg-white/20 text-white"
+                  : "bg-black/5 dark:bg-white/10 text-[#64748B] dark:text-[#94A3B8]"
+              }`}
+            >
               {personalBooks.length}
             </span>
           </button>
@@ -807,20 +988,22 @@ export const VisualReviewCalendar: React.FC<Props> = ({
           {/* 4. PUSTAKA */}
           <button
             type="button"
-            onClick={() => handleFilterChange('library')}
+            onClick={() => handleFilterChange("library")}
             className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap shrink-0 ${
-              filterType === 'library'
-                ? 'bg-gradient-to-br from-[#FF7E4A] to-[#E65320] text-white shadow-xs'
-                : 'text-[#5E6D88] hover:text-[#18234A] dark:text-[#94A3B8] dark:hover:text-[#F8FAFC]'
+              filterType === "library"
+                ? "bg-gradient-to-br from-[#FF7E4A] to-[#E65320] text-white shadow-xs"
+                : "text-[#5E6D88] hover:text-[#18234A] dark:text-[#94A3B8] dark:hover:text-[#F8FAFC]"
             }`}
           >
             <Library className="w-3.5 h-3.5 shrink-0" />
-            <span>{language === 'en' ? 'Library' : 'Pustaka'}</span>
-            <span className={`px-1.5 py-0.2 text-[9px] font-black rounded-full leading-none shrink-0 ${
-              filterType === 'library'
-                ? 'bg-white/20 text-white'
-                : 'bg-black/5 dark:bg-white/10 text-[#64748B] dark:text-[#94A3B8]'
-            }`}>
+            <span>{language === "en" ? "Library" : "Pustaka"}</span>
+            <span
+              className={`px-1.5 py-0.2 text-[9px] font-black rounded-full leading-none shrink-0 ${
+                filterType === "library"
+                  ? "bg-white/20 text-white"
+                  : "bg-black/5 dark:bg-white/10 text-[#64748B] dark:text-[#94A3B8]"
+              }`}
+            >
               {libraryBooks.length}
             </span>
           </button>
@@ -828,36 +1011,38 @@ export const VisualReviewCalendar: React.FC<Props> = ({
           {/* 5. KELAS */}
           <button
             type="button"
-            onClick={() => handleFilterChange('class')}
+            onClick={() => handleFilterChange("class")}
             className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap shrink-0 ${
-              filterType === 'class'
-                ? 'bg-gradient-to-br from-[#FF7E4A] to-[#E65320] text-white shadow-xs'
-                : 'text-[#5E6D88] hover:text-[#18234A] dark:text-[#94A3B8] dark:hover:text-[#F8FAFC]'
+              filterType === "class"
+                ? "bg-gradient-to-br from-[#FF7E4A] to-[#E65320] text-white shadow-xs"
+                : "text-[#5E6D88] hover:text-[#18234A] dark:text-[#94A3B8] dark:hover:text-[#F8FAFC]"
             }`}
           >
             <FolderPlus className="w-3.5 h-3.5 shrink-0" />
-            <span>{language === 'en' ? 'Class' : 'Kelas'}</span>
-            <span className={`px-1.5 py-0.2 text-[9px] font-black rounded-full leading-none shrink-0 ${
-              filterType === 'class'
-                ? 'bg-white/20 text-white'
-                : 'bg-black/5 dark:bg-white/10 text-[#64748B] dark:text-[#94A3B8]'
-            }`}>
+            <span>{language === "en" ? "Class" : "Kelas"}</span>
+            <span
+              className={`px-1.5 py-0.2 text-[9px] font-black rounded-full leading-none shrink-0 ${
+                filterType === "class"
+                  ? "bg-white/20 text-white"
+                  : "bg-black/5 dark:bg-white/10 text-[#64748B] dark:text-[#94A3B8]"
+              }`}
+            >
               {classBooks.length}
             </span>
           </button>
         </div>
 
         {/* Specific Book Selector (Dropdown / Selector Kitab) */}
-        {filterType !== 'quran' && currentCategoryBooks.length > 0 && (
+        {filterType !== "quran" && currentCategoryBooks.length > 0 && (
           <div className="relative">
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={() => setIsBookDropdownOpen(prev => !prev)}
+                onClick={() => setIsBookDropdownOpen((prev) => !prev)}
                 className={`flex-1 px-3 py-2 rounded-2xl text-xs font-bold flex items-center justify-between gap-2 transition-all cursor-pointer ${
-                  selectedBookId 
-                    ? 'neumorph-inset text-[#FF6F3D] ring-1 ring-[#FF6F3D]/30' 
-                    : 'neumorph-card text-[#18234A] dark:text-[#F8FAFC] hover:text-[#FF6F3D]'
+                  selectedBookId
+                    ? "neumorph-inset text-[#FF6F3D] ring-1 ring-[#FF6F3D]/30"
+                    : "neumorph-card text-[#18234A] dark:text-[#F8FAFC] hover:text-[#FF6F3D]"
                 }`}
               >
                 <div className="flex items-center gap-2 min-w-0">
@@ -865,30 +1050,43 @@ export const VisualReviewCalendar: React.FC<Props> = ({
                   <span className="truncate">
                     {selectedBookId && activeSelectedBook
                       ? `${activeSelectedBook.title}`
-                      : filterType === 'personal'
-                      ? (language === 'en' ? 'All Personal Books (Accumulated)' : 'Semua Kitab Pribadi (Akumulatif)')
-                      : filterType === 'library'
-                      ? (language === 'en' ? 'All Library Books (Accumulated)' : 'Semua Kitab Pustaka (Akumulatif)')
-                      : filterType === 'class'
-                      ? (language === 'en' ? 'All Class Books (Accumulated)' : 'Semua Kitab Kelas (Akumulatif)')
-                      : (language === 'en' ? 'All Books (Accumulated)' : 'Semua Kitab (Akumulatif)')
-                    }
+                      : filterType === "personal"
+                        ? language === "en"
+                          ? "All Personal Books (Accumulated)"
+                          : "Semua Kitab Pribadi (Akumulatif)"
+                        : filterType === "library"
+                          ? language === "en"
+                            ? "All Library Books (Accumulated)"
+                            : "Semua Kitab Pustaka (Akumulatif)"
+                          : filterType === "class"
+                            ? language === "en"
+                              ? "All Class Books (Accumulated)"
+                              : "Semua Kitab Kelas (Akumulatif)"
+                            : language === "en"
+                              ? "All Books (Accumulated)"
+                              : "Semua Kitab (Akumulatif)"}
                   </span>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
                   {selectedBookId && (
-                    <span 
+                    <span
                       onClick={(e) => {
                         e.stopPropagation();
                         setSelectedBookId(null);
                       }}
                       className="p-1 hover:bg-black/10 dark:hover:bg-white/10 rounded-lg text-[#5E6D88] hover:text-[#18234A]"
-                      title={language === 'en' ? 'Show all books' : 'Tampilkan semua kitab'}
+                      title={
+                        language === "en"
+                          ? "Show all books"
+                          : "Tampilkan semua kitab"
+                      }
                     >
                       <X className="w-3 h-3" />
                     </span>
                   )}
-                  <ChevronDown className={`w-3.5 h-3.5 transition-transform text-[#5E6D88] ${isBookDropdownOpen ? 'rotate-180' : ''}`} />
+                  <ChevronDown
+                    className={`w-3.5 h-3.5 transition-transform text-[#5E6D88] ${isBookDropdownOpen ? "rotate-180" : ""}`}
+                  />
                 </div>
               </button>
             </div>
@@ -912,28 +1110,40 @@ export const VisualReviewCalendar: React.FC<Props> = ({
                     }}
                     className={`w-full px-3 py-2 rounded-xl text-xs font-bold text-left flex items-center justify-between gap-2 transition-all cursor-pointer ${
                       !selectedBookId
-                        ? 'bg-gradient-to-r from-[#FF7E4A] to-[#E65320] text-white shadow-xs'
-                        : 'hover:bg-black/[0.04] dark:hover:bg-white/[0.05] text-[#18234A] dark:text-[#F8FAFC]'
+                        ? "bg-gradient-to-r from-[#FF7E4A] to-[#E65320] text-white shadow-xs"
+                        : "hover:bg-black/[0.04] dark:hover:bg-white/[0.05] text-[#18234A] dark:text-[#F8FAFC]"
                     }`}
                   >
                     <div className="flex items-center gap-2 min-w-0">
                       <Layers className="w-3.5 h-3.5 shrink-0" />
                       <span className="truncate">
-                        {filterType === 'personal'
-                          ? (language === 'en' ? 'All Personal Books (Accumulated)' : 'Semua Kitab Pribadi (Akumulatif)')
-                          : filterType === 'library'
-                          ? (language === 'en' ? 'All Library Books (Accumulated)' : 'Semua Kitab Pustaka (Akumulatif)')
-                          : filterType === 'class'
-                          ? (language === 'en' ? 'All Class Books (Accumulated)' : 'Semua Kitab Kelas (Akumulatif)')
-                          : (language === 'en' ? 'All Books (Accumulated)' : 'Semua Kitab (Akumulatif)')}
+                        {filterType === "personal"
+                          ? language === "en"
+                            ? "All Personal Books (Accumulated)"
+                            : "Semua Kitab Pribadi (Akumulatif)"
+                          : filterType === "library"
+                            ? language === "en"
+                              ? "All Library Books (Accumulated)"
+                              : "Semua Kitab Pustaka (Akumulatif)"
+                            : filterType === "class"
+                              ? language === "en"
+                                ? "All Class Books (Accumulated)"
+                                : "Semua Kitab Kelas (Akumulatif)"
+                              : language === "en"
+                                ? "All Books (Accumulated)"
+                                : "Semua Kitab (Akumulatif)"}
                       </span>
                     </div>
-                    {!selectedBookId && <Check className="w-3.5 h-3.5 shrink-0" />}
+                    {!selectedBookId && (
+                      <Check className="w-3.5 h-3.5 shrink-0" />
+                    )}
                   </button>
 
                   {/* Individual Books */}
-                  {currentCategoryBooks.map(b => {
-                    const bookActiveCards = (items || []).filter(i => i.bookId === b.id && i.isActive).length;
+                  {currentCategoryBooks.map((b) => {
+                    const bookActiveCards = (items || []).filter(
+                      (i) => i.bookId === b.id && i.isActive,
+                    ).length;
                     const isSelected = selectedBookId === b.id;
 
                     return (
@@ -946,8 +1156,8 @@ export const VisualReviewCalendar: React.FC<Props> = ({
                         }}
                         className={`w-full px-3 py-2 rounded-xl text-xs font-semibold text-left flex items-center justify-between gap-2 transition-all cursor-pointer ${
                           isSelected
-                            ? 'bg-gradient-to-r from-[#FF7E4A] to-[#E65320] text-white font-bold shadow-xs'
-                            : 'hover:bg-black/[0.04] dark:hover:bg-white/[0.05] text-[#18234A] dark:text-[#F8FAFC]'
+                            ? "bg-gradient-to-r from-[#FF7E4A] to-[#E65320] text-white font-bold shadow-xs"
+                            : "hover:bg-black/[0.04] dark:hover:bg-white/[0.05] text-[#18234A] dark:text-[#F8FAFC]"
                         }`}
                       >
                         <div className="flex items-center gap-2 min-w-0">
@@ -955,12 +1165,19 @@ export const VisualReviewCalendar: React.FC<Props> = ({
                           <span className="truncate">{b.title}</span>
                         </div>
                         <div className="flex items-center gap-1.5 shrink-0">
-                          <span className={`px-1.5 py-0.2 text-[9px] rounded-full font-bold ${
-                            isSelected ? 'bg-white/20 text-white' : 'bg-black/5 dark:bg-white/10 text-[#8493AB]'
-                          }`}>
-                            {bookActiveCards} {language === 'en' ? 'active' : 'kartu'}
+                          <span
+                            className={`px-1.5 py-0.2 text-[9px] rounded-full font-bold ${
+                              isSelected
+                                ? "bg-white/20 text-white"
+                                : "bg-black/5 dark:bg-white/10 text-[#8493AB]"
+                            }`}
+                          >
+                            {bookActiveCards}{" "}
+                            {language === "en" ? "active" : "kartu"}
                           </span>
-                          {isSelected && <Check className="w-3.5 h-3.5 shrink-0" />}
+                          {isSelected && (
+                            <Check className="w-3.5 h-3.5 shrink-0" />
+                          )}
                         </div>
                       </button>
                     );
@@ -977,12 +1194,12 @@ export const VisualReviewCalendar: React.FC<Props> = ({
         {/* Day of week headers */}
         <div className="grid grid-cols-7 gap-1 sm:gap-1.5 text-center">
           {weekDayLabels.map((lbl, idx) => (
-            <div 
-              key={lbl} 
+            <div
+              key={lbl}
               className={`py-1 text-[11px] sm:text-xs font-bold uppercase tracking-wider ${
                 idx === 4 || idx === 6
-                  ? 'text-[#FF6E65]'
-                  : 'text-[#64748B] dark:text-[#94A3B8]'
+                  ? "text-[#FF6E65]"
+                  : "text-[#64748B] dark:text-[#94A3B8]"
               }`}
             >
               {lbl}
@@ -1011,31 +1228,36 @@ export const VisualReviewCalendar: React.FC<Props> = ({
                 }}
                 className={`h-14 sm:h-16 p-1 rounded-2xl transition-all flex flex-col items-center justify-center relative cursor-pointer group ${
                   !day.isCurrentMonth
-                    ? 'opacity-20 pointer-events-none'
+                    ? "opacity-20 pointer-events-none"
                     : isToday && isSelected
-                    ? 'neumorph-card ring-2 ring-emerald-500 dark:ring-emerald-400 scale-105 z-10 shadow-md bg-emerald-500/10'
-                    : isToday
-                    ? 'neumorph-card ring-2 ring-emerald-500/60 dark:ring-emerald-400/60 bg-emerald-500/5'
-                    : isSelected 
-                    ? 'neumorph-card ring-2 ring-[#18234A] dark:ring-slate-300 scale-105 z-10 shadow-md' 
-                    : totalPlanned > 0
-                    ? 'neumorph-card hover:scale-[1.03]'
-                    : 'neumorph-card opacity-90 hover:opacity-100 hover:scale-[1.02]'
+                      ? "neumorph-card ring-2 ring-emerald-500 dark:ring-emerald-400 scale-105 z-10 shadow-md bg-emerald-500/10"
+                      : isToday
+                        ? "neumorph-card ring-2 ring-emerald-500/60 dark:ring-emerald-400/60 bg-emerald-500/5"
+                        : isSelected
+                          ? "neumorph-card ring-2 ring-[#18234A] dark:ring-slate-300 scale-105 z-10 shadow-md"
+                          : totalPlanned > 0
+                            ? "neumorph-card hover:scale-[1.03]"
+                            : "neumorph-card opacity-90 hover:opacity-100 hover:scale-[1.02]"
                 }`}
               >
                 {/* Date Number: Centered, distinct dark navy / white font (NEVER orange, completely separate from due total color) */}
                 <div className="flex items-center justify-center relative my-0.5">
-                  <span className={`text-xs sm:text-sm font-black tracking-tight text-center ${
-                    !day.isCurrentMonth
-                      ? 'text-slate-400 dark:text-slate-600'
-                      : 'text-[#18234A] dark:text-[#F8FAFC]'
-                  }`}>
+                  <span
+                    className={`text-xs sm:text-sm font-black tracking-tight text-center ${
+                      !day.isCurrentMonth
+                        ? "text-slate-400 dark:text-slate-600"
+                        : "text-[#18234A] dark:text-[#F8FAFC]"
+                    }`}
+                  >
                     {day.dayNumber}
                   </span>
 
                   {/* Subtle Today Beacon Indicator */}
                   {isToday && (
-                    <span className="absolute -top-1 -right-2 flex h-2 w-2" title="Hari Ini">
+                    <span
+                      className="absolute -top-1 -right-2 flex h-2 w-2"
+                      title="Hari Ini"
+                    >
                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75"></span>
                       <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                     </span>
@@ -1061,8 +1283,8 @@ export const VisualReviewCalendar: React.FC<Props> = ({
       {/* 3. SELECTED DATE DETAILS PANEL (BOUNDED SCROLLABLE CONTAINER, NO HISTORY STRIP) */}
       <div className="mt-3 pt-2.5 border-t border-black/[0.04] dark:border-white/5 rounded-3xl neumorph-inset p-2 overflow-hidden">
         {/* Header of Detail Box */}
-        <div 
-          onClick={() => setIsDetailsExpanded(v => !v)}
+        <div
+          onClick={() => setIsDetailsExpanded((v) => !v)}
           className="p-2.5 sm:p-3 flex items-center justify-between gap-3 cursor-pointer rounded-2xl hover:bg-white/40 dark:hover:bg-white/5 transition-colors"
         >
           <div className="flex items-center gap-2.5 min-w-0">
@@ -1076,51 +1298,58 @@ export const VisualReviewCalendar: React.FC<Props> = ({
                 </h4>
                 {selectedDateDetails.isDateToday && (
                   <span className="px-2 py-0.2 rounded-full bg-gradient-to-r from-[#FF7E4A] to-[#E65320] text-white font-extrabold text-[9px] shadow-2xs">
-                    {language === 'en' ? 'Today' : 'Hari Ini'}
+                    {language === "en" ? "Today" : "Hari Ini"}
                   </span>
                 )}
                 {selectedDateDetails.isFuture && (
                   <span className="px-2 py-0.2 rounded-full bg-amber-500 text-white font-bold text-[9px] shadow-2xs">
-                    {language === 'en' ? 'Upcoming' : 'Terjadwal'}
+                    {language === "en" ? "Upcoming" : "Terjadwal"}
                   </span>
                 )}
                 {selectedDateDetails.isPast && (
                   <span className="px-2 py-0.2 rounded-full bg-slate-500 text-white font-bold text-[9px] shadow-2xs">
-                    {language === 'en' ? 'Past Day' : 'Lampau'}
+                    {language === "en" ? "Past Day" : "Lampau"}
                   </span>
                 )}
               </div>
               <p className="text-[11px] text-[#5E6D88] dark:text-[#94A3B8] mt-0.5 font-medium truncate">
                 {selectedDateDetails.totalPlanned > 0
-                  ? `${selectedDateDetails.totalPlanned} ${language === 'en' ? 'items scheduled for murajaah' : 'materi terjadwal murajaah'}`
-                  : (language === 'en' ? 'No reviews scheduled on this date' : 'Tidak ada jadwal murajaah pada tanggal ini')}
+                  ? `${selectedDateDetails.totalPlanned} ${language === "en" ? "items scheduled for murajaah" : "materi terjadwal murajaah"}`
+                  : language === "en"
+                    ? "No reviews scheduled on this date"
+                    : "Tidak ada jadwal murajaah pada tanggal ini"}
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
-            {selectedDateDetails.isDateToday && selectedDateDetails.totalPlanned > 0 && (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (selectedDateDetails.plannedQuran.length > 0) {
-                    onOpenQuranReview();
-                  } else {
-                    onOpenPersonalReview();
-                  }
-                }}
-                className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-[#FF7E4A] to-[#E65320] text-white font-bold text-xs shadow-xs transition-all active:scale-95 cursor-pointer whitespace-nowrap"
-              >
-                <Play className="w-3.5 h-3.5 fill-white" />
-                <span>{language === 'en' ? 'Review Now' : 'Mulai Murajaah'}</span>
-              </button>
-            )}
+            {selectedDateDetails.isDateToday &&
+              selectedDateDetails.totalPlanned > 0 && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (selectedDateDetails.plannedQuran.length > 0) {
+                      onOpenQuranReview();
+                    } else {
+                      onOpenPersonalReview();
+                    }
+                  }}
+                  className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-[#FF7E4A] to-[#E65320] text-white font-bold text-xs shadow-xs transition-all active:scale-95 cursor-pointer whitespace-nowrap"
+                >
+                  <Play className="w-3.5 h-3.5 fill-white" />
+                  <span>
+                    {language === "en" ? "Review Now" : "Mulai Murajaah"}
+                  </span>
+                </button>
+              )}
             <button
               type="button"
               className="w-7 h-7 rounded-xl neumorph-card flex items-center justify-center text-[#18234A] dark:text-[#F8FAFC] cursor-pointer hover:scale-105 active:scale-95 transition-all"
             >
-              <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isDetailsExpanded ? 'rotate-180' : ''}`} />
+              <ChevronDown
+                className={`w-3.5 h-3.5 transition-transform ${isDetailsExpanded ? "rotate-180" : ""}`}
+              />
             </button>
           </div>
         </div>
@@ -1130,7 +1359,7 @@ export const VisualReviewCalendar: React.FC<Props> = ({
           {isDetailsExpanded && (
             <motion.div
               initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
+              animate={{ height: "auto", opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
               transition={{ duration: 0.2 }}
               className="border-t border-black/[0.04] dark:border-white/5 p-2.5 sm:p-3 space-y-2.5"
@@ -1139,8 +1368,15 @@ export const VisualReviewCalendar: React.FC<Props> = ({
               {selectedDateDetails.totalPlanned > 0 && (
                 <div className="space-y-2">
                   <div className="flex items-center justify-between text-[10px] font-bold text-[#5E6D88] dark:text-[#94A3B8] uppercase tracking-wider">
-                    <span>{language === 'en' ? 'Scheduled Material:' : 'Rincian Materi Terjadwal:'}</span>
-                    <span>({selectedDateDetails.totalPlanned} {language === 'en' ? 'items' : 'item'})</span>
+                    <span>
+                      {language === "en"
+                        ? "Scheduled Material:"
+                        : "Rincian Materi Terjadwal:"}
+                    </span>
+                    <span>
+                      ({selectedDateDetails.totalPlanned}{" "}
+                      {language === "en" ? "items" : "item"})
+                    </span>
                   </div>
 
                   {/* Scrollable container to avoid stretching the card endlessly */}
@@ -1148,11 +1384,15 @@ export const VisualReviewCalendar: React.FC<Props> = ({
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       {/* Quran Pages */}
                       {selectedDateDetails.plannedQuran.map((p) => {
-                        const stabilityDays = Math.round((p.fsrsData?.stability || 0) * 0.4025587);
-                        const isMapan = p.status === 'mastered_for_now' || stabilityDays >= 30;
+                        const stabilityDays = Math.round(
+                          (p.fsrsData?.stability || 0) * 0.4025587,
+                        );
+                        const isMapan =
+                          p.status === "mastered_for_now" ||
+                          stabilityDays >= 30;
 
                         return (
-                          <div 
+                          <div
                             key={p.pageNumber}
                             className="p-2.5 rounded-2xl neumorph-card flex items-center justify-between gap-2"
                           >
@@ -1172,7 +1412,7 @@ export const VisualReviewCalendar: React.FC<Props> = ({
                                 )}
                               </div>
                               <p className="text-[11px] text-[#5E6D88] dark:text-[#94A3B8] truncate mt-0.5 font-medium">
-                                QS. {p.surahNameEn} ({p.ayahRange || 'Ayat'})
+                                QS. {p.surahNameEn} ({p.ayahRange || "Ayat"})
                               </p>
                             </div>
 
@@ -1180,7 +1420,11 @@ export const VisualReviewCalendar: React.FC<Props> = ({
                               <button
                                 type="button"
                                 onClick={() => onOpenMushafViewer(p.pageNumber)}
-                                title={language === 'en' ? 'View Page' : 'Lihat Halaman'}
+                                title={
+                                  language === "en"
+                                    ? "View Page"
+                                    : "Lihat Halaman"
+                                }
                                 className="w-7 h-7 rounded-xl neumorph-inset flex items-center justify-center text-[#18234A] dark:text-[#F8FAFC] hover:text-[#FF6F3D] hover:scale-105 active:scale-95 transition-all cursor-pointer shadow-xs"
                               >
                                 <Eye className="w-3.5 h-3.5" />
@@ -1189,7 +1433,11 @@ export const VisualReviewCalendar: React.FC<Props> = ({
                                 <button
                                   type="button"
                                   onClick={() => onOpenQuranReview(p.juzNumber)}
-                                  title={language === 'en' ? 'Review Page' : 'Murajaah'}
+                                  title={
+                                    language === "en"
+                                      ? "Review Page"
+                                      : "Murajaah"
+                                  }
                                   className="w-7 h-7 rounded-xl bg-gradient-to-br from-[#FF7E4A] to-[#E65320] flex items-center justify-center text-white cursor-pointer active:scale-95 transition-all shadow-xs"
                                 >
                                   <Play className="w-3.5 h-3.5 fill-white" />
@@ -1201,41 +1449,52 @@ export const VisualReviewCalendar: React.FC<Props> = ({
                       })}
 
                       {/* Personal Cards */}
-                      {selectedDateDetails.plannedPersonal.map(({ item: it, bookTitle }) => {
-                        const stabilityDays = Math.round((it.fsrsData?.stability || 0) * 0.4025587);
+                      {selectedDateDetails.plannedPersonal.map(
+                        ({ item: it, bookTitle }) => {
+                          const stabilityDays = Math.round(
+                            (it.fsrsData?.stability || 0) * 0.4025587,
+                          );
 
-                        return (
-                          <div 
-                            key={it.id}
-                            className="p-2.5 rounded-2xl neumorph-card flex items-center justify-between gap-2"
-                          >
-                            <div className="min-w-0 flex-1">
-                              <div className="flex items-center gap-1.5 flex-wrap">
-                                <span className="font-bold text-xs text-[#18234A] dark:text-[#F8FAFC] truncate">
-                                  {bookTitle}
-                                </span>
-                                <span className="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-[#FF6F3D] text-white shadow-2xs">
-                                  {stabilityDays}d
-                                </span>
+                          return (
+                            <div
+                              key={it.id}
+                              className="p-2.5 rounded-2xl neumorph-card flex items-center justify-between gap-2"
+                            >
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <span className="font-bold text-xs text-[#18234A] dark:text-[#F8FAFC] truncate">
+                                    {bookTitle}
+                                  </span>
+                                  <span className="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-[#FF6F3D] text-white shadow-2xs">
+                                    {stabilityDays}d
+                                  </span>
+                                </div>
+                                <p className="text-[11px] text-[#5E6D88] dark:text-[#94A3B8] line-clamp-1 mt-0.5 font-medium">
+                                  {it.question ||
+                                    (language === "en"
+                                      ? "Card Item"
+                                      : "Kartu Materi")}
+                                </p>
                               </div>
-                              <p className="text-[11px] text-[#5E6D88] dark:text-[#94A3B8] line-clamp-1 mt-0.5 font-medium">
-                                {it.question || (language === 'en' ? 'Card Item' : 'Kartu Materi')}
-                              </p>
-                            </div>
 
-                            {selectedDateDetails.isDateToday && (
-                              <button
-                                type="button"
-                                onClick={onOpenPersonalReview}
-                                title={language === 'en' ? 'Review Card' : 'Murajaah'}
-                                className="w-7 h-7 rounded-xl bg-gradient-to-br from-[#FF7E4A] to-[#E65320] flex items-center justify-center text-white cursor-pointer shrink-0 active:scale-95 transition-all shadow-xs"
-                              >
-                                <Play className="w-3.5 h-3.5 fill-white" />
-                              </button>
-                            )}
-                          </div>
-                        );
-                      })}
+                              {selectedDateDetails.isDateToday && (
+                                <button
+                                  type="button"
+                                  onClick={onOpenPersonalReview}
+                                  title={
+                                    language === "en"
+                                      ? "Review Card"
+                                      : "Murajaah"
+                                  }
+                                  className="w-7 h-7 rounded-xl bg-gradient-to-br from-[#FF7E4A] to-[#E65320] flex items-center justify-center text-white cursor-pointer shrink-0 active:scale-95 transition-all shadow-xs"
+                                >
+                                  <Play className="w-3.5 h-3.5 fill-white" />
+                                </button>
+                              )}
+                            </div>
+                          );
+                        },
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1245,14 +1504,14 @@ export const VisualReviewCalendar: React.FC<Props> = ({
               {selectedDateDetails.totalPlanned === 0 && (
                 <div className="py-4 text-center space-y-1">
                   <p className="text-xs font-bold text-[#18234A] dark:text-[#F8FAFC]">
-                    {language === 'en' 
-                      ? 'No review sessions scheduled on this date.' 
-                      : 'Tidak ada jadwal murajaah pada tanggal ini.'}
+                    {language === "en"
+                      ? "No review sessions scheduled on this date."
+                      : "Tidak ada jadwal murajaah pada tanggal ini."}
                   </p>
                   <p className="text-[11px] text-[#5E6D88] dark:text-[#94A3B8] max-w-sm mx-auto font-medium">
-                    {language === 'en'
-                      ? 'Enjoy your free time, or use it for adding new memorization (Ziyadah) or reading.'
-                      : 'Waktu luang optimal untuk menambah hafalan baru (Ziyadah) atau memperdalam pemahaman materi.'}
+                    {language === "en"
+                      ? "Enjoy your free time, or use it for adding new memorization (Ziyadah) or reading."
+                      : "Waktu luang optimal untuk menambah hafalan baru (Ziyadah) atau memperdalam pemahaman materi."}
                   </p>
                 </div>
               )}

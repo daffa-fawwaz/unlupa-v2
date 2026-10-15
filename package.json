@@ -40,7 +40,7 @@
     "motion": "^13.2.0",
     "multer": "^1.4.5-lts.1",
     "react": "^19.0.1",
-    "react-dom": "^19.0.1",
+    "react-dom": "^19.3.0",
     "react-markdown": "^10.1.0",
     "recharts": "^3.10.1",
     "rehype-raw": "^7.0.0",
@@ -56,6 +56,17 @@
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
+    "@types/react-dom": "^19.3.0",
     "prisma": "^6.4.1"
+  },
+  "allowScripts": {
+    "@firebase/util@1.15.3": true,
+    "@google/genai": true,
+    "@prisma/client@6.4.1": true,
+    "@prisma/engines@6.4.1": true,
+    "core-js@3.50.0": true,
+    "esbuild": true,
+    "prisma@6.4.1": true,
+    "protobufjs": true
   }
 }

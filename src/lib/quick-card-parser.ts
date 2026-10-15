@@ -1,6 +1,6 @@
 /**
  * Quick Card Parser & External AI Prompt Generator
- * 
+ *
  * Memungkinkan pemrosesan flashcard instan 100% di sisi klien (tanpa biaya API, tanpa kuota, tanpa latensi),
  * serta menyediakan template prompt siap pakai untuk dieksekusi di ChatGPT / Claude / Gemini / DeepSeek eksternal.
  */
@@ -27,14 +27,14 @@ export interface ParsedBook {
  */
 function cleanText(text: string): string {
   return text
-    .split('\n')
-    .map(line => line.trim())
+    .split("\n")
+    .map((line) => line.trim())
     .filter((line, i, arr) => {
       // Hapus baris kosong di paling awal atau paling akhir
-      if (line === '' && (i === 0 || i === arr.length - 1)) return false;
+      if (line === "" && (i === 0 || i === arr.length - 1)) return false;
       return true;
     })
-    .join('\n')
+    .join("\n")
     .trim();
 }
 
@@ -50,19 +50,40 @@ export function parseCardsFromText(rawText: string): ParsedCard[] {
   const text = rawText.trim();
 
   // 1. Coba JSON parser jika formatnya berupa JSON array
-  if ((text.startsWith('[') && text.endsWith(']')) || (text.startsWith('{') && text.endsWith('}'))) {
+  if (
+    (text.startsWith("[") && text.endsWith("]")) ||
+    (text.startsWith("{") && text.endsWith("}"))
+  ) {
     try {
       const parsed = JSON.parse(text);
-      const list = Array.isArray(parsed) ? parsed : (parsed.cards || parsed.items || []);
+      const list = Array.isArray(parsed)
+        ? parsed
+        : parsed.cards || parsed.items || [];
       if (Array.isArray(list) && list.length > 0) {
-        const validCards = list.map((item: any) => {
-          const q = item.question || item.q || item.tanya || item.t || item.front || item.soal || '';
-          const a = item.answer || item.a || item.jawab || item.j || item.back || item.jawaban || '';
-          if (q.trim() && a.trim()) {
-            return { question: cleanText(q), answer: cleanText(a) };
-          }
-          return null;
-        }).filter(Boolean) as ParsedCard[];
+        const validCards = list
+          .map((item: any) => {
+            const q =
+              item.question ||
+              item.q ||
+              item.tanya ||
+              item.t ||
+              item.front ||
+              item.soal ||
+              "";
+            const a =
+              item.answer ||
+              item.a ||
+              item.jawab ||
+              item.j ||
+              item.back ||
+              item.jawaban ||
+              "";
+            if (q.trim() && a.trim()) {
+              return { question: cleanText(q), answer: cleanText(a) };
+            }
+            return null;
+          })
+          .filter(Boolean) as ParsedCard[];
 
         if (validCards.length > 0) return validCards;
       }
@@ -73,21 +94,23 @@ export function parseCardsFromText(rawText: string): ParsedCard[] {
 
   // Regex pola penanda Pertanyaan
   // Mendukung: T:, Q:, P:, Tanya:, Pertanyaan:, Soal:, 1. T:, 1) Q:, dsb.
-  const questionPattern = /^(?:(?:\d+[\.\)]|\-|\*)\s*)?(?:[TtQqPp]|Tanya|Pertanyaan|Question|Soal)\s*[:：]\s*(.*)$/i;
+  const questionPattern =
+    /^(?:(?:\d+[\.\)]|\-|\*)\s*)?(?:[TtQqPp]|Tanya|Pertanyaan|Question|Soal)\s*[:：]\s*(.*)$/i;
   // Regex pola penanda Jawaban
   // Mendukung: J:, A:, Ans:, Jawab:, Jawaban:, Answer:, 1. J:, 1) A:, dsb.
-  const answerPattern = /^(?:(?:\d+[\.\)]|\-|\*)\s*)?(?:[JjAa]|Ans|Jawab|Jawaban|Answer)\s*[:：]\s*(.*)$/i;
+  const answerPattern =
+    /^(?:(?:\d+[\.\)]|\-|\*)\s*)?(?:[JjAa]|Ans|Jawab|Jawaban|Answer)\s*[:：]\s*(.*)$/i;
 
-  const lines = text.split('\n');
+  const lines = text.split("\n");
   const cards: ParsedCard[] = [];
 
   let currentQuestionLines: string[] = [];
   let currentAnswerLines: string[] = [];
-  let state: 'idle' | 'in_question' | 'in_answer' = 'idle';
+  let state: "idle" | "in_question" | "in_answer" = "idle";
 
   const flushCard = () => {
-    const q = cleanText(currentQuestionLines.join('\n'));
-    const a = cleanText(currentAnswerLines.join('\n'));
+    const q = cleanText(currentQuestionLines.join("\n"));
+    const a = cleanText(currentAnswerLines.join("\n"));
     if (q && a) {
       cards.push({ question: q, answer: a });
     }
@@ -100,10 +123,14 @@ export function parseCardsFromText(rawText: string): ParsedCard[] {
     const trimmedLine = line.trim();
 
     // Lewati baris divider markdown atau header bab
-    if (trimmedLine.startsWith('---') || trimmedLine.startsWith('===') || trimmedLine.startsWith('#')) {
-      if (state === 'in_answer') {
+    if (
+      trimmedLine.startsWith("---") ||
+      trimmedLine.startsWith("===") ||
+      trimmedLine.startsWith("#")
+    ) {
+      if (state === "in_answer") {
         flushCard();
-        state = 'idle';
+        state = "idle";
       }
       continue;
     }
@@ -113,18 +140,18 @@ export function parseCardsFromText(rawText: string): ParsedCard[] {
 
     if (qMatch) {
       // Jika sebelumnya sudah ada tanya dan jawab, simpan kartu lama
-      if (state === 'in_answer' || state === 'in_question') {
+      if (state === "in_answer" || state === "in_question") {
         flushCard();
       }
-      state = 'in_question';
+      state = "in_question";
       currentQuestionLines = [qMatch[1]];
-    } else if (aMatch && state === 'in_question') {
-      state = 'in_answer';
+    } else if (aMatch && state === "in_question") {
+      state = "in_answer";
       currentAnswerLines = [aMatch[1]];
-    } else if (state === 'in_question') {
+    } else if (state === "in_question") {
       // Baris lanjutan dari pertanyaan (misal teks Arab atau baris kedua)
       currentQuestionLines.push(line);
-    } else if (state === 'in_answer') {
+    } else if (state === "in_answer") {
       // Baris lanjutan dari jawaban
       currentAnswerLines.push(line);
     }
@@ -140,41 +167,56 @@ export function parseCardsFromText(rawText: string): ParsedCard[] {
   // 2. Fallback: Cek Delimiter berbasis baris (Tab, Pipe |, ::, ///)
   for (const line of lines) {
     const tr = line.trim();
-    if (!tr || tr.startsWith('#') || tr.startsWith('---')) continue;
+    if (!tr || tr.startsWith("#") || tr.startsWith("---")) continue;
 
     // Cek tab (TSV export dari Spreadsheet / Anki)
-    if (tr.includes('\t')) {
-      const parts = tr.split('\t');
+    if (tr.includes("\t")) {
+      const parts = tr.split("\t");
       if (parts.length >= 2 && parts[0].trim() && parts[1].trim()) {
-        cards.push({ question: cleanText(parts[0]), answer: cleanText(parts.slice(1).join(' ')) });
+        cards.push({
+          question: cleanText(parts[0]),
+          answer: cleanText(parts.slice(1).join(" ")),
+        });
         continue;
       }
     }
 
     // Cek Pipe delimiter (|) misal tabel markdown atau flashcard sederhana
-    if (tr.includes('|')) {
+    if (tr.includes("|")) {
       // Abaikan baris format header tabel seperti |---|---|
       if (/^\|?[\s\-:]+\|[\s\-:]+\|?$/.test(tr)) continue;
-      const parts = tr.split('|').map(p => p.trim()).filter(Boolean);
+      const parts = tr
+        .split("|")
+        .map((p) => p.trim())
+        .filter(Boolean);
       if (parts.length >= 2) {
-        cards.push({ question: cleanText(parts[0]), answer: cleanText(parts.slice(1).join(' | ')) });
+        cards.push({
+          question: cleanText(parts[0]),
+          answer: cleanText(parts.slice(1).join(" | ")),
+        });
         continue;
       }
     }
 
     // Cek delimiter :: atau ///
-    if (tr.includes('::')) {
-      const parts = tr.split('::');
+    if (tr.includes("::")) {
+      const parts = tr.split("::");
       if (parts.length >= 2 && parts[0].trim() && parts[1].trim()) {
-        cards.push({ question: cleanText(parts[0]), answer: cleanText(parts.slice(1).join('::')) });
+        cards.push({
+          question: cleanText(parts[0]),
+          answer: cleanText(parts.slice(1).join("::")),
+        });
         continue;
       }
     }
 
-    if (tr.includes('///')) {
-      const parts = tr.split('///');
+    if (tr.includes("///")) {
+      const parts = tr.split("///");
       if (parts.length >= 2 && parts[0].trim() && parts[1].trim()) {
-        cards.push({ question: cleanText(parts[0]), answer: cleanText(parts.slice(1).join('///')) });
+        cards.push({
+          question: cleanText(parts[0]),
+          answer: cleanText(parts.slice(1).join("///")),
+        });
         continue;
       }
     }
@@ -186,25 +228,29 @@ export function parseCardsFromText(rawText: string): ParsedCard[] {
 /**
  * Mem-parsing teks struktur buku yang berisi beberapa Bab dan Q&A di bawah tiap bab
  */
-export function parseBookFromText(rawText: string, fallbackTitle = 'Buku Baru'): ParsedBook {
+export function parseBookFromText(
+  rawText: string,
+  fallbackTitle = "Buku Baru",
+): ParsedBook {
   if (!rawText || !rawText.trim()) {
     return {
       title: fallbackTitle,
-      description: '',
-      chapters: [{ title: 'Bab 1: Materi Utama', cards: [] }]
+      description: "",
+      chapters: [{ title: "Bab 1: Materi Utama", cards: [] }],
     };
   }
 
-  const lines = rawText.split('\n');
-  let title = '';
-  let description = '';
+  const lines = rawText.split("\n");
+  let title = "";
+  let description = "";
 
   const chapterBlocks: { title: string; lines: string[] }[] = [];
-  let currentChapterTitle = '';
+  let currentChapterTitle = "";
   let currentChapterLines: string[] = [];
 
   // Regex mendeteksi header bab
-  const chapterHeaderRegex = /^(?:#{1,3}\s*|Bab\s+\d+\s*[:：\-]|BAB\s+[IVXLCDM]+\s*[:：\-]|Chapter\s+\d+\s*[:：\-]|Bagian\s+\d+\s*[:：\-])\s*(.*)$/i;
+  const chapterHeaderRegex =
+    /^(?:#{1,3}\s*|Bab\s+\d+\s*[:：\-]|BAB\s+[IVXLCDM]+\s*[:：\-]|Chapter\s+\d+\s*[:：\-]|Bagian\s+\d+\s*[:：\-])\s*(.*)$/i;
   const titleRegex = /^(?:Judul|Title|Nama Buku)\s*[:：]\s*(.*)$/i;
   const descRegex = /^(?:Deskripsi|Description|Keterangan)\s*[:：]\s*(.*)$/i;
 
@@ -219,8 +265,8 @@ export function parseBookFromText(rawText: string, fallbackTitle = 'Buku Baru'):
         title = tMatch[1].trim();
         continue;
       }
-      if (trimmed.startsWith('# ') && !trimmed.toLowerCase().includes('bab')) {
-        title = trimmed.replace(/^#\s+/, '').trim();
+      if (trimmed.startsWith("# ") && !trimmed.toLowerCase().includes("bab")) {
+        title = trimmed.replace(/^#\s+/, "").trim();
         continue;
       }
     }
@@ -235,17 +281,20 @@ export function parseBookFromText(rawText: string, fallbackTitle = 'Buku Baru'):
     }
 
     // Deteksi Bab
-    const isChapHeader = chapterHeaderRegex.test(trimmed) && !trimmed.toLowerCase().startsWith('t:') && !trimmed.toLowerCase().startsWith('j:');
+    const isChapHeader =
+      chapterHeaderRegex.test(trimmed) &&
+      !trimmed.toLowerCase().startsWith("t:") &&
+      !trimmed.toLowerCase().startsWith("j:");
     if (isChapHeader) {
       // Simpan bab sebelumnya jika ada
       if (currentChapterLines.length > 0 || currentChapterTitle) {
         chapterBlocks.push({
-          title: currentChapterTitle || 'Bab 1: Materi Utama',
-          lines: currentChapterLines
+          title: currentChapterTitle || "Bab 1: Materi Utama",
+          lines: currentChapterLines,
         });
       }
       // Mulai bab baru
-      const rawTitle = trimmed.replace(/^#{1,3}\s*/, '').trim();
+      const rawTitle = trimmed.replace(/^#{1,3}\s*/, "").trim();
       currentChapterTitle = rawTitle || `Bab ${chapterBlocks.length + 1}`;
       currentChapterLines = [];
       continue;
@@ -257,61 +306,75 @@ export function parseBookFromText(rawText: string, fallbackTitle = 'Buku Baru'):
   // Simpan bab terakhir
   if (currentChapterLines.length > 0 || currentChapterTitle) {
     chapterBlocks.push({
-      title: currentChapterTitle || (chapterBlocks.length === 0 ? 'Bab 1: Materi Utama' : `Bab ${chapterBlocks.length + 1}`),
-      lines: currentChapterLines
+      title:
+        currentChapterTitle ||
+        (chapterBlocks.length === 0
+          ? "Bab 1: Materi Utama"
+          : `Bab ${chapterBlocks.length + 1}`),
+      lines: currentChapterLines,
     });
   }
 
   // Jika tidak ada bab yang terdeteksi, jadikan seluruh teks sebagai Bab 1
   if (chapterBlocks.length === 0) {
     chapterBlocks.push({
-      title: 'Bab 1: Materi Utama',
-      lines: lines
+      title: "Bab 1: Materi Utama",
+      lines: lines,
     });
   }
 
   // Parse kartu pada tiap bab
-  const chapters: ParsedChapter[] = chapterBlocks.map((block, idx) => {
-    const blockText = block.lines.join('\n');
-    const cards = parseCardsFromText(blockText);
-    return {
-      title: block.title || `Bab ${idx + 1}`,
-      cards
-    };
-  }).filter(ch => ch.cards.length > 0 || chapterBlocks.length === 1);
+  const chapters: ParsedChapter[] = chapterBlocks
+    .map((block, idx) => {
+      const blockText = block.lines.join("\n");
+      const cards = parseCardsFromText(blockText);
+      return {
+        title: block.title || `Bab ${idx + 1}`,
+        cards,
+      };
+    })
+    .filter((ch) => ch.cards.length > 0 || chapterBlocks.length === 1);
 
   // Jika semua bab kosong tapi ada teks global
-  if (chapters.length === 0 || chapters.every(c => c.cards.length === 0)) {
+  if (chapters.length === 0 || chapters.every((c) => c.cards.length === 0)) {
     const allCards = parseCardsFromText(rawText);
     return {
       title: title || fallbackTitle,
-      description: description || '',
+      description: description || "",
       chapters: [
         {
-          title: 'Bab 1: Materi Utama',
-          cards: allCards
-        }
-      ]
+          title: "Bab 1: Materi Utama",
+          cards: allCards,
+        },
+      ],
     };
   }
 
   return {
     title: title || fallbackTitle,
-    description: description || '',
-    chapters
+    description: description || "",
+    chapters,
   };
 }
 
-import { Language } from '../types';
+import { Language } from "../types";
 
 /**
  * Template Prompt Siap Pakai untuk AI Eksternal (ChatGPT, Claude, Gemini, DeepSeek)
  * Didesain berdasarkan sains kognitif, prinsip spaced repetition (Dr. Piotr Wozniak - SuperMemo 20 Rules),
  * active recall, dan cognitive load theory.
  */
-export const EXTERNAL_AI_CARD_PROMPT_TEMPLATE = (topic?: string, material?: string, language: Language = 'id'): string => {
-  if (language === 'en') {
-    const subject = topic ? `on the topic of "${topic}"` : material ? `based on the attached material below` : `based on the following material`;
+export const EXTERNAL_AI_CARD_PROMPT_TEMPLATE = (
+  topic?: string,
+  material?: string,
+  language: Language = "id",
+): string => {
+  if (language === "en") {
+    const subject = topic
+      ? `on the topic of "${topic}"`
+      : material
+        ? `based on the attached material below`
+        : `based on the following material`;
     return `You are a Senior Cognitive Scientist and Master Spaced Repetition Flashcard Architect, an expert in Dr. Piotr Wozniak's Twenty Rules of Formulating Knowledge, Active Recall, and the Testing Effect.
 
 Your task is to craft high-yield flashcard Q&A items ${subject} adhering strictly to the highest standards of cognitive neuroscience and long-term memory encoding.
@@ -342,11 +405,15 @@ J: مَكِّيَّةٌ
 Makkiyyah (Revealed in Makkah).
 
 ### ZERO CHIT-CHAT POLICY:
-Output ONLY the raw "T:" and "J:" cards. Do NOT include any introductory or concluding remarks, explanations, or code fences.${material ? `\n\nSOURCE MATERIAL:\n${material}` : ''}`;
+Output ONLY the raw "T:" and "J:" cards. Do NOT include any introductory or concluding remarks, explanations, or code fences.${material ? `\n\nSOURCE MATERIAL:\n${material}` : ""}`;
   }
 
   // Bahasa Indonesia (Masterpiece Default)
-  const subject = topic ? `tentang "${topic}"` : material ? `berdasarkan materi terlampir di bawah` : `berdasarkan materi berikut`;
+  const subject = topic
+    ? `tentang "${topic}"`
+    : material
+      ? `berdasarkan materi terlampir di bawah`
+      : `berdasarkan materi berikut`;
   return `Anda adalah seorang Senior Cognitive Scientist dan Master Spaced Repetition Flashcard Architect, pakar dalam sains memori jangka panjang, prinsip SuperMemo (20 Rules of Formulating Knowledge oleh Dr. Piotr Wozniak), Active Recall, dan Cognitive Load Theory.
 
 Tugas Anda adalah merancang kartu hafalan (flashcard) tanya-jawab ${subject} dengan mutu tertinggi (Masterpiece) yang dirancang khusus untuk efisiensi otak manusia dalam mengingat secara permanen.
@@ -377,14 +444,16 @@ J: مَكِّيَّةٌ
 Surah An-Naba' termasuk surah Makkiyah.
 
 ### ATURAN OUTPUT (ZERO CHIT-CHAT):
-Langsung keluarkan daftar kartu dalam format "T:" dan "J:". DILARANG MENAMBAHKAN kata pembuka ("Tentu, ini kartu untuk Anda..."), pengantar, penutup, atau tanda kurung blok markdown.${material ? `\n\nMATERI RUJUKAN:\n${material}` : ''}`;
+Langsung keluarkan daftar kartu dalam format "T:" dan "J:". DILARANG MENAMBAHKAN kata pembuka ("Tentu, ini kartu untuk Anda..."), pengantar, penutup, atau tanda kurung blok markdown.${material ? `\n\nMATERI RUJUKAN:\n${material}` : ""}`;
 };
 
 /**
  * Prompt untuk Mengubah Tanya-Jawab yang Sudah Ada di AI Eksternal ke Format Baku Masterpiece Unlupa
  */
-export const EXTERNAL_AI_CARD_REFORMAT_PROMPT = (language: Language = 'id'): string => {
-  if (language === 'en') {
+export const EXTERNAL_AI_CARD_REFORMAT_PROMPT = (
+  language: Language = "id",
+): string => {
+  if (language === "en") {
     return `You are a Master Spaced Repetition Flashcard Editor and Cognitive Science Specialist.
 
 Your task is to audit, optimize, and reformat the existing Q&A material above into Masterpiece Flashcards adhering to strict cognitive science principles:
@@ -433,9 +502,17 @@ Langsung keluarkan daftar kartu dalam format "T:" dan "J:". DILARANG menyertakan
 /**
  * Prompt untuk Membuat Kitab / Buku Digital Lengkap Berbab-bab dari Topik / Materi
  */
-export const EXTERNAL_AI_BOOK_PROMPT_TEMPLATE = (topic?: string, material?: string, language: Language = 'id'): string => {
-  if (language === 'en') {
-    const subject = topic ? `on the topic of "${topic}"` : material ? `based on the attached material below` : `based on the following material`;
+export const EXTERNAL_AI_BOOK_PROMPT_TEMPLATE = (
+  topic?: string,
+  material?: string,
+  language: Language = "id",
+): string => {
+  if (language === "en") {
+    const subject = topic
+      ? `on the topic of "${topic}"`
+      : material
+        ? `based on the attached material below`
+        : `based on the following material`;
     return `You are a Senior Curriculum Architect and Master Spaced Repetition Book Builder, an expert in structured learning, cognitive neuroscience, and Dr. Piotr Wozniak's Twenty Rules of Formulating Knowledge.
 
 Your task is to organize and generate a complete, chaptered digital study book ${subject} formatted specifically for instant import into the Unlupa Spaced Repetition app.
@@ -466,11 +543,15 @@ T: [Short question acting as a retrieval trigger]
 J: [Precise target answer]
 
 ### ZERO CHIT-CHAT POLICY:
-Output ONLY the formatted text starting directly with "Judul:". Do NOT provide introductory polite remarks or concluding summaries.${material ? `\n\nSOURCE MATERIAL:\n${material}` : ''}`;
+Output ONLY the formatted text starting directly with "Judul:". Do NOT provide introductory polite remarks or concluding summaries.${material ? `\n\nSOURCE MATERIAL:\n${material}` : ""}`;
   }
 
   // Bahasa Indonesia (Masterpiece Default)
-  const subject = topic ? `tentang "${topic}"` : material ? `berdasarkan materi terlampir di bawah` : `berdasarkan materi berikut`;
+  const subject = topic
+    ? `tentang "${topic}"`
+    : material
+      ? `berdasarkan materi terlampir di bawah`
+      : `berdasarkan materi berikut`;
   return `Anda adalah seorang Senior Curriculum Architect dan Master Spaced Repetition Book Builder, pakar dalam taksonomi kurikulum, sains memori kognitif, dan prinsip formulasi pengetahuan (SuperMemo 20 Rules of Knowledge oleh Dr. Piotr Wozniak).
 
 Tugas Anda adalah merancang dan menyusun sebuah Kitab / Buku Hafalan Berbab ${subject} yang terstruktur rapi dan berstandar ilmiah tinggi untuk aplikasi hafalan Unlupa.
@@ -501,14 +582,16 @@ T: [Pertanyaan singkat, padat, pemantik retrieval]
 J: [Jawaban kunci yang presisi dan definitif]
 
 ### ATURAN OUTPUT (ZERO CHIT-CHAT):
-Langsung keluarkan teks berformat yang diawali dengan "Judul:". DILARANG menyertakan kata pembuka, basa-basi, atau penutup.${material ? `\n\nMATERI RUJUKAN:\n${material}` : ''}`;
+Langsung keluarkan teks berformat yang diawali dengan "Judul:". DILARANG menyertakan kata pembuka, basa-basi, atau penutup.${material ? `\n\nMATERI RUJUKAN:\n${material}` : ""}`;
 };
 
 /**
  * Prompt untuk Mengubah Materi / Percakapan Tanya-Jawab Menjadi Struktur Buku Berbab di Unlupa
  */
-export const EXTERNAL_AI_BOOK_REFORMAT_PROMPT = (language: Language = 'id'): string => {
-  if (language === 'en') {
+export const EXTERNAL_AI_BOOK_REFORMAT_PROMPT = (
+  language: Language = "id",
+): string => {
+  if (language === "en") {
     return `You are a Master Curriculum Editor and Spaced Repetition Specialist.
 
 Your task is to transform, curate, and organize the raw text / conversation / notes above into a Masterpiece Chaptered Digital Book for the Unlupa app:

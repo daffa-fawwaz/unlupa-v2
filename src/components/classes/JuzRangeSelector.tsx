@@ -1,12 +1,15 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Layers } from 'lucide-react';
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import { Layers } from "lucide-react";
 
 interface JuzRangeSelectorProps {
   value: string;
   onChange: (val: string) => void;
 }
 
-export const JuzRangeSelector: React.FC<JuzRangeSelectorProps> = ({ value, onChange }) => {
+export const JuzRangeSelector: React.FC<JuzRangeSelectorProps> = ({
+  value,
+  onChange,
+}) => {
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState<number | null>(null);
   const [hoverJuz, setHoverJuz] = useState<number | null>(null);
@@ -18,9 +21,9 @@ export const JuzRangeSelector: React.FC<JuzRangeSelectorProps> = ({ value, onCha
   isDraggingRef.current = isDragging;
 
   const parseRange = (val: string): [number, number] => {
-    if (!val || val === 'all' || val === '1-30') return [1, 30];
-    if (val.includes('-')) {
-      const parts = val.split('-').map(Number);
+    if (!val || val === "all" || val === "1-30") return [1, 30];
+    if (val.includes("-")) {
+      const parts = val.split("-").map(Number);
       const start = Math.min(parts[0] || 1, parts[1] || 1);
       const end = Math.max(parts[0] || 1, parts[1] || 1);
       return [start, end];
@@ -38,31 +41,40 @@ export const JuzRangeSelector: React.FC<JuzRangeSelectorProps> = ({ value, onCha
     setRange(parseRange(value));
   }, [value]);
 
-  const commitRange = useCallback((start: number, end: number) => {
-    const min = Math.max(1, Math.min(start, end));
-    const max = Math.min(30, Math.max(start, end));
-    setRange([min, max]);
+  const commitRange = useCallback(
+    (start: number, end: number) => {
+      const min = Math.max(1, Math.min(start, end));
+      const max = Math.min(30, Math.max(start, end));
+      setRange([min, max]);
 
-    if (min === 1 && max === 30) {
-      onChange('all');
-    } else if (min === max) {
-      onChange(String(min));
-    } else {
-      onChange(`${min}-${max}`);
-    }
-  }, [onChange]);
+      if (min === 1 && max === 30) {
+        onChange("all");
+      } else if (min === max) {
+        onChange(String(min));
+      } else {
+        onChange(`${min}-${max}`);
+      }
+    },
+    [onChange],
+  );
 
   // Helper to extract valid juz number from touch or cursor coordinates
-  const getJuzFromCoords = (clientX: number, clientY: number): number | null => {
+  const getJuzFromCoords = (
+    clientX: number,
+    clientY: number,
+  ): number | null => {
     const el = document.elementFromPoint(clientX, clientY);
-    const item = el?.closest<HTMLElement>('[data-juz]');
+    const item = el?.closest<HTMLElement>("[data-juz]");
     if (!item) return null;
     const num = Number(item.dataset.juz);
     return !isNaN(num) && num >= 1 && num <= 30 ? num : null;
   };
 
   // Pointer Down (Desktop Mouse, Touch, Stylus)
-  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>, juz: number) => {
+  const handlePointerDown = (
+    e: React.PointerEvent<HTMLDivElement>,
+    juz: number,
+  ) => {
     // Prevent default touch gestures and text selection
     e.preventDefault();
     try {
@@ -121,16 +133,16 @@ export const JuzRangeSelector: React.FC<JuzRangeSelectorProps> = ({ value, onCha
       }
     };
 
-    window.addEventListener('pointerup', handleGlobalEnd);
-    window.addEventListener('pointercancel', handleGlobalEnd);
-    window.addEventListener('touchend', handleGlobalEnd);
-    window.addEventListener('touchcancel', handleGlobalEnd);
+    window.addEventListener("pointerup", handleGlobalEnd);
+    window.addEventListener("pointercancel", handleGlobalEnd);
+    window.addEventListener("touchend", handleGlobalEnd);
+    window.addEventListener("touchcancel", handleGlobalEnd);
 
     return () => {
-      window.removeEventListener('pointerup', handleGlobalEnd);
-      window.removeEventListener('pointercancel', handleGlobalEnd);
-      window.removeEventListener('touchend', handleGlobalEnd);
-      window.removeEventListener('touchcancel', handleGlobalEnd);
+      window.removeEventListener("pointerup", handleGlobalEnd);
+      window.removeEventListener("pointercancel", handleGlobalEnd);
+      window.removeEventListener("touchend", handleGlobalEnd);
+      window.removeEventListener("touchcancel", handleGlobalEnd);
     };
   }, []);
 
@@ -140,10 +152,10 @@ export const JuzRangeSelector: React.FC<JuzRangeSelectorProps> = ({ value, onCha
   const pageCount = count * 20;
 
   const PRESETS = [
-    { label: 'Juz 1-5', range: [1, 5] },
-    { label: 'Juz 28-30', range: [28, 30] },
-    { label: 'Juz 30 Saja', range: [30, 30] },
-    { label: 'Semua (1-30)', range: [1, 30] },
+    { label: "Juz 1-5", range: [1, 5] },
+    { label: "Juz 28-30", range: [28, 30] },
+    { label: "Juz 30 Saja", range: [30, 30] },
+    { label: "Semua (1-30)", range: [1, 30] },
   ];
 
   return (
@@ -156,7 +168,9 @@ export const JuzRangeSelector: React.FC<JuzRangeSelectorProps> = ({ value, onCha
           </div>
           <div>
             <div className="font-bold text-[#1E293B] dark:text-[#F8FAFC] text-xs flex items-center gap-1.5">
-              <span>{min === max ? `Juz ${min} Saja` : `Juz ${min} s.d. Juz ${max}`}</span>
+              <span>
+                {min === max ? `Juz ${min} Saja` : `Juz ${min} s.d. Juz ${max}`}
+              </span>
               {isDragging && (
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full clay-badge-orange text-[10px] font-bold animate-pulse">
                   <Layers className="w-2.5 h-2.5" />
@@ -176,7 +190,7 @@ export const JuzRangeSelector: React.FC<JuzRangeSelectorProps> = ({ value, onCha
 
       {/* Preset shortcut buttons */}
       <div className="flex flex-wrap items-center gap-1.5">
-        {PRESETS.map(p => {
+        {PRESETS.map((p) => {
           const isSelected = min === p.range[0] && max === p.range[1];
           return (
             <button
@@ -185,8 +199,8 @@ export const JuzRangeSelector: React.FC<JuzRangeSelectorProps> = ({ value, onCha
               onClick={() => commitRange(p.range[0], p.range[1])}
               className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                 isSelected
-                  ? 'clay-btn-primary scale-105'
-                  : 'clay-pill text-[#64748B] dark:text-[#94A3B8] hover:text-[#1E293B]'
+                  ? "clay-btn-primary scale-105"
+                  : "clay-pill text-[#64748B] dark:text-[#94A3B8] hover:text-[#1E293B]"
               }`}
             >
               {p.label}
@@ -196,7 +210,7 @@ export const JuzRangeSelector: React.FC<JuzRangeSelectorProps> = ({ value, onCha
       </div>
 
       {/* Interactive 30-Juz Sweep Grid */}
-      <div 
+      <div
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerUp}
@@ -204,7 +218,7 @@ export const JuzRangeSelector: React.FC<JuzRangeSelectorProps> = ({ value, onCha
         onTouchEnd={() => handlePointerUp()}
         className="grid grid-cols-6 sm:grid-cols-10 gap-1.5 p-3 rounded-2xl clay-inset touch-none select-none"
       >
-        {Array.from({ length: 30 }, (_, i) => i + 1).map(juz => {
+        {Array.from({ length: 30 }, (_, i) => i + 1).map((juz) => {
           const inRange = juz >= min && juz <= max;
           const isEdge = juz === min || juz === max;
           const isDragHover = isDragging && hoverJuz === juz;
@@ -216,11 +230,11 @@ export const JuzRangeSelector: React.FC<JuzRangeSelectorProps> = ({ value, onCha
               onPointerDown={(e) => handlePointerDown(e, juz)}
               className={`h-10.5 rounded-xl flex flex-col items-center justify-center text-xs font-bold transition-all cursor-pointer touch-none select-none relative ${
                 isEdge
-                  ? 'clay-juz-cell-edge'
+                  ? "clay-juz-cell-edge"
                   : inRange
-                  ? 'clay-juz-cell-range'
-                  : 'clay-juz-cell-inactive'
-              } ${isDragHover ? 'ring-2 ring-[#FF6E65]' : ''}`}
+                    ? "clay-juz-cell-range"
+                    : "clay-juz-cell-inactive"
+              } ${isDragHover ? "ring-2 ring-[#FF6E65]" : ""}`}
             >
               <span className="pointer-events-none">{juz}</span>
             </div>
@@ -228,7 +242,10 @@ export const JuzRangeSelector: React.FC<JuzRangeSelectorProps> = ({ value, onCha
         })}
       </div>
       <p className="text-[10.5px] text-[#64748B] dark:text-[#94A3B8] text-center flex items-center justify-center gap-1.5">
-        <span>Ketuk satu juz atau sapukan jari/mouse untuk memilih rentang target hafalan secara instan.</span>
+        <span>
+          Ketuk satu juz atau sapukan jari/mouse untuk memilih rentang target
+          hafalan secara instan.
+        </span>
       </p>
     </div>
   );

@@ -1,8 +1,8 @@
-import { initializeApp, getApps, getApp } from 'firebase/app';
-import { 
-  getAuth, 
-  GoogleAuthProvider, 
-  signInWithPopup, 
+import { initializeApp, getApps, getApp } from "firebase/app";
+import {
+  getAuth,
+  GoogleAuthProvider,
+  signInWithPopup,
   signInWithRedirect,
   getRedirectResult,
   signInWithEmailAndPassword,
@@ -11,26 +11,29 @@ import {
   sendSignInLinkToEmail,
   isSignInWithEmailLink,
   signInWithEmailLink,
-  signOut, 
+  signOut,
   onAuthStateChanged,
-  User
-} from 'firebase/auth';
-import { 
+  User,
+} from "firebase/auth";
+import {
   getFirestore,
   initializeFirestore,
-  doc, 
-  setDoc, 
-  getDoc, 
-  updateDoc, 
+  doc,
+  setDoc,
+  getDoc,
+  updateDoc,
   serverTimestamp,
-  setLogLevel
-} from 'firebase/firestore';
-import { isFirestoreQuotaExceeded, markFirestoreQuotaExceeded } from './firestore-quota';
-import firebaseConfigData from '../../firebase-applet-config.json';
+  setLogLevel,
+} from "firebase/firestore";
+import {
+  isFirestoreQuotaExceeded,
+  markFirestoreQuotaExceeded,
+} from "./firestore-quota";
+import firebaseConfigData from "../../firebase-applet-config.json";
 
 // Silence verbose internal backoff and warning logs from Firestore SDK
 try {
-  setLogLevel('silent');
+  setLogLevel("silent");
 } catch {
   // ignore
 }
@@ -39,28 +42,42 @@ try {
 const env = (import.meta as any).env || {};
 
 const firebaseConfig = {
-  apiKey: env.VITE_FIREBASE_API_KEY || firebaseConfigData?.apiKey || '',
-  authDomain: env.VITE_FIREBASE_AUTH_DOMAIN || firebaseConfigData?.authDomain || '',
-  projectId: env.VITE_FIREBASE_PROJECT_ID || firebaseConfigData?.projectId || '',
-  storageBucket: env.VITE_FIREBASE_STORAGE_BUCKET || firebaseConfigData?.storageBucket || '',
-  messagingSenderId: env.VITE_FIREBASE_MESSAGING_SENDER_ID || firebaseConfigData?.messagingSenderId || '',
-  appId: env.VITE_FIREBASE_APP_ID || firebaseConfigData?.appId || ''
+  apiKey: env.VITE_FIREBASE_API_KEY || firebaseConfigData?.apiKey || "",
+  authDomain:
+    env.VITE_FIREBASE_AUTH_DOMAIN || firebaseConfigData?.authDomain || "",
+  projectId:
+    env.VITE_FIREBASE_PROJECT_ID || firebaseConfigData?.projectId || "",
+  storageBucket:
+    env.VITE_FIREBASE_STORAGE_BUCKET || firebaseConfigData?.storageBucket || "",
+  messagingSenderId:
+    env.VITE_FIREBASE_MESSAGING_SENDER_ID ||
+    firebaseConfigData?.messagingSenderId ||
+    "",
+  appId: env.VITE_FIREBASE_APP_ID || firebaseConfigData?.appId || "",
 };
 
 // Initialize Firebase securely
-export const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+export const app =
+  getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 export const auth = getAuth(app);
 
 // Use custom provisioned database ID or fallback to standard (default)
-const customDatabaseId = env.VITE_FIREBASE_FIRESTORE_DATABASE_ID || firebaseConfigData?.firestoreDatabaseId || '(default)';
-export const db = initializeFirestore(app, {
-  experimentalForceLongPolling: true,
-}, customDatabaseId);
+const customDatabaseId =
+  env.VITE_FIREBASE_FIRESTORE_DATABASE_ID ||
+  firebaseConfigData?.firestoreDatabaseId ||
+  "(default)";
+export const db = initializeFirestore(
+  app,
+  {
+    experimentalForceLongPolling: true,
+  },
+  customDatabaseId,
+);
 
 // Google Auth Provider setup with select_account prompt
 export const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({
-  prompt: 'select_account'
+  prompt: "select_account",
 });
 
 /**
@@ -72,7 +89,10 @@ export async function loginWithGoogle(): Promise<User> {
     return result.user;
   } catch (error: any) {
     // If popup is blocked by iframe or browser policy, fallback to redirect
-    if (error?.code === 'auth/popup-blocked' || error?.code === 'auth/popup-closed-by-user') {
+    if (
+      error?.code === "auth/popup-blocked" ||
+      error?.code === "auth/popup-closed-by-user"
+    ) {
       try {
         await signInWithRedirect(auth, googleProvider);
         const redirectResult = await getRedirectResult(auth);
@@ -80,7 +100,7 @@ export async function loginWithGoogle(): Promise<User> {
           return redirectResult.user;
         }
       } catch (redirectErr) {
-        console.warn('Redirect sign-in fallback notice:', redirectErr);
+        console.warn("Redirect sign-in fallback notice:", redirectErr);
       }
     }
     throw error;
@@ -95,7 +115,7 @@ export async function handleRedirectResult(): Promise<User | null> {
     const result = await getRedirectResult(auth);
     return result?.user || null;
   } catch (error) {
-    console.error('Error handling redirect result:', error);
+    console.error("Error handling redirect result:", error);
     return null;
   }
 }
@@ -103,9 +123,16 @@ export async function handleRedirectResult(): Promise<User | null> {
 /**
  * Sign in securely with Email & Password
  */
-export async function loginWithEmailPassword(email: string, password: string): Promise<User> {
+export async function loginWithEmailPassword(
+  email: string,
+  password: string,
+): Promise<User> {
   const sanitizedEmail = email.trim().toLowerCase();
-  const userCredential = await signInWithEmailAndPassword(auth, sanitizedEmail, password);
+  const userCredential = await signInWithEmailAndPassword(
+    auth,
+    sanitizedEmail,
+    password,
+  );
   return userCredential.user;
 }
 
@@ -115,17 +142,21 @@ export async function loginWithEmailPassword(email: string, password: string): P
 export async function registerWithEmailPassword(
   email: string,
   password: string,
-  fullName?: string
+  fullName?: string,
 ): Promise<User> {
   const sanitizedEmail = email.trim().toLowerCase();
-  const userCredential = await createUserWithEmailAndPassword(auth, sanitizedEmail, password);
+  const userCredential = await createUserWithEmailAndPassword(
+    auth,
+    sanitizedEmail,
+    password,
+  );
   const user = userCredential.user;
 
   if (fullName && fullName.trim()) {
     try {
       await updateProfile(user, { displayName: fullName.trim() });
     } catch (profileErr) {
-      console.warn('Failed to update displayName on register:', profileErr);
+      console.warn("Failed to update displayName on register:", profileErr);
     }
   }
 
@@ -135,17 +166,31 @@ export async function registerWithEmailPassword(
 /**
  * Sign in or Register quickly with Email & Password (legacy wrapper)
  */
-export async function loginWithEmail(email: string, password: string): Promise<User> {
+export async function loginWithEmail(
+  email: string,
+  password: string,
+): Promise<User> {
   const sanitizedEmail = email.trim().toLowerCase();
   try {
     // Try sign in first
-    const userCredential = await signInWithEmailAndPassword(auth, sanitizedEmail, password);
+    const userCredential = await signInWithEmailAndPassword(
+      auth,
+      sanitizedEmail,
+      password,
+    );
     return userCredential.user;
   } catch (error: any) {
     // If user not found, automatically register securely
-    if (error?.code === 'auth/user-not-found' || error?.code === 'auth/invalid-credential') {
+    if (
+      error?.code === "auth/user-not-found" ||
+      error?.code === "auth/invalid-credential"
+    ) {
       try {
-        const newUserCredential = await createUserWithEmailAndPassword(auth, sanitizedEmail, password);
+        const newUserCredential = await createUserWithEmailAndPassword(
+          auth,
+          sanitizedEmail,
+          password,
+        );
         return newUserCredential.user;
       } catch (createErr) {
         throw createErr;
@@ -165,7 +210,7 @@ export async function sendEmailLoginLink(email: string): Promise<void> {
     handleCodeInApp: true,
   };
   await sendSignInLinkToEmail(auth, sanitizedEmail, actionCodeSettings);
-  window.localStorage.setItem('unlupa_email_for_signin', sanitizedEmail);
+  window.localStorage.setItem("unlupa_email_for_signin", sanitizedEmail);
 }
 
 /**
@@ -173,13 +218,19 @@ export async function sendEmailLoginLink(email: string): Promise<void> {
  */
 export async function completeEmailLinkSignIn(): Promise<User | null> {
   if (isSignInWithEmailLink(auth, window.location.href)) {
-    let email = window.localStorage.getItem('unlupa_email_for_signin');
+    let email = window.localStorage.getItem("unlupa_email_for_signin");
     if (!email) {
-      email = window.prompt('Mohon masukkan email Anda untuk konfirmasi login:');
+      email = window.prompt(
+        "Mohon masukkan email Anda untuk konfirmasi login:",
+      );
     }
     if (email) {
-      const result = await signInWithEmailLink(auth, email, window.location.href);
-      window.localStorage.removeItem('unlupa_email_for_signin');
+      const result = await signInWithEmailLink(
+        auth,
+        email,
+        window.location.href,
+      );
+      window.localStorage.removeItem("unlupa_email_for_signin");
       return result.user;
     }
   }
@@ -193,12 +244,14 @@ export async function logoutUser(): Promise<void> {
   await signOut(auth);
 }
 
-import { checkAndBootstrapSuperAdmin } from '../services/authRbacService';
+import { checkAndBootstrapSuperAdmin } from "../services/authRbacService";
 
 /**
  * Sync user profile to Firestore securely with automated Super Admin bootstrap
  */
-export async function syncUserProfileToFirestore(user: User): Promise<'superadmin' | 'admin' | 'user'> {
+export async function syncUserProfileToFirestore(
+  user: User,
+): Promise<"superadmin" | "admin" | "user"> {
   // Determine role based on RBAC rules (First Google user is Super Admin, default emails, or regular user)
   const determinedRole = await checkAndBootstrapSuperAdmin(user);
 
@@ -220,35 +273,39 @@ export async function syncUserProfileToFirestore(user: User): Promise<'superadmi
   }
 
   try {
-    const userRef = doc(db, 'users', user.uid);
+    const userRef = doc(db, "users", user.uid);
     const snap = await getDoc(userRef);
-    
+
     if (!snap.exists()) {
       await setDoc(userRef, {
         id: user.uid,
-        email: user.email || '',
-        fullName: user.displayName || user.email?.split('@')[0] || 'Penghafal Qur\'an',
-        avatarUrl: user.photoURL || `https://api.dicebear.com/7.x/bottts/svg?seed=${user.uid}`,
+        email: user.email || "",
+        fullName:
+          user.displayName || user.email?.split("@")[0] || "Penghafal Qur'an",
+        avatarUrl:
+          user.photoURL ||
+          `https://api.dicebear.com/7.x/bottts/svg?seed=${user.uid}`,
         role: determinedRole,
-        plan: determinedRole === 'superadmin' ? 'institutional' : 'free',
+        plan: determinedRole === "superadmin" ? "institutional" : "free",
         emailVerified: user.emailVerified,
         createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
       });
     } else {
       const existingData = snap.data();
       const existingRole = existingData?.role;
-      const finalRole = (existingRole === 'superadmin' || determinedRole === 'superadmin')
-        ? 'superadmin'
-        : (existingRole === 'admin' || determinedRole === 'admin')
-        ? 'admin'
-        : 'user';
+      const finalRole =
+        existingRole === "superadmin" || determinedRole === "superadmin"
+          ? "superadmin"
+          : existingRole === "admin" || determinedRole === "admin"
+            ? "admin"
+            : "user";
 
       await updateDoc(userRef, {
         lastLoginAt: new Date().toISOString(),
         emailVerified: user.emailVerified,
         role: finalRole,
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
       });
     }
 
@@ -259,11 +316,16 @@ export async function syncUserProfileToFirestore(user: User): Promise<'superadmi
     }
   } catch (error: any) {
     const errMsg = error?.message || String(error);
-    if (errMsg.includes('resource-exhausted') || error?.code === 'resource-exhausted') {
+    if (
+      errMsg.includes("resource-exhausted") ||
+      error?.code === "resource-exhausted"
+    ) {
       markFirestoreQuotaExceeded(4);
-      console.warn('[Firestore] Profile sync skipped: daily quota reached (operating in offline/local-first mode).');
+      console.warn(
+        "[Firestore] Profile sync skipped: daily quota reached (operating in offline/local-first mode).",
+      );
     } else {
-      console.warn('Firestore profile sync notice (offline-safe):', error);
+      console.warn("Firestore profile sync notice (offline-safe):", error);
     }
   }
 

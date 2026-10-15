@@ -1,6 +1,14 @@
-import React, { useRef, useState, useEffect, useCallback } from 'react';
-import { Pencil, Undo2, Trash2, Check, Sparkles, Highlighter, X } from 'lucide-react';
-import { Language } from '../../types';
+import React, { useRef, useState, useEffect, useCallback } from "react";
+import {
+  Pencil,
+  Undo2,
+  Trash2,
+  Check,
+  Sparkles,
+  Highlighter,
+  X,
+} from "lucide-react";
+import { Language } from "../../types";
 
 interface Point {
   x: number;
@@ -23,21 +31,23 @@ interface MushafDrawingCanvasProps {
 }
 
 export const COLOR_PRESETS = [
-  { id: 'amber', color: '#F59E0B', label: 'Stabilo Kuning / Ragu' },
-  { id: 'green', color: '#10B981', label: 'Stabilo Hijau / Lancar' },
-  { id: 'blue', color: '#3B82F6', label: 'Stabilo Biru / Catatan' },
-  { id: 'red', color: '#EF4444', label: 'Stabilo Merah / Tajwid' },
+  { id: "amber", color: "#F59E0B", label: "Stabilo Kuning / Ragu" },
+  { id: "green", color: "#10B981", label: "Stabilo Hijau / Lancar" },
+  { id: "blue", color: "#3B82F6", label: "Stabilo Biru / Catatan" },
+  { id: "red", color: "#EF4444", label: "Stabilo Merah / Tajwid" },
 ];
 
 export const MushafDrawingCanvas: React.FC<MushafDrawingCanvasProps> = ({
   pageNumber,
   isRightPage = true,
-  language
+  language,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [isDrawingMode, setIsDrawingMode] = useState(false);
-  const [currentColor, setCurrentColor] = useState('#F59E0B');
-  const [strokeType, setStrokeType] = useState<'pen' | 'highlighter'>('highlighter');
+  const [currentColor, setCurrentColor] = useState("#F59E0B");
+  const [strokeType, setStrokeType] = useState<"pen" | "highlighter">(
+    "highlighter",
+  );
   const [strokes, setStrokes] = useState<Stroke[]>([]);
   const currentStrokeRef = useRef<Stroke | null>(null);
   const isPointerDownRef = useRef(false);
@@ -45,23 +55,33 @@ export const MushafDrawingCanvas: React.FC<MushafDrawingCanvasProps> = ({
   // Listen for toggle drawing event from header
   useEffect(() => {
     const handleToggle = (e: Event) => {
-      const customEvent = e as CustomEvent<{ pageNumber?: number; enabled?: boolean }>;
-      if (customEvent.detail?.pageNumber && customEvent.detail.pageNumber !== pageNumber) return;
-      if (typeof customEvent.detail?.enabled === 'boolean') {
+      const customEvent = e as CustomEvent<{
+        pageNumber?: number;
+        enabled?: boolean;
+      }>;
+      if (
+        customEvent.detail?.pageNumber &&
+        customEvent.detail.pageNumber !== pageNumber
+      )
+        return;
+      if (typeof customEvent.detail?.enabled === "boolean") {
         setIsDrawingMode(customEvent.detail.enabled);
       } else {
-        setIsDrawingMode(prev => !prev);
+        setIsDrawingMode((prev) => !prev);
       }
     };
-    window.addEventListener('toggle-mushaf-drawing', handleToggle);
-    return () => window.removeEventListener('toggle-mushaf-drawing', handleToggle);
+    window.addEventListener("toggle-mushaf-drawing", handleToggle);
+    return () =>
+      window.removeEventListener("toggle-mushaf-drawing", handleToggle);
   }, [pageNumber]);
 
   // Dispatch state change so header icon can reflect active state
   useEffect(() => {
-    window.dispatchEvent(new CustomEvent('mushaf-drawing-mode-changed', {
-      detail: { pageNumber, isDrawingMode }
-    }));
+    window.dispatchEvent(
+      new CustomEvent("mushaf-drawing-mode-changed", {
+        detail: { pageNumber, isDrawingMode },
+      }),
+    );
   }, [pageNumber, isDrawingMode]);
 
   // Storage key per page
@@ -79,7 +99,7 @@ export const MushafDrawingCanvas: React.FC<MushafDrawingCanvasProps> = ({
         }
       }
     } catch (e) {
-      console.debug('Failed to load drawing strokes', e);
+      console.debug("Failed to load drawing strokes", e);
     }
     setStrokes([]);
   }, [pageNumber, storageKey]);
@@ -88,7 +108,7 @@ export const MushafDrawingCanvas: React.FC<MushafDrawingCanvasProps> = ({
   const redrawAllStrokes = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
     // Clear canvas
@@ -102,8 +122,8 @@ export const MushafDrawingCanvas: React.FC<MushafDrawingCanvasProps> = ({
       ctx.strokeStyle = stroke.color;
       ctx.lineWidth = stroke.width;
       ctx.globalAlpha = stroke.opacity;
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
 
       ctx.beginPath();
       // Normalize coordinates to current canvas dimensions (0..1 percentage based)
@@ -157,7 +177,7 @@ export const MushafDrawingCanvas: React.FC<MushafDrawingCanvasProps> = ({
         localStorage.setItem(storageKey, JSON.stringify(updatedStrokes));
       }
     } catch (e) {
-      console.debug('Failed to save drawing strokes', e);
+      console.debug("Failed to save drawing strokes", e);
     }
   };
 
@@ -174,20 +194,25 @@ export const MushafDrawingCanvas: React.FC<MushafDrawingCanvasProps> = ({
     const normX = (e.clientX - rect.left) / rect.width;
     const normY = (e.clientY - rect.top) / rect.height;
 
-    const width = strokeType === 'highlighter' ? 18 : 4;
-    const opacity = strokeType === 'highlighter' ? 0.42 : 0.95;
+    const width = strokeType === "highlighter" ? 18 : 4;
+    const opacity = strokeType === "highlighter" ? 0.42 : 0.95;
 
     currentStrokeRef.current = {
       color: currentColor,
       width,
       opacity,
-      points: [{ x: normX, y: normY }]
+      points: [{ x: normX, y: normY }],
     };
   };
 
   // Pointer Move (Draw ongoing)
   const handlePointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    if (!isDrawingMode || !isPointerDownRef.current || !currentStrokeRef.current) return;
+    if (
+      !isDrawingMode ||
+      !isPointerDownRef.current ||
+      !currentStrokeRef.current
+    )
+      return;
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -198,7 +223,7 @@ export const MushafDrawingCanvas: React.FC<MushafDrawingCanvasProps> = ({
     currentStrokeRef.current.points.push({ x: normX, y: normY });
 
     // Live draw incremental stroke
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext("2d");
     if (ctx && currentStrokeRef.current.points.length >= 2) {
       const pts = currentStrokeRef.current.points;
       const prev = pts[pts.length - 2];
@@ -208,8 +233,8 @@ export const MushafDrawingCanvas: React.FC<MushafDrawingCanvasProps> = ({
       ctx.strokeStyle = currentStrokeRef.current.color;
       ctx.lineWidth = currentStrokeRef.current.width;
       ctx.globalAlpha = currentStrokeRef.current.opacity;
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
 
       ctx.beginPath();
       ctx.moveTo(prev.x * canvas.width, prev.y * canvas.height);
@@ -224,7 +249,10 @@ export const MushafDrawingCanvas: React.FC<MushafDrawingCanvasProps> = ({
     if (!isDrawingMode || !isPointerDownRef.current) return;
     isPointerDownRef.current = false;
 
-    if (currentStrokeRef.current && currentStrokeRef.current.points.length >= 2) {
+    if (
+      currentStrokeRef.current &&
+      currentStrokeRef.current.points.length >= 2
+    ) {
       const updated = [...strokes, currentStrokeRef.current];
       setStrokes(updated);
       saveStrokes(updated);
@@ -252,7 +280,8 @@ export const MushafDrawingCanvas: React.FC<MushafDrawingCanvasProps> = ({
       if (detail?.color) setCurrentColor(detail.color);
     };
     const handleSetType = (e: Event) => {
-      const detail = (e as CustomEvent<{ strokeType?: 'pen' | 'highlighter' }>).detail;
+      const detail = (e as CustomEvent<{ strokeType?: "pen" | "highlighter" }>)
+        .detail;
       if (detail?.strokeType) setStrokeType(detail.strokeType);
     };
     const handleUndoEvent = () => {
@@ -268,16 +297,16 @@ export const MushafDrawingCanvas: React.FC<MushafDrawingCanvasProps> = ({
       saveStrokes([]);
     };
 
-    window.addEventListener('set-mushaf-drawing-color', handleSetColor);
-    window.addEventListener('set-mushaf-drawing-type', handleSetType);
-    window.addEventListener('mushaf-drawing-undo', handleUndoEvent);
-    window.addEventListener('mushaf-drawing-clear', handleClearEvent);
+    window.addEventListener("set-mushaf-drawing-color", handleSetColor);
+    window.addEventListener("set-mushaf-drawing-type", handleSetType);
+    window.addEventListener("mushaf-drawing-undo", handleUndoEvent);
+    window.addEventListener("mushaf-drawing-clear", handleClearEvent);
 
     return () => {
-      window.removeEventListener('set-mushaf-drawing-color', handleSetColor);
-      window.removeEventListener('set-mushaf-drawing-type', handleSetType);
-      window.removeEventListener('mushaf-drawing-undo', handleUndoEvent);
-      window.removeEventListener('mushaf-drawing-clear', handleClearEvent);
+      window.removeEventListener("set-mushaf-drawing-color", handleSetColor);
+      window.removeEventListener("set-mushaf-drawing-type", handleSetType);
+      window.removeEventListener("mushaf-drawing-undo", handleUndoEvent);
+      window.removeEventListener("mushaf-drawing-clear", handleClearEvent);
     };
   }, [saveStrokes]);
 
@@ -289,9 +318,9 @@ export const MushafDrawingCanvas: React.FC<MushafDrawingCanvasProps> = ({
       onPointerUp={handlePointerUp}
       onPointerCancel={handlePointerUp}
       className={`absolute inset-0 z-20 w-full h-full ${
-        isDrawingMode 
-          ? 'cursor-crosshair touch-none select-none' 
-          : 'pointer-events-none select-none'
+        isDrawingMode
+          ? "cursor-crosshair touch-none select-none"
+          : "pointer-events-none select-none"
       }`}
     />
   );

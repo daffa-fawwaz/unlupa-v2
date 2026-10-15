@@ -1,10 +1,10 @@
-import React, { useMemo } from 'react';
-import { detectScript, ScriptType } from '../../utils/bilingualHelper';
+import React, { useMemo } from "react";
+import { detectScript, ScriptType } from "../../utils/bilingualHelper";
 
 export interface BilingualCardTextProps {
   text: string;
-  type?: 'question' | 'answer' | 'general';
-  variant?: 'card-list' | 'detail-modal' | 'review' | 'compact';
+  type?: "question" | "answer" | "general";
+  variant?: "card-list" | "detail-modal" | "review" | "compact";
   className?: string;
   emptyFallback?: string;
   clampLines?: boolean | number;
@@ -25,16 +25,17 @@ interface TextBlock {
  */
 export function renderBilingualInline(text: string): React.ReactNode {
   if (!text) return null;
-  const arabicRegex = /([\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF\s،؛؟]{2,})/g;
+  const arabicRegex =
+    /([\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF\s،؛؟]{2,})/g;
   const parts = text.split(arabicRegex);
   if (parts.length <= 1) return text;
-  
+
   return parts.map((part, i) => {
     if (i % 2 === 1 && /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]/.test(part)) {
       return (
-        <bdi 
-          key={i} 
-          dir="rtl" 
+        <bdi
+          key={i}
+          dir="rtl"
           className="font-arabic font-semibold inline-block text-[1.14em] px-1 py-0.5 leading-[2.0] overflow-visible text-amber-950 dark:text-amber-100 align-baseline"
         >
           {part}
@@ -52,10 +53,13 @@ export function renderBilingualInline(text: string): React.ReactNode {
  * 3. Detects transitions (e.g. Indonesian translation immediately following Arabic).
  */
 function parseTextBlocks(rawText: string, isGeneral: boolean): TextBlock[] {
-  if (!rawText || typeof rawText !== 'string') return [];
+  if (!rawText || typeof rawText !== "string") return [];
 
   // Split into individual non-empty lines
-  const rawLines = rawText.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  const rawLines = rawText
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter(Boolean);
   if (rawLines.length === 0) return [];
 
   interface ClassifiedLine {
@@ -63,8 +67,11 @@ function parseTextBlocks(rawText: string, isGeneral: boolean): TextBlock[] {
     isArabic: boolean;
   }
 
-  const classified: ClassifiedLine[] = rawLines.map(line => {
-    const hasArabicLetters = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/.test(line);
+  const classified: ClassifiedLine[] = rawLines.map((line) => {
+    const hasArabicLetters =
+      /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/.test(
+        line,
+      );
     const hasLatinLetters = /[a-zA-Z]/.test(line);
     // Pure Arabic: has Arabic letters and NO Latin words
     const isArabic = hasArabicLetters && !hasLatinLetters;
@@ -89,7 +96,7 @@ function parseTextBlocks(rawText: string, isGeneral: boolean): TextBlock[] {
   // Build TextBlock list and mark translation transitions
   let justSawArabic = false;
   return groups.map((g, idx) => {
-    const text = g.lines.join('\n');
+    const text = g.lines.join("\n");
     let isTranslationTransition = false;
 
     if (g.isArabic) {
@@ -102,29 +109,34 @@ function parseTextBlocks(rawText: string, isGeneral: boolean): TextBlock[] {
     return {
       id: `block-${idx}`,
       text,
-      script: g.isArabic ? 'arabic' : 'latin',
+      script: g.isArabic ? "arabic" : "latin",
       isArabic: g.isArabic,
-      isTranslationTransition
+      isTranslationTransition,
     };
   });
 }
 
 export const BilingualCardText: React.FC<BilingualCardTextProps> = ({
   text,
-  type = 'general',
-  variant = 'card-list',
-  className = '',
+  type = "general",
+  variant = "card-list",
+  className = "",
   emptyFallback,
   clampLines = false,
-  language = 'id'
+  language = "id",
 }) => {
-  const isGeneral = type === 'general';
-  const blocks = useMemo(() => parseTextBlocks(text, isGeneral), [text, isGeneral]);
+  const isGeneral = type === "general";
+  const blocks = useMemo(
+    () => parseTextBlocks(text, isGeneral),
+    [text, isGeneral],
+  );
 
   if (!text || blocks.length === 0) {
     if (emptyFallback) {
       return (
-        <span className={`text-slate-400 dark:text-slate-500 italic text-xs ${className}`}>
+        <span
+          className={`text-slate-400 dark:text-slate-500 italic text-xs ${className}`}
+        >
           {emptyFallback}
         </span>
       );
@@ -166,8 +178,8 @@ export const BilingualCardText: React.FC<BilingualCardTextProps> = ({
   }
 
   // 2. DETAIL MODAL VARIANT (Card Preview Modal)
-  if (variant === 'detail-modal') {
-    const isAnswer = type === 'answer';
+  if (variant === "detail-modal") {
+    const isAnswer = type === "answer";
 
     return (
       <div className={`w-full space-y-3 select-text ${className}`}>
@@ -179,8 +191,8 @@ export const BilingualCardText: React.FC<BilingualCardTextProps> = ({
                 dir="rtl"
                 className={`text-right font-arabic leading-[2.2] tracking-wide py-1 px-1 overflow-visible ${
                   isAnswer
-                    ? 'text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100'
-                    : 'text-lg sm:text-xl font-bold text-slate-900 dark:text-white'
+                    ? "text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100"
+                    : "text-lg sm:text-xl font-bold text-slate-900 dark:text-white"
                 }`}
               >
                 {block.text}
@@ -193,12 +205,14 @@ export const BilingualCardText: React.FC<BilingualCardTextProps> = ({
             <div key={block.id} className="space-y-1.5">
               {block.isTranslationTransition && (
                 <div className="pt-2 pb-1 border-t border-slate-200/70 dark:border-slate-700/70">
-                  <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md ${
-                    isAnswer
-                      ? 'bg-indigo-100 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300'
-                      : 'bg-slate-200/70 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
-                  }`}>
-                    {isAnswer ? 'Terjemahan / Penjelasan' : 'Terjemahan'}
+                  <span
+                    className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md ${
+                      isAnswer
+                        ? "bg-indigo-100 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300"
+                        : "bg-slate-200/70 dark:bg-slate-700 text-slate-600 dark:text-slate-300"
+                    }`}
+                  >
+                    {isAnswer ? "Terjemahan / Penjelasan" : "Terjemahan"}
                   </span>
                 </div>
               )}
@@ -206,8 +220,8 @@ export const BilingualCardText: React.FC<BilingualCardTextProps> = ({
                 dir="ltr"
                 className={`text-left leading-relaxed whitespace-pre-line ${
                   isAnswer
-                    ? 'text-sm sm:text-base font-normal text-slate-800 dark:text-slate-200'
-                    : 'text-sm sm:text-base font-normal text-slate-700 dark:text-slate-300'
+                    ? "text-sm sm:text-base font-normal text-slate-800 dark:text-slate-200"
+                    : "text-sm sm:text-base font-normal text-slate-700 dark:text-slate-300"
                 }`}
               >
                 {renderBilingualInline(block.text)}
@@ -220,8 +234,8 @@ export const BilingualCardText: React.FC<BilingualCardTextProps> = ({
   }
 
   // 3. REVIEW VARIANT (Active Flashcard Study & Flipping - Professional Optical Typography)
-  if (variant === 'review') {
-    const isAnswer = type === 'answer';
+  if (variant === "review") {
+    const isAnswer = type === "answer";
     const totalCharCount = text.trim().length;
 
     // Optical sizing tailored to flashcard reading:
@@ -232,7 +246,9 @@ export const BilingualCardText: React.FC<BilingualCardTextProps> = ({
     const isMedium = totalCharCount > 60 && totalCharCount <= 180;
 
     return (
-      <div className={`w-full max-w-2xl mx-auto space-y-4 select-text flex flex-col items-center justify-center text-center ${className}`}>
+      <div
+        className={`w-full max-w-2xl mx-auto space-y-4 select-text flex flex-col items-center justify-center text-center ${className}`}
+      >
         {blocks.map((block) => {
           if (block.isArabic) {
             return (
@@ -241,14 +257,14 @@ export const BilingualCardText: React.FC<BilingualCardTextProps> = ({
                 dir="rtl"
                 className={`w-full text-center font-arabic tracking-wide leading-[2.2] overflow-visible ${
                   isShort
-                    ? 'text-2xl sm:text-3xl md:text-4xl font-bold'
+                    ? "text-2xl sm:text-3xl md:text-4xl font-bold"
                     : isMedium
-                    ? 'text-xl sm:text-2xl md:text-3xl font-bold'
-                    : 'text-lg sm:text-xl md:text-2xl font-semibold'
+                      ? "text-xl sm:text-2xl md:text-3xl font-bold"
+                      : "text-lg sm:text-xl md:text-2xl font-semibold"
                 } ${
                   isAnswer
-                    ? 'text-emerald-900 dark:text-emerald-200'
-                    : 'text-[#18234A] dark:text-[#F8FAFC]'
+                    ? "text-emerald-900 dark:text-emerald-200"
+                    : "text-[#18234A] dark:text-[#F8FAFC]"
                 }`}
               >
                 {block.text}
@@ -257,15 +273,20 @@ export const BilingualCardText: React.FC<BilingualCardTextProps> = ({
           }
 
           return (
-            <div key={block.id} className="w-full space-y-2.5 flex flex-col items-center justify-center">
+            <div
+              key={block.id}
+              className="w-full space-y-2.5 flex flex-col items-center justify-center"
+            >
               {block.isTranslationTransition && (
                 <div className="pt-2 pb-1 flex items-center justify-center">
-                  <span className={`text-[10px] sm:text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full shadow-2xs ${
-                    isAnswer
-                      ? 'bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 border border-emerald-300/40'
-                      : 'bg-orange-100 dark:bg-orange-950/80 text-orange-800 dark:text-orange-300 border border-orange-300/40'
-                  }`}>
-                    {isAnswer ? 'Terjemahan / Arti' : 'Terjemahan'}
+                  <span
+                    className={`text-[10px] sm:text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full shadow-2xs ${
+                      isAnswer
+                        ? "bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 border border-emerald-300/40"
+                        : "bg-orange-100 dark:bg-orange-950/80 text-orange-800 dark:text-orange-300 border border-orange-300/40"
+                    }`}
+                  >
+                    {isAnswer ? "Terjemahan / Arti" : "Terjemahan"}
                   </span>
                 </div>
               )}
@@ -273,10 +294,10 @@ export const BilingualCardText: React.FC<BilingualCardTextProps> = ({
                 dir="ltr"
                 className={`w-full text-center whitespace-pre-line ${
                   isShort
-                    ? 'text-xl sm:text-2xl md:text-3xl font-bold text-[#18234A] dark:text-[#F8FAFC] tracking-tight leading-snug sm:leading-relaxed'
+                    ? "text-xl sm:text-2xl md:text-3xl font-bold text-[#18234A] dark:text-[#F8FAFC] tracking-tight leading-snug sm:leading-relaxed"
                     : isMedium
-                    ? 'text-lg sm:text-xl md:text-2xl font-bold text-[#18234A] dark:text-[#F8FAFC] leading-relaxed'
-                    : 'text-base sm:text-lg font-medium text-slate-800 dark:text-slate-100 leading-relaxed max-w-xl text-center'
+                      ? "text-lg sm:text-xl md:text-2xl font-bold text-[#18234A] dark:text-[#F8FAFC] leading-relaxed"
+                      : "text-base sm:text-lg font-medium text-slate-800 dark:text-slate-100 leading-relaxed max-w-xl text-center"
                 }`}
               >
                 {renderBilingualInline(block.text)}
@@ -289,17 +310,17 @@ export const BilingualCardText: React.FC<BilingualCardTextProps> = ({
   }
 
   // 4. COMPACT VARIANT (Tables, mini rows)
-  if (variant === 'compact') {
+  if (variant === "compact") {
     return (
       <div className={`space-y-1 w-full text-xs ${className}`}>
         {blocks.map((block) => (
           <div
             key={block.id}
-            dir={block.isArabic ? 'rtl' : 'ltr'}
+            dir={block.isArabic ? "rtl" : "ltr"}
             className={`${
               block.isArabic
-                ? 'text-right font-arabic font-semibold text-slate-900 dark:text-white text-[13px] leading-[1.9] py-0.5 overflow-visible'
-                : 'text-left font-normal text-slate-600 dark:text-slate-300 text-xs leading-normal whitespace-pre-line'
+                ? "text-right font-arabic font-semibold text-slate-900 dark:text-white text-[13px] leading-[1.9] py-0.5 overflow-visible"
+                : "text-left font-normal text-slate-600 dark:text-slate-300 text-xs leading-normal whitespace-pre-line"
             }`}
           >
             {block.isArabic ? block.text : renderBilingualInline(block.text)}
@@ -310,11 +331,18 @@ export const BilingualCardText: React.FC<BilingualCardTextProps> = ({
   }
 
   // 5. DEFAULT / CARD-LIST VARIANT (Flashcard Items in Personal & Book Space)
-  const isAnswer = type === 'answer';
-  const clampClass = clampLines === true ? 'line-clamp-3 overflow-hidden text-ellipsis' : typeof clampLines === 'number' ? `line-clamp-${clampLines} overflow-hidden text-ellipsis` : '';
+  const isAnswer = type === "answer";
+  const clampClass =
+    clampLines === true
+      ? "line-clamp-3 overflow-hidden text-ellipsis"
+      : typeof clampLines === "number"
+        ? `line-clamp-${clampLines} overflow-hidden text-ellipsis`
+        : "";
 
   return (
-    <div className={`w-full select-text flex flex-col gap-1.5 sm:gap-2 ${clampClass} ${className}`}>
+    <div
+      className={`w-full select-text flex flex-col gap-1.5 sm:gap-2 ${clampClass} ${className}`}
+    >
       {blocks.map((block) => {
         if (block.isArabic) {
           return (
@@ -332,24 +360,29 @@ export const BilingualCardText: React.FC<BilingualCardTextProps> = ({
           <div key={block.id} className="w-full flex flex-col gap-1">
             {block.isTranslationTransition && (
               <div className="pt-1.5 pb-0.5 border-t border-slate-200/80 dark:border-slate-700/70 flex items-center gap-1.5">
-                <span className={`text-[9px] sm:text-[9.5px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded shadow-2xs ${
-                  isAnswer
-                    ? 'bg-amber-100/90 dark:bg-amber-950/70 text-amber-800 dark:text-amber-300 border border-amber-300/40'
-                    : 'bg-indigo-100/90 dark:bg-indigo-950/70 text-indigo-700 dark:text-indigo-300 border border-indigo-200/40'
-                }`}>
-                  {isAnswer 
-                    ? (language === 'en' ? 'Translation / Meaning' : 'Terjemahan / Arti')
-                    : (language === 'en' ? 'Translation' : 'Terjemahan')
-                  }
+                <span
+                  className={`text-[9px] sm:text-[9.5px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded shadow-2xs ${
+                    isAnswer
+                      ? "bg-amber-100/90 dark:bg-amber-950/70 text-amber-800 dark:text-amber-300 border border-amber-300/40"
+                      : "bg-indigo-100/90 dark:bg-indigo-950/70 text-indigo-700 dark:text-indigo-300 border border-indigo-200/40"
+                  }`}
+                >
+                  {isAnswer
+                    ? language === "en"
+                      ? "Translation / Meaning"
+                      : "Terjemahan / Arti"
+                    : language === "en"
+                      ? "Translation"
+                      : "Terjemahan"}
                 </span>
               </div>
             )}
             <div
               dir="ltr"
               className={`w-full text-left text-xs sm:text-[13px] leading-relaxed whitespace-pre-line break-words ${
-                isAnswer 
-                  ? 'text-slate-800 dark:text-slate-200 font-normal' 
-                  : 'text-slate-800 dark:text-slate-200 font-medium'
+                isAnswer
+                  ? "text-slate-800 dark:text-slate-200 font-normal"
+                  : "text-slate-800 dark:text-slate-200 font-medium"
               }`}
             >
               {renderBilingualInline(block.text)}

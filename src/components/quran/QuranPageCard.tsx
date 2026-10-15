@@ -1,23 +1,28 @@
-import React, { useState, useEffect } from 'react';
-import { QuranPageItem, Language } from '../../types';
-import { useApp } from '../../context/AppContext';
-import { isDue, isReviewedToday, getIntervalDays, predictQuranIntervals } from '../../lib/fsrs';
-import { AudioStorageService } from '../../lib/AudioStorageService';
-import { AudioRecorderPlayer } from '../shared/AudioRecorderPlayer';
-import { getQuranPageImageUrl } from '../../data/quranData';
-import { 
-  Play, 
-  Power, 
-  MessageSquare, 
-  Eye, 
-  Flame, 
-  Brain, 
-  CalendarClock, 
+import React, { useState, useEffect } from "react";
+import { QuranPageItem, Language } from "../../types";
+import { useApp } from "../../context/AppContext";
+import {
+  isDue,
+  isReviewedToday,
+  getIntervalDays,
+  predictQuranIntervals,
+} from "../../lib/fsrs";
+import { AudioStorageService } from "../../lib/AudioStorageService";
+import { AudioRecorderPlayer } from "../shared/AudioRecorderPlayer";
+import { getQuranPageImageUrl } from "../../data/quranData";
+import {
+  Play,
+  Power,
+  MessageSquare,
+  Eye,
+  Flame,
+  Brain,
+  CalendarClock,
   Mic,
   Lock,
   CheckCircle2,
-  BookOpen
-} from 'lucide-react';
+  BookOpen,
+} from "lucide-react";
 
 interface Props {
   page: QuranPageItem;
@@ -42,7 +47,7 @@ export const QuranPageCard: React.FC<Props> = ({
   onInlineReview,
   isJustReviewed,
   justReviewedRating,
-  isHighlighted
+  isHighlighted,
 }) => {
   const [showAudio, setShowAudio] = useState(false);
   const [hasAudio, setHasAudio] = useState(false);
@@ -50,23 +55,23 @@ export const QuranPageCard: React.FC<Props> = ({
 
   useEffect(() => {
     let mounted = true;
-    AudioStorageService.hasAudio(page.pageNumber).then(exists => {
+    AudioStorageService.hasAudio(page.pageNumber).then((exists) => {
       if (mounted) setHasAudio(exists);
     });
 
     const handleAudioChange = (e: Event) => {
       const customEvent = e as CustomEvent<{ itemId: string | number }>;
       if (String(customEvent.detail?.itemId) === String(page.pageNumber)) {
-        AudioStorageService.hasAudio(page.pageNumber).then(exists => {
+        AudioStorageService.hasAudio(page.pageNumber).then((exists) => {
           if (mounted) setHasAudio(exists);
         });
       }
     };
 
-    window.addEventListener('audio-updated', handleAudioChange);
+    window.addEventListener("audio-updated", handleAudioChange);
     return () => {
       mounted = false;
-      window.removeEventListener('audio-updated', handleAudioChange);
+      window.removeEventListener("audio-updated", handleAudioChange);
     };
   }, [page.pageNumber]);
 
@@ -75,40 +80,58 @@ export const QuranPageCard: React.FC<Props> = ({
   // Odd page numbers (23, 25, 27, 63...) are on the RIGHT side of the open Mushaf.
   const isLeftPage = Number(page.pageNumber) % 2 === 0;
 
-  const isDueToday = isDue(page.fsrsData.nextReview, page.isActive, page.fsrsData.lastReview);
+  const isDueToday = isDue(
+    page.fsrsData.nextReview,
+    page.isActive,
+    page.fsrsData.lastReview,
+  );
   const reviewedToday = isReviewedToday(page.fsrsData.lastReview);
   const showDimmed = reviewedToday && !isDueToday;
-  const isMapan = page.status === 'mastered_for_now' || !!page.mapanCelebrated || (page.fsrsData.stability || 0) * 0.4025587 >= 30;
+  const isMapan =
+    page.status === "mastered_for_now" ||
+    !!page.mapanCelebrated ||
+    (page.fsrsData.stability || 0) * 0.4025587 >= 30;
   const isMutqinUnlocked = isMapan;
 
   const formatAccurateDueDate = () => {
-    if (!page.fsrsData.nextReview) return language === 'en' ? 'Today' : 'Hari ini';
+    if (!page.fsrsData.nextReview)
+      return language === "en" ? "Today" : "Hari ini";
     const nextDate = new Date(page.fsrsData.nextReview);
     const now = new Date();
     const isOverdue = nextDate <= now;
-    const formatted = nextDate.toLocaleDateString(language === 'id' ? 'id-ID' : 'en-US', {
-      day: 'numeric',
-      month: 'short'
-    });
+    const formatted = nextDate.toLocaleDateString(
+      language === "id" ? "id-ID" : "en-US",
+      {
+        day: "numeric",
+        month: "short",
+      },
+    );
     if (isOverdue) {
-      return language === 'en' ? `Today (${formatted})` : `Hari ini (${formatted})`;
+      return language === "en"
+        ? `Today (${formatted})`
+        : `Hari ini (${formatted})`;
     }
     return formatted;
   };
 
   const getFullDueDateStr = () => {
-    if (!page.fsrsData.nextReview) return language === 'en' ? 'Today' : 'Hari ini';
+    if (!page.fsrsData.nextReview)
+      return language === "en" ? "Today" : "Hari ini";
     const nextDate = new Date(page.fsrsData.nextReview);
-    return nextDate.toLocaleDateString(language === 'id' ? 'id-ID' : 'en-US', {
-      weekday: 'long',
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric'
+    return nextDate.toLocaleDateString(language === "id" ? "id-ID" : "en-US", {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      year: "numeric",
     });
   };
 
-  const pageInterval = getIntervalDays(page.fsrsData) || Math.max(1, Math.round((page.fsrsData.stability || 0) * 0.4025587));
-  const unresolvedIssuesCount = page.issues ? page.issues.filter(i => !i.isResolved).length : 0;
+  const pageInterval =
+    getIntervalDays(page.fsrsData) ||
+    Math.max(1, Math.round((page.fsrsData.stability || 0) * 0.4025587));
+  const unresolvedIssuesCount = page.issues
+    ? page.issues.filter((i) => !i.isResolved).length
+    : 0;
   const qIntervals = predictQuranIntervals(page.fsrsData, page.mapanSchedule);
   const pageImageUrl = getQuranPageImageUrl(page.pageNumber, 1024);
 
@@ -123,8 +146,8 @@ export const QuranPageCard: React.FC<Props> = ({
       onClick={() => onOpenMushafViewer(page.pageNumber)}
       className={`relative w-22 sm:w-26 md:w-28 shrink-0 aspect-[1/1.45] overflow-hidden cursor-pointer group bg-[#FCFBF7] dark:bg-slate-950 transition-all hover:scale-[1.03] active:scale-95 select-none ${
         isLeftPage
-          ? 'rounded-l-[3px] rounded-r-[9px] border-l border-y border-r-2 border-amber-900/25 dark:border-amber-500/30 shadow-[3px_4px_12px_rgba(0,0,0,0.16)]'
-          : 'rounded-l-[9px] rounded-r-[3px] border-r border-y border-l-2 border-amber-900/25 dark:border-amber-500/30 shadow-[-3px_4px_12px_rgba(0,0,0,0.16)]'
+          ? "rounded-l-[3px] rounded-r-[9px] border-l border-y border-r-2 border-amber-900/25 dark:border-amber-500/30 shadow-[3px_4px_12px_rgba(0,0,0,0.16)]"
+          : "rounded-l-[9px] rounded-r-[3px] border-r border-y border-l-2 border-amber-900/25 dark:border-amber-500/30 shadow-[-3px_4px_12px_rgba(0,0,0,0.16)]"
       }`}
       title={`Buka Mushaf Cetak Halaman ${page.pageNumber}`}
     >
@@ -136,23 +159,25 @@ export const QuranPageCard: React.FC<Props> = ({
           loading="lazy"
           onError={() => setImageError(true)}
           className={`w-full h-full object-cover object-top select-none transition-transform group-hover:scale-105 ${
-            isDueToday ? 'filter blur-[1.5px] brightness-95' : ''
+            isDueToday ? "filter blur-[1.5px] brightness-95" : ""
           }`}
         />
       ) : (
         <div className="w-full h-full flex flex-col items-center justify-center p-2 text-center bg-amber-100/60 dark:bg-slate-800">
           <BookOpen className="w-6 h-6 text-amber-700/60 dark:text-amber-400/60 mb-1" />
-          <span className="text-[10px] font-bold text-amber-900 dark:text-amber-200">Hal {page.pageNumber}</span>
+          <span className="text-[10px] font-bold text-amber-900 dark:text-amber-200">
+            Hal {page.pageNumber}
+          </span>
         </div>
       )}
 
       {/* 3D Binding Spine Gutter Shadow (Lekukan jilid tengah buku) */}
-      <div 
+      <div
         className={`absolute inset-y-0 pointer-events-none z-10 ${
-          isLeftPage 
-            ? 'right-0 w-3.5 bg-gradient-to-l from-black/50 via-black/15 to-transparent border-r border-black/35' 
-            : 'left-0 w-3.5 bg-gradient-to-r from-black/50 via-black/15 to-transparent border-l border-black/35'
-        }`} 
+          isLeftPage
+            ? "right-0 w-3.5 bg-gradient-to-l from-black/50 via-black/15 to-transparent border-r border-black/35"
+            : "left-0 w-3.5 bg-gradient-to-r from-black/50 via-black/15 to-transparent border-l border-black/35"
+        }`}
       />
 
       {/* Hover Eye Overlay Indicator */}
@@ -224,8 +249,8 @@ export const QuranPageCard: React.FC<Props> = ({
               onClick={() => setShowAudio(!showAudio)}
               className={`relative w-7 h-7 sm:w-7.5 sm:h-7.5 rounded-xl flex items-center justify-center transition-all cursor-pointer hover:scale-105 active:scale-95 shadow-2xs ${
                 showAudio || hasAudio
-                  ? 'clay-icon-pod-pacific text-white shadow-xs'
-                  : 'clay-icon-pod-neutral'
+                  ? "clay-icon-pod-pacific text-white shadow-xs"
+                  : "clay-icon-pod-neutral"
               }`}
               title="Rekaman Suara Tasmi' Mandiri"
             >
@@ -251,10 +276,10 @@ export const QuranPageCard: React.FC<Props> = ({
               onClick={() => onToggleActive(page.pageNumber)}
               className={`w-7 h-7 sm:w-7.5 sm:h-7.5 rounded-xl flex items-center justify-center transition-all cursor-pointer shrink-0 active:scale-95 ${
                 page.isActive
-                  ? 'clay-icon-pod-pacific text-white shadow-xs hover:scale-105'
-                  : 'clay-icon-pod-neutral hover:text-[#0EA5E9]'
+                  ? "clay-icon-pod-pacific text-white shadow-xs hover:scale-105"
+                  : "clay-icon-pod-neutral hover:text-[#0EA5E9]"
               }`}
-              title={page.isActive ? 'Nonaktifkan Halaman' : 'Aktivasi Halaman'}
+              title={page.isActive ? "Nonaktifkan Halaman" : "Aktivasi Halaman"}
             >
               {page.isActive ? (
                 <Play className="w-3.5 h-3.5 fill-white text-white ml-0.5" />
@@ -266,12 +291,13 @@ export const QuranPageCard: React.FC<Props> = ({
         </div>
 
         {/* Page Title: Surah & Ayat */}
-        <div 
+        <div
           onClick={() => onOpenMushafViewer(page.pageNumber)}
           className="mt-1.5 cursor-pointer group/title"
         >
           <h3 className="font-black text-xs sm:text-sm text-[#18234A] dark:text-[#F8FAFC] group-hover/title:text-[#FF6F3D] transition-colors leading-tight truncate">
-            Hal {page.pageNumber} <span className="text-[#FF6F3D]">•</span> {page.surahNameEn}
+            Hal {page.pageNumber} <span className="text-[#FF6F3D]">•</span>{" "}
+            {page.surahNameEn}
           </h3>
           <p className="text-[10.5px] text-[#5E6D88] dark:text-[#94A3B8] font-semibold truncate mt-0.5">
             Ayat {page.ayahRange}
@@ -283,30 +309,38 @@ export const QuranPageCard: React.FC<Props> = ({
       {page.isActive ? (
         <div className="clay-inset px-2.5 py-1 rounded-xl flex items-center justify-between gap-1 text-[9.5px]">
           {/* Reps */}
-          <div 
-            className="flex items-center gap-1 text-[#5E6D88] dark:text-[#94A3B8] shrink-0" 
+          <div
+            className="flex items-center gap-1 text-[#5E6D88] dark:text-[#94A3B8] shrink-0"
             title={`Sudah direview: ${page.fsrsData.reps} kali`}
           >
             <Flame className="w-2.5 h-2.5 text-[#FF6F3D] fill-[#FF6F3D] shrink-0" />
-            <span className="font-black text-[#18234A] dark:text-[#F8FAFC]">{page.fsrsData.reps}×</span>
+            <span className="font-black text-[#18234A] dark:text-[#F8FAFC]">
+              {page.fsrsData.reps}×
+            </span>
           </div>
 
           {/* Interval */}
-          <div 
-            className="flex items-center gap-1 text-[#5E6D88] dark:text-[#94A3B8] shrink-0" 
+          <div
+            className="flex items-center gap-1 text-[#5E6D88] dark:text-[#94A3B8] shrink-0"
             title={`Interval murajaah: ${pageInterval} hari`}
           >
             <Brain className="w-2.5 h-2.5 text-[#5E6D88] dark:text-[#94A3B8] shrink-0" />
-            <span className="font-bold text-[#18234A] dark:text-[#F8FAFC]">{pageInterval} hr</span>
+            <span className="font-bold text-[#18234A] dark:text-[#F8FAFC]">
+              {pageInterval} hr
+            </span>
           </div>
 
           {/* Due Date */}
-          <div 
-            className="flex items-center gap-1 text-[#5E6D88] dark:text-[#94A3B8] truncate" 
+          <div
+            className="flex items-center gap-1 text-[#5E6D88] dark:text-[#94A3B8] truncate"
             title={`Jatuh tempo: ${getFullDueDateStr()}`}
           >
-            <CalendarClock className={`w-2.5 h-2.5 shrink-0 ${isDueToday ? 'text-[#FF6F3D]' : 'text-[#8493AB]'}`} />
-            <span className={`font-bold truncate ${isDueToday ? 'text-[#FF6F3D] font-black' : ''}`}>
+            <CalendarClock
+              className={`w-2.5 h-2.5 shrink-0 ${isDueToday ? "text-[#FF6F3D]" : "text-[#8493AB]"}`}
+            />
+            <span
+              className={`font-bold truncate ${isDueToday ? "text-[#FF6F3D] font-black" : ""}`}
+            >
               {formatAccurateDueDate()}
             </span>
           </div>
@@ -324,22 +358,31 @@ export const QuranPageCard: React.FC<Props> = ({
           <button
             type="button"
             onClick={() => {
-              if (isDueToday && onInlineReview) onInlineReview(page.pageNumber, 1);
+              if (isDueToday && onInlineReview)
+                onInlineReview(page.pageNumber, 1);
             }}
             disabled={!isDueToday || !onInlineReview}
             className={`py-1.5 px-1 sm:px-2 flex-1 rounded-2xl flex flex-col items-center justify-center transition-all cursor-pointer ${
               isJustReviewed && justReviewedRating === 1
-                ? 'bg-gradient-to-b from-[#FB923C] via-[#F97316] to-[#EA580C] text-white scale-105 shadow-md ring-2 ring-orange-400'
+                ? "bg-gradient-to-b from-[#FB923C] via-[#F97316] to-[#EA580C] text-white scale-105 shadow-md ring-2 ring-orange-400"
                 : isDueToday
-                ? 'bg-gradient-to-b from-[#FB923C] via-[#F97316] to-[#EA580C] text-white hover:brightness-110 active:scale-95 shadow-[0_5px_14px_rgba(249,115,22,0.38),inset_0_2px_3px_rgba(255,255,255,0.85),inset_0_-2px_3px_rgba(0,0,0,0.18)] border border-orange-200/60 dark:border-orange-400/40'
-                : 'clay-inset text-slate-700 dark:text-slate-200 font-bold cursor-not-allowed border border-amber-900/10 dark:border-slate-700/50'
+                  ? "bg-gradient-to-b from-[#FB923C] via-[#F97316] to-[#EA580C] text-white hover:brightness-110 active:scale-95 shadow-[0_5px_14px_rgba(249,115,22,0.38),inset_0_2px_3px_rgba(255,255,255,0.85),inset_0_-2px_3px_rgba(0,0,0,0.18)] border border-orange-200/60 dark:border-orange-400/40"
+                  : "clay-inset text-slate-700 dark:text-slate-200 font-bold cursor-not-allowed border border-amber-900/10 dark:border-slate-700/50"
             }`}
-            title={!isDueToday ? `Hanya aktif saat jatuh tempo (${formatAccurateDueDate()})` : 'Belum lancar (Review 1 hari)'}
+            title={
+              !isDueToday
+                ? `Hanya aktif saat jatuh tempo (${formatAccurateDueDate()})`
+                : "Belum lancar (Review 1 hari)"
+            }
           >
-            <span className={`text-[10px] sm:text-[10.5px] font-black leading-tight drop-shadow-xs ${isDueToday ? 'text-white' : 'text-slate-700 dark:text-slate-200'}`}>
+            <span
+              className={`text-[10px] sm:text-[10.5px] font-black leading-tight drop-shadow-xs ${isDueToday ? "text-white" : "text-slate-700 dark:text-slate-200"}`}
+            >
               {qIntervals.needReviewDays || 1} hr
             </span>
-            <span className={`text-[8.5px] font-black uppercase tracking-wider leading-none mt-0.5 drop-shadow-xs ${isDueToday ? 'text-white/95' : 'text-slate-700 dark:text-slate-200'}`}>
+            <span
+              className={`text-[8.5px] font-black uppercase tracking-wider leading-none mt-0.5 drop-shadow-xs ${isDueToday ? "text-white/95" : "text-slate-700 dark:text-slate-200"}`}
+            >
               Belum
             </span>
           </button>
@@ -348,22 +391,31 @@ export const QuranPageCard: React.FC<Props> = ({
           <button
             type="button"
             onClick={() => {
-              if (isDueToday && onInlineReview) onInlineReview(page.pageNumber, 2);
+              if (isDueToday && onInlineReview)
+                onInlineReview(page.pageNumber, 2);
             }}
             disabled={!isDueToday || !onInlineReview}
             className={`py-1.5 px-1 sm:px-2 flex-1 rounded-2xl flex flex-col items-center justify-center transition-all cursor-pointer ${
               isJustReviewed && justReviewedRating === 2
-                ? 'bg-gradient-to-b from-[#38BDF8] via-[#0284C7] to-[#0369A1] text-white scale-105 shadow-md ring-2 ring-sky-300'
+                ? "bg-gradient-to-b from-[#38BDF8] via-[#0284C7] to-[#0369A1] text-white scale-105 shadow-md ring-2 ring-sky-300"
                 : isDueToday
-                ? 'bg-gradient-to-b from-[#38BDF8] via-[#0284C7] to-[#0369A1] text-white hover:brightness-110 active:scale-95 shadow-[0_5px_14px_rgba(2,132,199,0.38),inset_0_2px_3px_rgba(255,255,255,0.85),inset_0_-2px_3px_rgba(0,0,0,0.18)] border border-sky-200/60 dark:border-sky-400/40'
-                : 'clay-inset text-slate-700 dark:text-slate-200 font-bold cursor-not-allowed border border-amber-900/10 dark:border-slate-700/50'
+                  ? "bg-gradient-to-b from-[#38BDF8] via-[#0284C7] to-[#0369A1] text-white hover:brightness-110 active:scale-95 shadow-[0_5px_14px_rgba(2,132,199,0.38),inset_0_2px_3px_rgba(255,255,255,0.85),inset_0_-2px_3px_rgba(0,0,0,0.18)] border border-sky-200/60 dark:border-sky-400/40"
+                  : "clay-inset text-slate-700 dark:text-slate-200 font-bold cursor-not-allowed border border-amber-900/10 dark:border-slate-700/50"
             }`}
-            title={!isDueToday ? `Hanya aktif saat jatuh tempo (${formatAccurateDueDate()})` : `Lancar (+${qIntervals.hardDays} hari)`}
+            title={
+              !isDueToday
+                ? `Hanya aktif saat jatuh tempo (${formatAccurateDueDate()})`
+                : `Lancar (+${qIntervals.hardDays} hari)`
+            }
           >
-            <span className={`text-[10px] sm:text-[10.5px] font-black leading-tight drop-shadow-xs ${isDueToday ? 'text-white' : 'text-slate-700 dark:text-slate-200'}`}>
+            <span
+              className={`text-[10px] sm:text-[10.5px] font-black leading-tight drop-shadow-xs ${isDueToday ? "text-white" : "text-slate-700 dark:text-slate-200"}`}
+            >
               +{qIntervals.hardDays} hr
             </span>
-            <span className={`text-[8.5px] font-black uppercase tracking-wider leading-none mt-0.5 drop-shadow-xs ${isDueToday ? 'text-white/95' : 'text-slate-700 dark:text-slate-200'}`}>
+            <span
+              className={`text-[8.5px] font-black uppercase tracking-wider leading-none mt-0.5 drop-shadow-xs ${isDueToday ? "text-white/95" : "text-slate-700 dark:text-slate-200"}`}
+            >
               Lancar
             </span>
           </button>
@@ -373,22 +425,31 @@ export const QuranPageCard: React.FC<Props> = ({
             <button
               type="button"
               onClick={() => {
-                if (isDueToday && onInlineReview) onInlineReview(page.pageNumber, 3);
+                if (isDueToday && onInlineReview)
+                  onInlineReview(page.pageNumber, 3);
               }}
               disabled={!isDueToday || !onInlineReview}
               className={`py-1.5 px-1 sm:px-2 flex-1 rounded-2xl flex flex-col items-center justify-center transition-all cursor-pointer ${
                 isJustReviewed && justReviewedRating === 3
-                  ? 'bg-gradient-to-b from-[#34D399] via-[#10B981] to-[#059669] text-white scale-105 shadow-md ring-2 ring-emerald-300'
+                  ? "bg-gradient-to-b from-[#34D399] via-[#10B981] to-[#059669] text-white scale-105 shadow-md ring-2 ring-emerald-300"
                   : isDueToday
-                  ? 'bg-gradient-to-b from-[#34D399] via-[#10B981] to-[#059669] text-white hover:brightness-110 active:scale-95 shadow-[0_5px_14px_rgba(16,185,129,0.38),inset_0_2px_3px_rgba(255,255,255,0.85),inset_0_-2px_3px_rgba(0,0,0,0.18)] border border-emerald-200/60 dark:border-emerald-400/40'
-                : 'clay-inset text-slate-700 dark:text-slate-200 font-bold cursor-not-allowed border border-amber-900/10 dark:border-slate-700/50'
+                    ? "bg-gradient-to-b from-[#34D399] via-[#10B981] to-[#059669] text-white hover:brightness-110 active:scale-95 shadow-[0_5px_14px_rgba(16,185,129,0.38),inset_0_2px_3px_rgba(255,255,255,0.85),inset_0_-2px_3px_rgba(0,0,0,0.18)] border border-emerald-200/60 dark:border-emerald-400/40"
+                    : "clay-inset text-slate-700 dark:text-slate-200 font-bold cursor-not-allowed border border-amber-900/10 dark:border-slate-700/50"
               }`}
-              title={!isDueToday ? `Hanya aktif saat jatuh tempo (${formatAccurateDueDate()})` : `Mutqin (+${qIntervals.goodDays} hari)`}
+              title={
+                !isDueToday
+                  ? `Hanya aktif saat jatuh tempo (${formatAccurateDueDate()})`
+                  : `Mutqin (+${qIntervals.goodDays} hari)`
+              }
             >
-              <span className={`text-[10px] sm:text-[10.5px] font-black leading-tight drop-shadow-xs ${isDueToday ? 'text-white' : 'text-slate-700 dark:text-slate-200'}`}>
+              <span
+                className={`text-[10px] sm:text-[10.5px] font-black leading-tight drop-shadow-xs ${isDueToday ? "text-white" : "text-slate-700 dark:text-slate-200"}`}
+              >
                 +{qIntervals.goodDays} hr
               </span>
-              <span className={`text-[8.5px] font-black uppercase tracking-wider leading-none mt-0.5 drop-shadow-xs ${isDueToday ? 'text-white/95' : 'text-slate-700 dark:text-slate-200'}`}>
+              <span
+                className={`text-[8.5px] font-black uppercase tracking-wider leading-none mt-0.5 drop-shadow-xs ${isDueToday ? "text-white/95" : "text-slate-700 dark:text-slate-200"}`}
+              >
                 Mutqin
               </span>
             </button>
@@ -409,7 +470,9 @@ export const QuranPageCard: React.FC<Props> = ({
         </div>
       ) : (
         <div className="flex items-center justify-between pt-0.5">
-          <span className="text-[9.5px] text-[#8493AB] italic">Status Nonaktif</span>
+          <span className="text-[9.5px] text-[#8493AB] italic">
+            Status Nonaktif
+          </span>
           <button
             type="button"
             onClick={() => onToggleActive(page.pageNumber)}
@@ -427,14 +490,14 @@ export const QuranPageCard: React.FC<Props> = ({
       id={`quran-page-card-${page.pageNumber}`}
       className={`clay-card p-2.5 sm:p-3 rounded-3xl transition-all relative overflow-hidden group ${
         isHighlighted
-          ? 'ring-4 ring-[#0EA5E9] shadow-[0_0_30px_rgba(14,165,233,0.5)] scale-[1.01] z-10 duration-300'
-          : isDueToday 
-          ? 'ring-2 ring-[#FF6F3D]/80 shadow-[0_6px_20px_rgba(255,111,61,0.22)]' 
-          : showDimmed
-          ? 'opacity-85'
-          : page.isActive 
-          ? '' 
-          : 'opacity-70 hover:opacity-100'
+          ? "ring-4 ring-[#0EA5E9] shadow-[0_0_30px_rgba(14,165,233,0.5)] scale-[1.01] z-10 duration-300"
+          : isDueToday
+            ? "ring-2 ring-[#FF6F3D]/80 shadow-[0_6px_20px_rgba(255,111,61,0.22)]"
+            : showDimmed
+              ? "opacity-85"
+              : page.isActive
+                ? ""
+                : "opacity-70 hover:opacity-100"
       }`}
     >
       {/* 
@@ -467,5 +530,3 @@ export const QuranPageCard: React.FC<Props> = ({
     </div>
   );
 };
-
-
