@@ -177,6 +177,20 @@ export const TeachingSpace: React.FC = () => {
   const [isClassSearchOpen, setIsClassSearchOpen] = useState(false);
   const [selectedClassId, setSelectedClassId] = useState<string | null>(selectedTeachingClassId || null);
 
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleManualSync = async () => {
+    if (isRefreshing) return;
+    setIsRefreshing(true);
+    try {
+      await refreshClassesFromBackend();
+    } catch (e) {
+      console.warn('[TeachingSpace] Manual sync notice:', e);
+    } finally {
+      setTimeout(() => setIsRefreshing(false), 600);
+    }
+  };
+
   useEffect(() => {
     refreshClassesFromBackend();
   }, [refreshClassesFromBackend]);
@@ -2509,6 +2523,17 @@ export const TeachingSpace: React.FC = () => {
           >
             <KeyRound className="w-3.5 h-3.5 text-[#FF6F3D] shrink-0" />
             <span className="hidden sm:inline">{language === 'en' ? 'Join Class' : 'Gabung Kelas'}</span>
+          </button>
+
+          {/* Manual Sync Button */}
+          <button
+            type="button"
+            onClick={handleManualSync}
+            disabled={isRefreshing}
+            className="flex items-center justify-center w-9 h-9 rounded-2xl clay-pill text-[#18234A] dark:text-[#F8FAFC] hover:text-[#FF6F3D] transition-all cursor-pointer shadow-2xs shrink-0 disabled:opacity-60"
+            title={language === 'en' ? 'Sync classes from cloud' : 'Sinkronkan data kelas'}
+          >
+            <RotateCcw className={`w-3.5 h-3.5 text-[#FF6F3D] shrink-0 ${isRefreshing ? 'animate-spin' : ''}`} />
           </button>
         </div>
       </div>

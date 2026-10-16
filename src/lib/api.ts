@@ -149,10 +149,17 @@ export class ApiClient {
     } = options;
 
     const normalizedPath = path.startsWith("/") ? path : `/${path}`;
-    const targetUrl = `${this.baseUrl}${normalizedPath}`;
+    let targetUrl = `${this.baseUrl}${normalizedPath}`;
+    const method = (fetchInit.method || "GET").toUpperCase();
+    if (method === "GET") {
+      const sep = targetUrl.includes("?") ? "&" : "?";
+      targetUrl = `${targetUrl}${sep}_t=${Date.now()}`;
+    }
 
     const headers: Record<string, string> = {
       Accept: "application/json",
+      "Cache-Control": "no-cache, no-store, must-revalidate",
+      Pragma: "no-cache",
       ...(customHeaders as Record<string, string>),
     };
 
@@ -200,6 +207,7 @@ export class ApiClient {
 
     try {
       const response = await fetch(targetUrl, {
+        cache: "no-store",
         ...fetchInit,
         headers,
         body: serializedBody,

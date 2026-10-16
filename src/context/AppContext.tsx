@@ -1457,24 +1457,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       ]);
       if (loadedUserIdRef.current === targetId) {
         if (Array.isArray(backendTeaching)) {
-          setTeachingClasses(prev => {
-            const map = new Map<string, ClassGroup>();
-            backendTeaching.forEach(c => map.set(c.id, c));
-            prev.forEach(c => {
-              if (!map.has(c.id) && !map.has(c.code)) map.set(c.id, c);
-            });
-            return Array.from(map.values());
-          });
+          if (backendTeaching.length > 0) {
+            setTeachingClasses(backendTeaching);
+          } else {
+            // If backend has 0 classes, auto-migrate any local class created before login
+            const localToMigrate = (accountData.teachingClasses || []).filter(c => c && c.id && c.id.startsWith('cls-'));
+            if (localToMigrate.length > 0) {
+              for (const locCls of localToMigrate) {
+                try {
+                  const synced = await classApiService.createClass({
+                    name: locCls.name,
+                    type: locCls.type,
+                    code: locCls.code,
+                    description: locCls.description,
+                    coverUrl: locCls.coverUrl,
+                    requiredJuzList: locCls.requiredJuzList,
+                    assignedBookIds: locCls.assignedBookIds,
+                  });
+                  backendTeaching.push(synced);
+                } catch (e) {
+                  console.warn('[Sync] Auto-migrate local class notice:', e);
+                }
+              }
+            }
+            setTeachingClasses(backendTeaching);
+          }
         }
         if (Array.isArray(backendJoined)) {
-          setMyClasses(prev => {
-            const map = new Map<string, ClassGroup>();
-            backendJoined.forEach(c => map.set(c.id, c));
-            prev.forEach(c => {
-              if (!map.has(c.id) && !map.has(c.code)) map.set(c.id, c);
-            });
-            return Array.from(map.values());
-          });
+          setMyClasses(backendJoined);
         }
       }
     } catch (classErr) {

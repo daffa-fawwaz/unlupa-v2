@@ -80,6 +80,15 @@ async function startServer() {
     });
   });
 
+  // 1.5 Prevent browser/proxy caching for all dynamic API endpoints (critical for WebKit / iOS Safari)
+  app.use(["/api", "/api/v1"], (req, res, next) => {
+    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+    res.setHeader("Pragma", "no-cache");
+    res.setHeader("Expires", "0");
+    res.setHeader("Surrogate-Control", "no-store");
+    next();
+  });
+
   // Mount API v1 Router & alias /api
   app.use("/api/v1", apiRouter);
   app.use("/api", apiRouter);
