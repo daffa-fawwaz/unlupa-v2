@@ -19,6 +19,7 @@ export interface UpdateClassPayload {
   status?: 'active' | 'closed';
   requiredJuzList?: number[];
   assignedBookIds?: string[];
+  assignedBooksData?: any[];
 }
 
 export const classApiService = {
@@ -130,6 +131,17 @@ export const classApiService = {
    */
   async reviewStudentQuranPage(classId: string, studentId: string, pageNumber: number, input: any): Promise<any> {
     const res = await api.post(`/api/v1/classes/${classId}/students/${studentId}/quran-pages/${pageNumber}/review`, input);
+    return res.data;
+  },
+
+  /**
+   * Teacher submits review for student's book item card
+   */
+  async reviewStudentBookItem(classId: string, studentId: string, itemId: string, rating: 1 | 2 | 3 | 4, notes?: string): Promise<any> {
+    const res = await api.post(`/api/v1/classes/${classId}/students/${studentId}/items/${itemId}/review`, {
+      rating,
+      notes,
+    });
     return res.data;
   },
 };

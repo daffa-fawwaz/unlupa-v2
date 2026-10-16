@@ -8,6 +8,7 @@ import { quranRouter } from './quran.routes';
 import { uploadRouter } from './upload.routes';
 import { adminUserRouter } from './adminUser.routes';
 import { classRouter } from './class.routes';
+import { leaderboardRouter } from './leaderboard.routes';
 
 export const apiRouter = Router();
 
@@ -45,6 +46,7 @@ apiRouter.get('/health', async (req: Request, res: Response) => {
 // Mount domain routes
 apiRouter.use(uploadRouter);
 apiRouter.use(authRouter);
+apiRouter.use(leaderboardRouter);
 apiRouter.use(bookRouter);
 apiRouter.use(learningRouter);
 apiRouter.use(quranRouter);

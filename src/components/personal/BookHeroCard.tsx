@@ -62,6 +62,7 @@ export interface BookHeroCardProps {
   onSelectCard?: (item: BookItem) => void;
   onLeaveClass?: (classId: string) => void;
   onEditBook?: () => void;
+  onSyncToClasses?: () => void;
   onPublishBook?: () => void;
   onDeleteBook?: () => void;
   onAddChapter?: () => void;
@@ -198,6 +199,7 @@ export const BookHeroCard: React.FC<BookHeroCardProps> = ({
   onSelectCard,
   onLeaveClass,
   onEditBook,
+  onSyncToClasses,
   onPublishBook,
   onDeleteBook,
   onAddChapter,
@@ -1263,6 +1265,16 @@ export const BookHeroCard: React.FC<BookHeroCardProps> = ({
                     <span>
                       {language === "en" ? "Edit Book Info" : "Edit Info Buku"}
                     </span>
+                  </button>
+                )}
+                {!isReadonly && onSyncToClasses && (
+                  <button
+                    type="button"
+                    onClick={() => { setIsMenuOpen(false); onSyncToClasses(); }}
+                    className="w-full px-3 py-1.5 text-left text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 flex items-center gap-2 transition-colors cursor-pointer"
+                  >
+                    <GraduationCap className="w-3.5 h-3.5 text-emerald-500" />
+                    <span>{language === 'en' ? 'Apply to Classroom' : 'Terapkan ke Ruang Kelas'}</span>
                   </button>
                 )}
                 {!isReadonly && onAddChapter && (

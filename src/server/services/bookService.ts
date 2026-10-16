@@ -460,6 +460,7 @@ export interface UpdateBookInput {
   coverUrl?: string | null;
   category?: string;
   isPublic?: boolean;
+  isReadonly?: boolean;
 }
 
 export interface CreateChapterInput {
@@ -537,13 +538,42 @@ export function normalizeBilingualText(text: string): string {
  *    - If price > 0: rejected with 403 PAID_CONTENT_ACCESS_DENIED (AUDIT-4-07).
  *    - If price <= 0: allowed (free public book).
  */
-export function checkBookAccess(
-  book: { userId: string | null; isPublic: boolean; price?: number | null },
+export async function checkBookAccess(
+  book: { id?: string; userId: string | null; isPublic: boolean; price?: number | null },
   currentUserId: string
-): void {
+): Promise<void> {
   if (book.userId === currentUserId) return;
 
   if (!book.isPublic) {
+    // Check if current user is an enrolled student in an active class where this book is assigned
+    if (book.id) {
+      const isClassStudent = await prisma.classMember.findFirst({
+        where: {
+          studentId: currentUserId,
+          class: {
+            status: 'ACTIVE',
+            OR: [
+              { assignedBookIds: { has: book.id } },
+              { assignedBooks: { some: { bookId: book.id } } },
+            ],
+          },
+        },
+      });
+      if (isClassStudent) return;
+
+      const isClassTeacher = await prisma.class.findFirst({
+        where: {
+          teacherId: currentUserId,
+          status: 'ACTIVE',
+          OR: [
+            { assignedBookIds: { has: book.id } },
+            { assignedBooks: { some: { bookId: book.id } } },
+          ],
+        },
+      });
+      if (isClassTeacher) return;
+    }
+
     throw createError('Anda tidak memiliki akses ke buku privat ini.', 403, 'FORBIDDEN');
   }
 
@@ -650,7 +680,7 @@ export const bookService = {
     }
 
     // Authorization: User must own the book OR book must be free public (AUDIT-4-07)
-    checkBookAccess(book, currentUserId);
+    await checkBookAccess(book, currentUserId);
 
     return book;
   },
@@ -692,6 +722,7 @@ export const bookService = {
     if (input.coverUrl !== undefined) data.coverUrl = input.coverUrl;
     if (input.category !== undefined) data.category = input.category.trim();
     if (input.isPublic !== undefined) data.isPublic = input.isPublic;
+    if (input.isReadonly !== undefined) data.isReadonly = input.isReadonly;
 
     return prisma.book.update({
       where: { id: bookId },
@@ -739,7 +770,7 @@ export const bookService = {
     }
 
     // Must be owner or free public book to allow duplication (AUDIT-4-07)
-    checkBookAccess(sourceBook, currentUserId);
+    await checkBookAccess(sourceBook, currentUserId);
 
     // Execute atomic transaction for book, chapters, and items duplication
     return prisma.$transaction(async (tx) => {
@@ -827,7 +858,7 @@ export const bookService = {
       throw createError('Buku tidak ditemukan.', 404, 'BOOK_NOT_FOUND');
     }
 
-    checkBookAccess(book, currentUserId);
+    await checkBookAccess(book, currentUserId);
 
     return prisma.chapter.findMany({
       where: { bookId },
@@ -986,7 +1017,7 @@ export const bookService = {
       throw createError('Buku tidak ditemukan.', 404, 'BOOK_NOT_FOUND');
     }
 
-    checkBookAccess(book, currentUserId);
+    await checkBookAccess(book, currentUserId);
 
     const where: Prisma.BookItemWhereInput = { bookId };
     if (chapterId) {
@@ -1072,7 +1103,7 @@ export const bookService = {
       throw createError('Kartu materi tidak ditemukan.', 404, 'ITEM_NOT_FOUND');
     }
 
-    checkBookAccess(item.book, currentUserId);
+    await checkBookAccess(item.book, currentUserId);
 
     const progress = item.userProgresses[0] || null;
 
@@ -1484,4 +1515,195 @@ export const bookService = {
       throw error;
     }
   },
+
+  /**
+   * Clone/import a public library book into user's personal space
+   */
+  async importLibraryBook(currentUserId: string, masterBookId: string) {
+    const masterBook = await prisma.book.findUnique({
+      where: { id: masterBookId },
+      include: {
+        chapters: { orderBy: { order: 'asc' } },
+        items: { orderBy: { order: 'asc' } },
+      },
+    });
+
+    if (!masterBook) {
+      throw createError('Buku perpustakaan tidak ditemukan.', 404, 'BOOK_NOT_FOUND');
+    }
+
+    // Verify access: must be public or owned by user
+    if (!masterBook.isPublic && masterBook.userId !== currentUserId) {
+      throw createError('Anda tidak memiliki izin untuk mengimpor buku privat ini.', 403, 'FORBIDDEN');
+    }
+
+    // Check if user already imported this book
+    const existingClone = await prisma.book.findFirst({
+      where: {
+        userId: currentUserId,
+        OR: [
+          { masterBookId: masterBook.id },
+          { title: masterBook.title, isReadonly: true },
+        ],
+      },
+      include: {
+        chapters: true,
+        items: true,
+      },
+    });
+
+    if (existingClone) {
+      return {
+        isExisting: true,
+        book: existingClone,
+      };
+    }
+
+    // Clone book inside transaction
+    const cloned = await prisma.$transaction(async (tx) => {
+      const newBook = await tx.book.create({
+        data: {
+          userId: currentUserId,
+          masterBookId: masterBook.id,
+          title: masterBook.title,
+          description: masterBook.description || '',
+          coverUrl: masterBook.coverUrl,
+          category: 'imported',
+          isPublic: false,
+          isReadonly: Boolean(masterBook.isReadonly),
+          authorName: masterBook.authorName || 'Penulis Pribadi',
+          price: 0,
+          downloads: 0,
+          rating: 5.0,
+        },
+      });
+
+      // Clone chapters preserving hierarchy
+      const chapterIdMap = new Map<string, string>();
+      for (const ch of masterBook.chapters) {
+        const createdCh = await tx.chapter.create({
+          data: {
+            bookId: newBook.id,
+            masterChapterId: ch.id,
+            parentId: ch.parentId ? (chapterIdMap.get(ch.parentId) || null) : null,
+            title: ch.title,
+            description: ch.description,
+            material: ch.material,
+            order: ch.order,
+          },
+        });
+        chapterIdMap.set(ch.id, createdCh.id);
+      }
+
+      // Clone items
+      for (const item of masterBook.items) {
+        await tx.bookItem.create({
+          data: {
+            bookId: newBook.id,
+            chapterId: item.chapterId ? (chapterIdMap.get(item.chapterId) || null) : null,
+            masterItemId: item.id,
+            question: item.question,
+            answer: item.answer,
+            explanation: item.explanation,
+            imageQ: item.imageQ,
+            imageA: item.imageA,
+            tags: item.tags,
+            order: item.order,
+          },
+        });
+      }
+
+      return newBook;
+    });
+
+    return {
+      isExisting: false,
+      book: cloned,
+    };
+  },
+
+  /**
+   * Get all public books structured as library entries
+   */
+  async getPublicLibrary() {
+    const books = await prisma.book.findMany({
+      where: { isPublic: true },
+      include: {
+        chapters: {
+          orderBy: [{ order: 'asc' }, { createdAt: 'asc' }],
+        },
+        items: {
+          orderBy: [{ order: 'asc' }, { createdAt: 'asc' }],
+        },
+      },
+      orderBy: { updatedAt: 'desc' },
+    });
+
+    return books.map((b) => ({
+      id: b.id,
+      title: b.title,
+      description: b.description || '',
+      category: b.category || 'Umum & Akademik',
+      curator: b.authorName || 'Penulis Komunitas',
+      downloads: b.downloads || 0,
+      rating: b.rating || 5.0,
+      verified: true,
+      book: {
+        id: b.id,
+        userId: b.userId || null,
+        masterBookId: b.masterBookId || null,
+        title: b.title,
+        description: b.description || '',
+        coverUrl: b.coverUrl || 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=600&auto=format&fit=crop&q=80',
+        isPublic: true,
+        isReadonly: Boolean(b.isReadonly),
+        authorName: b.authorName || 'Penulis Komunitas',
+        category: b.category || 'Umum & Akademik',
+        price: b.price || 0,
+        downloads: b.downloads || 0,
+        rating: b.rating || 5.0,
+        createdAt: b.createdAt.toISOString(),
+        updatedAt: b.updatedAt.toISOString(),
+      },
+      chapters: b.chapters.map((c) => ({
+        id: c.id,
+        bookId: c.bookId,
+        masterChapterId: c.masterChapterId || null,
+        parentId: c.parentId || null,
+        title: c.title,
+        description: c.description || undefined,
+        material: c.material || undefined,
+        order: c.order || 1,
+      })),
+      items: b.items.map((it) => ({
+        id: it.id,
+        bookId: it.bookId,
+        chapterId: it.chapterId || null,
+        masterItemId: it.masterItemId || null,
+        question: it.question,
+        answer: it.answer,
+        explanation: it.explanation || undefined,
+        imageQ: it.imageQ || undefined,
+        imageA: it.imageA || undefined,
+        tags: it.tags || [],
+        order: it.order || 1,
+        isActive: false,
+        status: 'inactive' as const,
+        fsrsData: {
+          stability: 0,
+          difficulty: 0,
+          reps: 0,
+          lapses: 0,
+          state: 'new' as const,
+          lastReview: null,
+          nextReview: null,
+        },
+        reviewLogs: [],
+        createdAt: it.createdAt.toISOString(),
+      })),
+      tags: ['community'],
+    }));
+  },
 };
+
+

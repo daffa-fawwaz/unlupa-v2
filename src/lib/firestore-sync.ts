@@ -657,3 +657,32 @@ export async function updateStudentInClassGlobal(
 ): Promise<void> {
   return enrollStudentInGlobalClass(classId, studentId, studentData, true);
 }
+
+export const listenToClassGlobal = (classId: string, callback: (classData: any) => void): (() => void) | null => {
+  if (!db || !classId) return null;
+  if (isFirestoreQuotaExceeded()) return null;
+  try {
+    const docRef = doc(db, 'classes', classId);
+    const unsubscribe = onSnapshot(
+      docRef,
+      (snapshot: any) => {
+        if (snapshot.exists()) {
+          callback(snapshot.data());
+        }
+      },
+      (error: any) => {
+        const errMsg = error?.message || String(error);
+        if (errMsg.includes('resource-exhausted') || error?.code === 'resource-exhausted') {
+          markFirestoreQuotaExceeded(4);
+        } else {
+          console.warn('Class document listener notice:', errMsg);
+        }
+      }
+    );
+    return unsubscribe;
+  } catch (error) {
+    console.error('Failed to listen to class document:', error);
+    return null;
+  }
+};
+

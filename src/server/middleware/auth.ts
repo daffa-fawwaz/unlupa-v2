@@ -29,27 +29,20 @@ export async function authenticate(req: Request, res: Response, next: NextFuncti
     return next();
   }
 
+  let token = '';
   const authHeader = req.headers.authorization;
-
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    res.status(401).json({
-      success: false,
-      error: {
-        code: 'UNAUTHORIZED',
-        message: 'Header otorisasi dengan format Bearer <token> diperlukan.',
-      },
-    });
-    return;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    token = authHeader.split('Bearer ')[1]?.trim();
+  } else if (typeof req.query.token === 'string' && req.query.token) {
+    token = req.query.token.trim();
   }
-
-  const token = authHeader.split('Bearer ')[1]?.trim();
 
   if (!token) {
     res.status(401).json({
       success: false,
       error: {
         code: 'UNAUTHORIZED',
-        message: 'Token autentikasi tidak boleh kosong.',
+        message: 'Token autentikasi diperlukan (header Bearer <token> atau query ?token=...).',
       },
     });
     return;

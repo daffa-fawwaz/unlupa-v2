@@ -325,6 +325,16 @@ export const JUZ_LIST: JuzMeta[] = [
   },
 ];
 
+export function isPageInJuzList(pageNumber: number, requiredJuzList?: number[]): boolean {
+  if (!requiredJuzList || requiredJuzList.length === 0 || requiredJuzList.length === 30) {
+    return true;
+  }
+  return requiredJuzList.some(juzNum => {
+    const meta = JUZ_LIST.find(j => j.juzNumber === juzNum);
+    return meta && pageNumber >= meta.startPage && pageNumber <= meta.endPage;
+  });
+}
+
 export const SURAH_LIST: SurahMeta[] = [
   {
     number: 1,

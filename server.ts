@@ -11,6 +11,7 @@ import { prisma, checkDatabaseConnection } from "./src/server/db";
 import { apiRouter } from "./src/server/routes/api.routes";
 import { errorHandler } from "./src/server/middleware/errorHandler";
 import { getFirebaseAdminApp } from "./src/server/firebaseAdmin";
+import { wsManager } from "./src/server/websocket";
 
 function ensureFirebaseAdmin() {
   try {
@@ -396,6 +397,8 @@ async function startServer() {
   const server = app.listen(PORT, "0.0.0.0", () => {
     console.log(`Server running on http://0.0.0.0:${PORT}`);
   });
+
+  wsManager.initialize(server);
 
   server.on("error", (err: any) => {
     console.error("Server listen error:", err);

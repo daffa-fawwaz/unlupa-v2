@@ -3,6 +3,8 @@ import { ClassType, ClassStatus, Plan, Role, Prisma } from '@prisma/client';
 import { createError } from '../middleware/errorHandler';
 import { quranService, ReviewQuranPageInput } from './quranService';
 import { getSurahForPage, getJuzForPage } from '../../data/quranData';
+import { isDue } from '../../lib/fsrs';
+import { learningService } from './learningService';
 
 function isValidUuid(id: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id);
@@ -26,6 +28,7 @@ export interface UpdateClassInput {
   status?: 'active' | 'closed' | 'ACTIVE' | 'CLOSED';
   requiredJuzList?: number[];
   assignedBookIds?: string[];
+  assignedBooksData?: any[];
 }
 
 /**
@@ -90,6 +93,14 @@ export function buildStudentQuranPages(userPages: any[] = []): any[] {
   return result;
 }
 
+function isPageInRequiredJuz(pageNumber: number, requiredJuzList?: number[]): boolean {
+  if (!requiredJuzList || requiredJuzList.length === 0 || requiredJuzList.length === 30) {
+    return true;
+  }
+  const pageJuz = getJuzForPage(pageNumber);
+  return requiredJuzList.includes(pageJuz);
+}
+
 export function formatClassResponse(cls: any) {
   const typeFormatted = (cls.type === ClassType.QURAN || cls.type === 'quran') ? 'quran' : 'non-quran';
   const statusFormatted = (cls.status === ClassStatus.ACTIVE || cls.status === 'active') ? 'active' : 'closed';
@@ -98,34 +109,123 @@ export function formatClassResponse(cls: any) {
     ? cls.assignedBookIds
     : (cls.assignedBooks?.map((ab: any) => ab.bookId) || []);
 
+  const isQuranClass = typeFormatted === 'quran';
+  const requiredJuzList: number[] = Array.isArray(cls.requiredJuzList) ? cls.requiredJuzList : [];
+
   const students = (cls.members || []).map((m: any) => {
-    const userPages = m.student?.userQuranPages || [];
-    const activePages = userPages.filter((p: any) => p.isActive);
-    const activeCount = activePages.length;
-    const dueCount = activePages.filter((p: any) => {
-      if (!p.nextReview) return true;
-      return new Date(p.nextReview).getTime() <= Date.now();
-    }).length;
-    const avgStability = activeCount > 0
-      ? Number((activePages.reduce((acc: number, p: any) => acc + (p.stability || 0), 0) / activeCount).toFixed(1))
-      : 0;
+    if (isQuranClass) {
+      // QURAN CLASS: Strictly calculate due and active pages for this class's assigned Juz!
+      const userPages = m.student?.userQuranPages || [];
+      const classPages = userPages.filter((p: any) => isPageInRequiredJuz(Number(p.pageNumber), requiredJuzList));
+      const activePages = classPages.filter((p: any) => p.isActive);
+      const activeCount = activePages.length;
+      const dueCount = activePages.filter((p: any) => {
+        const nextIso = p.nextReview ? new Date(p.nextReview).toISOString() : null;
+        const lastIso = p.lastReview ? new Date(p.lastReview).toISOString() : null;
+        return isDue(nextIso, p.isActive, lastIso);
+      }).length;
+      const avgStability = activeCount > 0
+        ? Number((activePages.reduce((acc: number, p: any) => acc + (p.stability || 0), 0) / activeCount).toFixed(1))
+        : 0;
 
-    const fullQuranData = buildStudentQuranPages(userPages);
+      const fullQuranData = buildStudentQuranPages(classPages);
 
-    return {
-      id: m.student?.id || m.studentId,
-      name: m.student?.fullName || 'Santri',
-      email: m.student?.email || '',
-      avatarUrl: m.student?.avatarUrl || '',
-      quranSpaceCode: m.student?.quranSpaceCode || '',
-      activeItemsCount: activeCount,
-      dueTodayCount: dueCount,
-      averageStability: avgStability,
-      retentionRate: 95,
-      lastActive: m.joinedAt ? new Date(m.joinedAt).toISOString() : 'Baru bergabung',
-      frequentStruggles: [],
-      quranData: fullQuranData,
-    };
+      return {
+        id: m.student?.id || m.studentId,
+        name: m.student?.fullName || 'Santri',
+        email: m.student?.email || '',
+        avatarUrl: m.student?.avatarUrl || '',
+        quranSpaceCode: m.student?.quranSpaceCode || '',
+        activeItemsCount: activeCount,
+        dueTodayCount: dueCount,
+        averageStability: avgStability,
+        retentionRate: 95,
+        lastActive: m.joinedAt ? new Date(m.joinedAt).toISOString() : 'Baru bergabung',
+        frequentStruggles: [],
+        quranData: fullQuranData,
+        bookItemsData: [],
+      };
+    } else {
+      // NON-QURAN (Kitab / Materi Flashcard) CLASS:
+      // Strictly calculate progress for books assigned to THIS class only!
+      const allClassBookIds = new Set<string>();
+      assignedIds.forEach(id => {
+        if (id) {
+          allClassBookIds.add(id);
+          allClassBookIds.add(`class-book-${cls.id}-${id}`);
+        }
+      });
+      if (Array.isArray(cls.assignedBooks)) {
+        cls.assignedBooks.forEach((ab: any) => {
+          if (ab.bookId) {
+            allClassBookIds.add(ab.bookId);
+            allClassBookIds.add(`class-book-${cls.id}-${ab.bookId}`);
+          }
+          if (ab.book?.id) {
+            allClassBookIds.add(ab.book.id);
+            allClassBookIds.add(`class-book-${cls.id}-${ab.book.id}`);
+          }
+        });
+      }
+
+      const allProgresses: any[] = m.student?.bookProgresses || [];
+      const classProgresses = allProgresses.filter((bp: any) => {
+        const bId = bp.bookItem?.bookId;
+        return bId && allClassBookIds.has(bId);
+      });
+
+      const activeProgresses = classProgresses.filter((bp: any) => bp.isActive);
+      const activeCount = activeProgresses.length;
+      const dueProgresses = activeProgresses.filter((bp: any) => {
+        const nextIso = bp.nextReview ? new Date(bp.nextReview).toISOString() : null;
+        const lastIso = bp.lastReview ? new Date(bp.lastReview).toISOString() : null;
+        return isDue(nextIso, bp.isActive, lastIso);
+      });
+      const dueCount = dueProgresses.length;
+
+      const frequentStruggles = dueProgresses
+        .map((bp: any) => bp.bookItem?.question)
+        .filter(Boolean)
+        .slice(0, 5);
+
+      const avgStability = activeCount > 0
+        ? Number((activeProgresses.reduce((acc: number, bp: any) => acc + (bp.stability || 0), 0) / activeCount).toFixed(1))
+        : 0;
+
+      const bookItemsData = classProgresses.map((bp: any) => ({
+        id: bp.bookItemId,
+        bookId: bp.bookItem?.bookId,
+        question: bp.bookItem?.question || '',
+        answer: bp.bookItem?.answer || '',
+        isActive: bp.isActive,
+        status: bp.status,
+        fsrsData: {
+          stability: bp.stability || 0,
+          difficulty: bp.difficulty || 5,
+          reps: bp.reps || 0,
+          lapses: bp.lapses || 0,
+          state: bp.state?.toLowerCase() || 'new',
+          lastReview: bp.lastReview ? new Date(bp.lastReview).toISOString() : null,
+          nextReview: bp.nextReview ? new Date(bp.nextReview).toISOString() : null,
+        },
+      }));
+
+      return {
+        id: m.student?.id || m.studentId,
+        name: m.student?.fullName || 'Santri',
+        email: m.student?.email || '',
+        avatarUrl: m.student?.avatarUrl || '',
+        quranSpaceCode: m.student?.quranSpaceCode || '',
+        activeItemsCount: activeCount,
+        dueTodayCount: dueCount,
+        averageStability: avgStability,
+        retentionRate: 95,
+        lastActive: m.joinedAt ? new Date(m.joinedAt).toISOString() : 'Baru bergabung',
+        frequentStruggles,
+        quranData: [],
+        bookItemsData,
+      };
+    }
   });
 
   return {
@@ -175,6 +275,32 @@ const defaultClassInclude = {
               mapanCelebrated: true,
             },
             orderBy: { pageNumber: 'asc' as const },
+          },
+          bookProgresses: {
+            where: {
+              isActive: true,
+            },
+            select: {
+              id: true,
+              bookItemId: true,
+              isActive: true,
+              status: true,
+              stability: true,
+              difficulty: true,
+              reps: true,
+              lapses: true,
+              lastReview: true,
+              nextReview: true,
+              state: true,
+              bookItem: {
+                select: {
+                  id: true,
+                  bookId: true,
+                  question: true,
+                  answer: true,
+                },
+              },
+            },
           },
         },
       },
@@ -425,6 +551,11 @@ export class ClassService {
       ? ((input.status.toLowerCase() === 'closed') ? ClassStatus.CLOSED : ClassStatus.ACTIVE)
       : undefined;
 
+    const currentMeta = (existing.metadata as Record<string, any>) || {};
+    const nextMeta = input.assignedBooksData !== undefined
+      ? { ...currentMeta, assignedBooksData: input.assignedBooksData }
+      : undefined;
+
     const updated = await prisma.class.update({
       where: { id: classId },
       data: {
@@ -435,6 +566,7 @@ export class ClassService {
         closedAt: statusEnum === ClassStatus.CLOSED ? new Date() : (statusEnum === ClassStatus.ACTIVE ? null : undefined),
         requiredJuzList: input.requiredJuzList,
         assignedBookIds: input.assignedBookIds,
+        metadata: nextMeta,
       },
       include: defaultClassInclude,
     });
@@ -542,6 +674,36 @@ export class ClassService {
     }
 
     return await quranService.reviewQuranPage(studentId, pageNumber, input);
+  }
+
+  /**
+   * Teacher conducts review for student's non-Quran book item card
+   */
+  async reviewStudentBookItem(
+    teacherId: string,
+    classId: string,
+    studentId: string,
+    itemId: string,
+    rating: 1 | 2 | 3 | 4,
+    userRole: Role,
+    notes?: string
+  ) {
+    const cls = await prisma.class.findUnique({ where: { id: classId } });
+    if (!cls) throw createError('Kelas tidak ditemukan.', 404, 'CLASS_NOT_FOUND');
+    if (cls.teacherId !== teacherId && userRole !== Role.ADMIN && userRole !== Role.SUPERADMIN) {
+      throw createError('Hanya pengajar kelas atau admin yang dapat menyimak kartu materi santri.', 403, 'FORBIDDEN');
+    }
+
+    const cleanStudentId = studentId.replace(/^std-user-/, '').replace(/^user-/, '');
+    let cleanItemId = itemId;
+    if (cleanItemId.startsWith('class-item-')) {
+      const parts = cleanItemId.split('-');
+      if (parts.length >= 5) {
+        cleanItemId = parts.slice(-5).join('-');
+      }
+    }
+
+    return await learningService.submitReview(cleanItemId, cleanStudentId, rating);
   }
 }
 

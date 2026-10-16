@@ -1,12 +1,16 @@
 import { Router, Request, Response, NextFunction } from 'express';
+import { EventEmitter } from 'events';
 import { z } from 'zod';
 import { authenticate } from '../middleware/auth';
 import { classService } from '../services/classService';
+import { wsManager } from '../websocket';
 
 export const classRouter = Router();
+export const classEventBus = new EventEmitter();
+classEventBus.setMaxListeners(200);
 
 // Protect all class endpoints with authentication
-classRouter.use(authenticate);
+classRouter.use('/classes', authenticate);
 
 function getParam(val: string | string[] | undefined): string {
   if (Array.isArray(val)) return val[0] || '';
@@ -35,6 +39,7 @@ const updateClassSchema = z.object({
   status: z.enum(['active', 'closed', 'ACTIVE', 'CLOSED']).optional(),
   requiredJuzList: z.array(z.number()).optional(),
   assignedBookIds: z.array(z.string()).optional(),
+  assignedBooksData: z.array(z.any()).optional(),
 });
 
 const joinClassSchema = z.object({
@@ -135,6 +140,42 @@ classRouter.post('/classes/join', async (req: Request, res: Response, next: Next
 });
 
 /**
+ * GET /api/v1/classes/events/stream
+ * Server-Sent Events (SSE) stream for real-time class notifications (e.g. book updates)
+ */
+classRouter.get('/classes/events/stream', (req: Request, res: Response) => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache, no-transform');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no');
+  if (typeof (res as any).flushHeaders === 'function') {
+    (res as any).flushHeaders();
+  }
+
+  // Send initial connection ACK
+  res.write(`data: ${JSON.stringify({ type: 'CONNECTED', timestamp: Date.now() })}\n\n`);
+
+  const onUpdate = (eventData: any) => {
+    try {
+      res.write(`data: ${JSON.stringify(eventData)}\n\n`);
+    } catch (err) {}
+  };
+
+  classEventBus.on('class_updated', onUpdate);
+
+  const heartbeat = setInterval(() => {
+    try {
+      res.write(': heartbeat\n\n');
+    } catch (err) {}
+  }, 25000);
+
+  req.on('close', () => {
+    clearInterval(heartbeat);
+    classEventBus.off('class_updated', onUpdate);
+  });
+});
+
+/**
  * GET /api/v1/classes/:id
  * Get class details by ID
  */
@@ -180,6 +221,16 @@ classRouter.patch('/classes/:id', async (req: Request, res: Response, next: Next
     const classId = getParam(req.params.id);
     const body = updateClassSchema.parse(req.body);
     const updated = await classService.updateClass(currentUserId, classId, body, currentUserRole);
+
+    // Broadcast real-time update event to connected clients (students and teachers)
+    classEventBus.emit('class_updated', {
+      type: 'CLASS_BOOK_UPDATED',
+      classId,
+      assignedBooksData: updated.assignedBooksData,
+      assignedBookIds: updated.assignedBookIds,
+      updatedAt: new Date().toISOString(),
+    });
+
     res.status(200).json({
       success: true,
       message: 'Kelas berhasil diperbarui.',
@@ -320,6 +371,26 @@ classRouter.post('/classes/:id/students/:studentId/quran-pages/:pageNumber/revie
       currentUserRole
     );
 
+    const cleanStudentIdQuran = studentId.replace(/^std-user-/, '').replace(/^user-/, '');
+    wsManager.broadcastToUser(cleanStudentIdQuran, {
+      type: 'STUDENT_QURAN_REVIEWED',
+      classId,
+      studentId: cleanStudentIdQuran,
+      pageNumber,
+      rating,
+      reviewerName,
+      timestamp: new Date().toISOString(),
+    });
+    wsManager.broadcastToRoom(`class:${classId}`, {
+      type: 'STUDENT_QURAN_REVIEWED',
+      classId,
+      studentId: cleanStudentIdQuran,
+      pageNumber,
+      rating,
+      reviewerName,
+      timestamp: new Date().toISOString(),
+    });
+
     res.status(200).json({
       success: true,
       message: 'Hasil simakan santri berhasil disimpan.',
@@ -329,4 +400,70 @@ classRouter.post('/classes/:id/students/:studentId/quran-pages/:pageNumber/revie
     next(error);
   }
 });
+
+/**
+ * POST /api/v1/classes/:id/students/:studentId/items/:itemId/review
+ * Teacher conducts review for student's book item card
+ */
+classRouter.post('/classes/:id/students/:studentId/items/:itemId/review', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const currentUserId = req.user!.id;
+    const currentUserRole = req.user!.role;
+    const classId = getParam(req.params.id);
+    const studentId = getParam(req.params.studentId);
+    const itemId = getParam(req.params.itemId);
+
+    const { rating, notes } = req.body;
+    if (![1, 2, 3, 4].includes(Number(rating))) {
+      return res.status(400).json({ success: false, message: 'Rating harus bernilai 1, 2, 3, atau 4' });
+    }
+
+    const result = await classService.reviewStudentBookItem(
+      currentUserId,
+      classId,
+      studentId,
+      itemId,
+      Number(rating) as 1 | 2 | 3 | 4,
+      currentUserRole,
+      notes
+    );
+
+    const cleanStudentId = studentId.replace(/^std-user-/, '').replace(/^user-/, '');
+    wsManager.broadcastToUser(cleanStudentId, {
+      type: 'STUDENT_BOOK_REVIEWED',
+      classId,
+      studentId: cleanStudentId,
+      itemId,
+      rating: Number(rating),
+      progress: result.progress,
+      reviewLog: result.reviewLog,
+      nextIntervalDays: result.nextIntervalDays,
+      reviewerId: currentUserId,
+      reviewerName: req.user?.fullName || 'Pengajar',
+      timestamp: new Date().toISOString(),
+    });
+    wsManager.broadcastToRoom(`class:${classId}`, {
+      type: 'STUDENT_BOOK_REVIEWED',
+      classId,
+      studentId: cleanStudentId,
+      itemId,
+      rating: Number(rating),
+      progress: result.progress,
+      reviewLog: result.reviewLog,
+      nextIntervalDays: result.nextIntervalDays,
+      reviewerId: currentUserId,
+      reviewerName: req.user?.fullName || 'Pengajar',
+      timestamp: new Date().toISOString(),
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Hasil review materi santri berhasil disimpan.',
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 

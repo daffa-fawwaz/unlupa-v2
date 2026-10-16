@@ -123,7 +123,7 @@ export const AuthModal: React.FC = () => {
         ? await api.register({ name: cleanName, email: cleanEmail, password: cleanPassword })
         : await api.login({ email: cleanEmail, password: cleanPassword });
 
-      await initiateUserSession(result.user);
+      await initiateUserSession(result.user, mode === 'register' ? { isNewRegistration: true } : undefined);
       setSuccess(mode === 'register' ? 'Akun berhasil dibuat.' : 'Berhasil masuk.');
 
       window.setTimeout(() => {

@@ -1,0 +1,85 @@
+# ==============================================================================
+# Unlupa v2 - Production Docker Compose Configuration
+# ==============================================================================
+
+services:
+  # ----------------------------------------------------------------------------
+  # PostgreSQL Database Service (Isolated for Unlupa v2)
+  # ----------------------------------------------------------------------------
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: "${POSTGRES_DB:-unlupa}"
+      POSTGRES_USER: "${POSTGRES_USER:-unlupa_user}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?Error: POSTGRES_PASSWORD is required}"
+    volumes:
+      - unlupa_pgdata:/var/lib/postgresql/data
+    networks:
+      - unlupa_network
+    # Port is NOT exposed to the host/internet to prevent unauthorized access
+    # and avoid port collisions (5432, 5433, 5434 are already in use on the host)
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-unlupa_user} -d $${POSTGRES_DB:-unlupa}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ----------------------------------------------------------------------------
+  # Unlupa v2 Application Service (React 19 + Express 5 + WebSocket + Prisma)
+  # ----------------------------------------------------------------------------
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: unlupa-app:latest
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: "postgresql://${POSTGRES_USER:-unlupa_user}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-unlupa}?schema=public"
+      APP_URL: "${APP_URL:-https://unlupa.id}"
+      JWT_SECRET: "${JWT_SECRET:?Error: JWT_SECRET must be set}"
+      JWT_EXPIRES_IN: "${JWT_EXPIRES_IN:-7d}"
+      GEMINI_API_KEY: "${GEMINI_API_KEY:-}"
+      FIREBASE_PROJECT_ID: "${FIREBASE_PROJECT_ID:-}"
+      VITE_FIREBASE_PROJECT_ID: "${VITE_FIREBASE_PROJECT_ID:-}"
+      BOOTSTRAP_ADMIN_EMAILS: "${BOOTSTRAP_ADMIN_EMAILS:-}"
+      SUPABASE_URL: "${SUPABASE_URL:-}"
+      SUPABASE_SERVICE_ROLE_KEY: "${SUPABASE_SERVICE_ROLE_KEY:-}"
+      SUPABASE_BUCKET: "${SUPABASE_BUCKET:-unlupa-storage}"
+    ports:
+      # Bind exclusively to 127.0.0.1 on the VPS host so Nginx can reverse-proxy it safely.
+      # Default host port is 3005, avoiding conflicts with ports 3000, 3002, 5432, 5433, 5434, 8000.
+      - "127.0.0.1:${APP_PORT:-3005}:3000"
+    networks:
+      - unlupa_network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+# ------------------------------------------------------------------------------
+# Persistent Storage Volumes
+# ------------------------------------------------------------------------------
+volumes:
+  unlupa_pgdata:
+    name: unlupa_v2_pgdata
+
+# ------------------------------------------------------------------------------
+# Isolated Internal Network
+# ------------------------------------------------------------------------------
+networks:
+  unlupa_network:
+    name: unlupa_v2_network
+    driver: bridge

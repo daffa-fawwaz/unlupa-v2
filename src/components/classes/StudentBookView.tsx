@@ -1,22 +1,22 @@
-import React, { useState, useMemo } from "react";
-import { ClassStudent, ClassGroup, BookItem, Chapter } from "../../types";
-import { useApp } from "../../context/AppContext";
-import { isDue, getIntervalDays } from "../../lib/fsrs";
-import {
-  ArrowLeft,
-  BookOpen,
-  Clock,
-  Award,
-  CheckCircle2,
-  UserMinus,
-  Printer,
-  Share2,
-  Layers,
-  Brain,
-  TrendingUp,
-  Check,
-  RotateCcw,
-  ChevronDown,
+import React, { useState, useMemo } from 'react';
+import { ClassStudent, ClassGroup, BookItem, Chapter } from '../../types';
+import { useApp } from '../../context/AppContext';
+import { isDue, getIntervalDays, updateNonQuranFSRS } from '../../lib/fsrs';
+import { 
+  ArrowLeft, 
+  BookOpen, 
+  Clock, 
+  Award, 
+  CheckCircle2, 
+  UserMinus, 
+  Printer, 
+  Share2, 
+  Layers, 
+  Brain, 
+  TrendingUp, 
+  Check, 
+  RotateCcw, 
+  ChevronDown, 
   ChevronRight,
   Eye,
   HelpCircle,
@@ -50,10 +50,11 @@ export const StudentBookView: React.FC<StudentBookViewProps> = ({
     removeStudentFromClass,
   } = useApp();
 
-  const assignedBookId =
-    classGroup.assignedBookIds?.[0] || books[0]?.id || "book-1";
-  const assignedBook = books.find((b) => b.id === assignedBookId) || books[0];
+  const assignedBookId = classGroup.assignedBookIds?.[0] || books[0]?.id || 'book-1';
+  const assignedPkg = classGroup.assignedBooksData?.find((p: any) => p?.book?.id === assignedBookId || p?.book?.masterBookId === assignedBookId) || classGroup.assignedBooksData?.[0];
+  const assignedBook = assignedPkg?.book || books.find(b => b.id === assignedBookId) || books[0];
   const assignedClassBookId = `class-book-${classGroup.id}-${assignedBookId}`;
+  const isCurrentUser = student.id === userProfile.id || student.id === `std-user-${userProfile.id}` || (student.name && userProfile.fullName && student.name.toLowerCase().includes(userProfile.fullName.toLowerCase()));
 
   // Local state
   const [viewMode, setViewMode] = useState<
@@ -67,48 +68,89 @@ export const StudentBookView: React.FC<StudentBookViewProps> = ({
   const [testingCardIndex, setTestingCardIndex] = useState(0);
   const [isAnswerRevealed, setIsAnswerRevealed] = useState(false);
   const [actionNotice, setActionNotice] = useState<string | null>(null);
+  const [localReviewedItems, setLocalReviewedItems] = useState<Record<string, { rating: 1 | 2 | 3 | 4; reviewedAt: string }>>({});
 
   // Chapters of the assigned book
   const bookChapters = useMemo(() => {
-    const direct = chapters.filter(
-      (c) => c.bookId === assignedBookId || c.bookId === assignedClassBookId,
-    );
+    if (assignedPkg?.chapters && assignedPkg.chapters.length > 0) return assignedPkg.chapters;
+    const direct = chapters.filter(c => c.bookId === assignedBookId || c.bookId === assignedClassBookId);
     if (direct.length > 0) return direct;
-    return chapters.filter((c) => c.bookId === assignedBook?.id);
-  }, [chapters, assignedBookId, assignedClassBookId, assignedBook?.id]);
+    return chapters.filter(c => c.bookId === assignedBook?.id);
+  }, [assignedPkg, chapters, assignedBookId, assignedClassBookId, assignedBook?.id]);
 
   // Student items for this book
   const studentItems: BookItem[] = useMemo(() => {
     const rawLive = getLiveStudentBookItems(student.id);
-    let pool: BookItem[] = [];
-    if (rawLive && rawLive.length > 0) {
-      pool = rawLive;
-    } else if (student.bookItemsData && student.bookItemsData.length > 0) {
-      pool = student.bookItemsData;
-    } else {
-      pool = items.filter(
-        (i) => i.bookId === assignedBookId || i.bookId === assignedClassBookId,
-      );
+
+    const masterItems = (assignedPkg?.items && assignedPkg.items.length > 0)
+      ? assignedPkg.items
+      : items.filter(i => i.bookId === assignedBookId || i.bookId === assignedBook?.id);
+
+    const studentMap = new Map<string, BookItem>();
+    const registerItem = (it: BookItem) => {
+      if (!it) return;
+      if (it.id) studentMap.set(it.id, it);
+      if (it.masterItemId) studentMap.set(it.masterItemId, it);
+      if (it.id && it.id.startsWith('class-item-')) {
+        const parts = it.id.split('-');
+        if (parts.length >= 5) {
+          const suffixUuid = parts.slice(-5).join('-');
+          studentMap.set(suffixUuid, it);
+        }
+      }
+      if (it.question) {
+        studentMap.set(`q:${it.question.trim().toLowerCase()}`, it);
+      }
+    };
+
+    if (Array.isArray(student.bookItemsData)) {
+      student.bookItemsData.forEach(registerItem);
+    }
+    if (Array.isArray(rawLive)) {
+      rawLive.forEach(registerItem);
+    }
+    if (isCurrentUser) {
+      items.filter(i => 
+        i.bookId === assignedBookId || 
+        i.bookId === assignedClassBookId ||
+        i.bookId?.startsWith(`class-book-${classGroup.id}-`)
+      ).forEach(registerItem);
     }
 
-    const masterItems = items.filter(
-      (i) => i.bookId === assignedBookId || i.bookId === assignedBook?.id,
-    );
-    if (masterItems.length === 0) return pool;
+    if (masterItems.length === 0) {
+      return (student.bookItemsData && student.bookItemsData.length > 0) 
+        ? student.bookItemsData 
+        : (rawLive || []);
+    }
 
-    const studentMap = new Map<string, BookItem>(
-      pool.map((i) => [i.masterItemId || i.id, i]),
-    );
+    return masterItems.map(m => {
+      const found = studentMap.get(m.id) ||
+        (m.masterItemId ? studentMap.get(m.masterItemId) : undefined) ||
+        (m.id?.startsWith('class-item-') ? studentMap.get(m.id.split('-').slice(-5).join('-')) : undefined) ||
+        (m.question ? studentMap.get(`q:${m.question.trim().toLowerCase()}`) : undefined);
 
-    return masterItems.map((m) => {
-      const found = studentMap.get(m.id);
-      if (found) {
+      const localReview = localReviewedItems[m.id] || 
+        (found?.id && localReviewedItems[found.id]) || 
+        (m.masterItemId && localReviewedItems[m.masterItemId]) ||
+        (m.id?.startsWith('class-item-') ? localReviewedItems[m.id.split('-').slice(-5).join('-')] : undefined);
+
+      if (found || localReview) {
+        const baseFsrs = found?.fsrsData || m.fsrsData;
+        let finalFsrs = baseFsrs;
+        let finalStatus = found?.status || (found?.isActive ? 'active' : 'inactive');
+
+        if (localReview) {
+          const { newState, nextIntervalDays } = updateNonQuranFSRS(baseFsrs, localReview.rating);
+          finalFsrs = newState;
+          finalStatus = nextIntervalDays >= 375 ? 'mastered' : 'active';
+        }
+
         return {
           ...m,
-          isActive: found.isActive,
-          status: found.status,
-          fsrsData: found.fsrsData,
-          reviewLogs: found.reviewLogs || [],
+          isActive: Boolean(found?.isActive) || Boolean(localReview),
+          status: finalStatus,
+          fsrsData: finalFsrs,
+          reviewLogs: found?.reviewLogs || []
         };
       }
       return {
@@ -127,15 +169,7 @@ export const StudentBookView: React.FC<StudentBookViewProps> = ({
         reviewLogs: [],
       };
     });
-  }, [
-    getLiveStudentBookItems,
-    student.id,
-    student.bookItemsData,
-    items,
-    assignedBookId,
-    assignedClassBookId,
-    assignedBook?.id,
-  ]);
+  }, [getLiveStudentBookItems, student.id, student.bookItemsData, items, assignedBookId, assignedClassBookId, assignedBook?.id, assignedPkg, isCurrentUser, classGroup.id, localReviewedItems]);
 
   const activeItems = useMemo(
     () => studentItems.filter((i) => i.isActive),
@@ -170,6 +204,10 @@ export const StudentBookView: React.FC<StudentBookViewProps> = ({
   }, [computedAverageStability]);
 
   const handleGradeCard = (itemId: string, rating: 1 | 2 | 3 | 4) => {
+    setLocalReviewedItems(prev => ({
+      ...prev,
+      [itemId]: { rating, reviewedAt: new Date().toISOString() }
+    }));
     reviewStudentBookItem(classGroup.id, student.id, itemId, rating);
     const labels: Record<number, string> = {
       1: "Perlu Belajar Ulang (Again)",

@@ -157,7 +157,7 @@ export const learningService = {
     }
 
     // Enforce book access and reject paid public books for non-owners (AUDIT-4-07)
-    checkBookAccess(item.book, userId);
+    await checkBookAccess(item.book, userId);
 
     const existingProgress = await prisma.userBookItemProgress.findUnique({
       where: {
@@ -248,7 +248,7 @@ export const learningService = {
     }
 
     // Enforce book access and reject paid public books for non-owners (AUDIT-4-07)
-    checkBookAccess(item.book, userId);
+    await checkBookAccess(item.book, userId);
 
     const maxRetries = 3;
     let attempt = 0;

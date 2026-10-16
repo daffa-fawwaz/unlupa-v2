@@ -2,6 +2,8 @@ import { Router, Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { authenticate } from '../middleware/auth';
 import { learningService } from '../services/learningService';
+import { wsManager } from '../websocket';
+import { prisma } from '../db';
 
 export const learningRouter = Router();
 
@@ -120,6 +122,39 @@ learningRouter.post('/items/:id/review', async (req: Request, res: Response, nex
       currentUserId,
       validatedData.rating
     );
+
+    // Realtime broadcast via WebSocket
+    const cleanUserId = currentUserId.replace(/^std-user-/, '').replace(/^user-/, '');
+    wsManager.broadcastToUser(cleanUserId, {
+      type: 'STUDENT_BOOK_REVIEWED',
+      studentId: cleanUserId,
+      itemId,
+      rating: validatedData.rating,
+      progress: result.progress,
+      reviewLog: result.reviewLog,
+      nextIntervalDays: result.nextIntervalDays,
+      timestamp: new Date().toISOString(),
+    });
+
+    // Also broadcast to active classes where this student is enrolled
+    prisma.classMember.findMany({
+      where: { studentId: cleanUserId, class: { status: 'ACTIVE' } },
+      select: { classId: true }
+    }).then(memberships => {
+      memberships.forEach(m => {
+        wsManager.broadcastToRoom(`class:${m.classId}`, {
+          type: 'STUDENT_BOOK_REVIEWED',
+          classId: m.classId,
+          studentId: cleanUserId,
+          itemId,
+          rating: validatedData.rating,
+          progress: result.progress,
+          reviewLog: result.reviewLog,
+          nextIntervalDays: result.nextIntervalDays,
+          timestamp: new Date().toISOString(),
+        });
+      });
+    }).catch(() => {});
 
     res.status(200).json({
       success: true,

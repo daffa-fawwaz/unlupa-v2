@@ -13,9 +13,27 @@ import {
   ImportBookInput,
 } from '../services/bookService';
 
+import { classEventBus } from './class.routes';
+
 export const bookRouter = Router();
 
-// Protect all book endpoints with Firebase Authentication
+/**
+ * GET /api/v1/books/public/library
+ * Public library entries from PostgreSQL database (accessible publicly)
+ */
+bookRouter.get('/books/public/library', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const entries = await bookService.getPublicLibrary();
+    res.status(200).json({
+      success: true,
+      data: entries,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Protect all remaining book endpoints with Authentication
 bookRouter.use(authenticate);
 
 function getParam(val: string | string[] | undefined): string {
@@ -41,6 +59,7 @@ const updateBookSchema = z.object({
   coverUrl: z.string().trim().url('URL cover tidak valid').optional().nullable(),
   category: z.string().trim().max(100).optional(),
   isPublic: z.boolean().optional(),
+  isReadonly: z.boolean().optional(),
 });
 
 const createChapterSchema = z.object({
@@ -271,6 +290,17 @@ bookRouter.put('/books/:id', async (req: Request, res: Response, next: NextFunct
     const validatedData = updateBookSchema.parse(req.body) as UpdateBookInput;
 
     const updatedBook = await bookService.updateBook(bookId, currentUserId, validatedData);
+
+    // Emit real-time event if book publication status or details changed
+    if (validatedData.isPublic !== undefined || validatedData.title || validatedData.description) {
+      classEventBus.emit('class_updated', {
+        type: 'LIBRARY_BOOK_UPDATED',
+        bookId,
+        isPublic: updatedBook.isPublic,
+        title: updatedBook.title,
+      });
+    }
+
     res.status(200).json({
       success: true,
       data: updatedBook,
@@ -312,6 +342,30 @@ bookRouter.post('/books/:id/duplicate', async (req: Request, res: Response, next
     res.status(201).json({
       success: true,
       data: duplicatedBook,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * POST /api/v1/books/:id/import-library
+ * Import/clone a public book into user's personal space as a readonly library copy
+ */
+bookRouter.post('/books/:id/import-library', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const currentUserId = req.user!.id;
+    const bookId = getParam(req.params.id);
+    const result = await bookService.importLibraryBook(currentUserId, bookId);
+
+    const statusCode = result.isExisting ? 200 : 201;
+    res.status(statusCode).json({
+      success: true,
+      message: result.isExisting
+        ? 'Buku perpustakaan sudah pernah diimpor ke ruang Anda.'
+        : 'Buku perpustakaan berhasil diimpor ke ruang Anda.',
+      data: result.book,
+      isExisting: result.isExisting,
     });
   } catch (error) {
     next(error);

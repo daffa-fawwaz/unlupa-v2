@@ -122,16 +122,23 @@ export interface ImportResponsePayload {
 // ============================================================================
 
 export function mapBackendBookToBook(b: BackendBook): Book {
+  // A book is only imported if it is a clone of a master book or marked category 'imported'
+  const isImported = Boolean(b.masterBookId || b.category === 'imported');
+  // Original master creations are NEVER read-only for their author
+  const isOriginalMaster = !b.masterBookId && b.category !== 'imported';
+  const isReadonly = isOriginalMaster ? false : Boolean(b.isReadonly);
+
   return {
     id: b.id,
     userId: b.userId || null,
     classId: null,
     masterBookId: b.masterBookId || null,
+    isImported: isImported,
     title: b.title,
     description: b.description || '',
     coverUrl: b.coverUrl || 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=600&auto=format&fit=crop&q=80',
     isPublic: Boolean(b.isPublic),
-    isReadonly: Boolean(b.isReadonly),
+    isReadonly: isReadonly,
     authorName: b.authorName || 'Penulis Pribadi',
     category: b.category || '',
     price: b.price || 0,
@@ -242,6 +249,7 @@ export const bookApiService = {
       coverUrl?: string | null;
       category?: string;
       isPublic?: boolean;
+      isReadonly?: boolean;
     }
   ) {
     const res = await api.put<BackendBook>(`/api/v1/books/${id}`, input);
@@ -255,6 +263,16 @@ export const bookApiService = {
 
   async duplicateBook(id: string) {
     const res = await api.post<BackendBook>(`/api/v1/books/${id}/duplicate`);
+    return res.data;
+  },
+
+  async importLibraryBook(id: string) {
+    const res = await api.post<{ success: boolean; message: string; data: BackendBook }>(`/api/v1/books/${id}/import-library`);
+    return res.data;
+  },
+
+  async getPublicLibrary(): Promise<any[]> {
+    const res = await api.get<any[]>('/api/v1/books/public/library');
     return res.data;
   },
 
