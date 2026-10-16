@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { ClassStudent, ClassGroup, BookItem, Chapter } from '../../types';
 import { useApp } from '../../context/AppContext';
-import { isDue, getIntervalDays, updateNonQuranFSRS } from '../../lib/fsrs';
+import { isDue, getIntervalDays, updateNonQuranFSRS, calculateRetrievability } from '../../lib/fsrs';
 import { 
   ArrowLeft, 
   BookOpen, 
@@ -200,7 +200,58 @@ export const StudentBookView: React.FC<StudentBookViewProps> = ({
   }, [activeItems, student.averageStability]);
 
   const retentionRate = useMemo(() => {
-    return Math.min(99, Math.round(85 + (computedAverageStability || 5) * 0.5));
+    if (activeItems.length === 0) {
+      if (!computedAverageStability) return 0;
+      return Math.round(calculateRetrievability(computedAverageStability, 1) * 100);
+    }
+    const now = Date.now();
+    let totalRetrievability = 0;
+    for (const it of activeItems) {
+      const s = it.fsrsData?.stability || 0;
+      if (s <= 0) {
+        totalRetrievability += 0.90;
+        continue;
+      }
+      const lastRev = it.fsrsData?.lastReview;
+      const daysPassed = lastRev 
+        ? Math.max(0, (now - new Date(lastRev).getTime()) / (1000 * 60 * 60 * 24))
+        : 0;
+      totalRetrievability += calculateRetrievability(s, daysPassed);
+    }
+    return Math.min(100, Math.max(0, Math.round((totalRetrievability / activeItems.length) * 100)));
+  }, [activeItems, computedAverageStability]);
+
+  const retentionProjections = useMemo(() => {
+    const s = computedAverageStability;
+    const intervals = [
+      { day: "Hari ke-1 (Setelah Setoran)", days: 1 },
+      { day: "Hari ke-3", days: 3 },
+      { day: "Hari ke-7 (Minggu Pertama)", days: 7 },
+      { day: "Hari ke-14 (2 Minggu)", days: 14 },
+      { day: "Hari ke-30 (1 Bulan)", days: 30 },
+      { day: "Hari ke-60 (2 Bulan)", days: 60 },
+    ];
+
+    return intervals.map(intv => {
+      let prob = 0;
+      if (s > 0) {
+        prob = Math.round(calculateRetrievability(s, intv.days) * 100);
+      } else {
+        prob = Math.max(10, Math.round(100 / (1 + intv.days * 0.5)));
+      }
+
+      let color = "bg-emerald-500";
+      if (prob < 60) color = "bg-rose-500";
+      else if (prob < 75) color = "bg-amber-500";
+      else if (prob < 85) color = "bg-blue-500";
+      else if (prob < 93) color = "bg-emerald-400";
+
+      return {
+        day: intv.day,
+        prob,
+        color
+      };
+    });
   }, [computedAverageStability]);
 
   const handleGradeCard = (itemId: string, rating: 1 | 2 | 3 | 4) => {
@@ -996,71 +1047,15 @@ export const StudentBookView: React.FC<StudentBookViewProps> = ({
               <div className="flex items-center justify-between">
                 <h5 className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white flex items-center gap-2">
                   <TrendingUp className="w-4 h-4 text-indigo-600" />
-                  Simulasi Probabilitas Daya Ingat Seiring Waktu
+                  Proyeksi Retensi Daya Ingat (FSRS-6 Memory Model)
                 </h5>
                 <span className="text-[10px] font-semibold text-slate-400">
-                  Model Kurva Daya Ingat
+                  Model Kurva Daya Ingat (FSRS-6)
                 </span>
               </div>
 
               <div className="space-y-3 pt-1">
-                {[
-                  {
-                    day: "Hari ke-1 (Setelah Setoran)",
-                    prob: 98,
-                    color: "bg-emerald-500",
-                  },
-                  {
-                    day: "Hari ke-3",
-                    prob: Math.max(
-                      70,
-                      Math.round(
-                        98 - (3 / Math.max(2, computedAverageStability)) * 25,
-                      ),
-                    ),
-                    color: "bg-emerald-400",
-                  },
-                  {
-                    day: "Hari ke-7 (Minggu Pertama)",
-                    prob: Math.max(
-                      60,
-                      Math.round(
-                        92 - (7 / Math.max(3, computedAverageStability)) * 20,
-                      ),
-                    ),
-                    color: "bg-blue-500",
-                  },
-                  {
-                    day: "Hari ke-14 (2 Minggu)",
-                    prob: Math.max(
-                      50,
-                      Math.round(
-                        88 - (14 / Math.max(5, computedAverageStability)) * 18,
-                      ),
-                    ),
-                    color: "bg-blue-400",
-                  },
-                  {
-                    day: "Hari ke-30 (1 Bulan)",
-                    prob: Math.max(
-                      45,
-                      Math.round(
-                        85 - (30 / Math.max(8, computedAverageStability)) * 15,
-                      ),
-                    ),
-                    color: "bg-amber-500",
-                  },
-                  {
-                    day: "Hari ke-60 (2 Bulan)",
-                    prob: Math.max(
-                      40,
-                      Math.round(
-                        80 - (60 / Math.max(12, computedAverageStability)) * 12,
-                      ),
-                    ),
-                    color: "bg-purple-500",
-                  },
-                ].map((item, idx) => (
+                {retentionProjections.map((item, idx) => (
                   <div key={idx} className="space-y-1.5">
                     <div className="flex justify-between text-xs">
                       <span className="font-semibold text-slate-700 dark:text-slate-300">

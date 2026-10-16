@@ -58,7 +58,7 @@ classRouter.post('/classes', async (req: Request, res: Response, next: NextFunct
   try {
     const currentUserId = req.user!.id;
     const body = createClassSchema.parse(req.body);
-    const created = await classService.createClass(currentUserId, body);
+    const created = await classService.createClass(currentUserId, body as unknown as import('../services/classService').CreateClassInput);
     res.status(201).json({
       success: true,
       message: 'Kelas berhasil dibuat.',

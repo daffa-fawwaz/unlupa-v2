@@ -375,6 +375,7 @@ export const INITIAL_ITEMS: BookItem[] = [
 
 export interface LibraryEntry {
   id: string;
+  title?: string;
   book: Book;
   chapters: Chapter[];
   items: BookItem[];

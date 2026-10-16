@@ -30,7 +30,7 @@ export const useDailyReminder = (
           if (Notification.permission === "granted") {
             new Notification("Waktunya Muraja'ah! 📖", {
               body: `Ada ${dueCount} materi hafalan yang jatuh tempo hari ini. Yuk rutinkan muraja'ahmu!`,
-              icon: "/favicon.svg",
+              icon: "/favicon.png",
             });
             try {
               localStorage.setItem("unlupa_last_notified_date", today);

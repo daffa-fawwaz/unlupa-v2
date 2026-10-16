@@ -1,5 +1,6 @@
 import React from 'react';
 import { School, CheckCircle2, User, X, Sparkles, BookOpen, Users } from 'lucide-react';
+import { Language } from '../../types';
 
 export interface ConnectedClassItem {
   id: string;
@@ -14,7 +15,7 @@ interface ClassBookSyncPromptModalProps {
   associatedClasses: ConnectedClassItem[];
   onConfirmSync: () => void; // User chose "Ya"
   onCancelSync: () => void;  // User chose "Tidak"
-  language: 'id' | 'en';
+  language: Language;
 }
 
 export const ClassBookSyncPromptModal: React.FC<ClassBookSyncPromptModalProps> = ({

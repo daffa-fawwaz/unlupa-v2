@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { getIntervalDays, getNonQuranIntervalDays, predictNonQuranIntervals, isReviewedToday, isDue } from '../../lib/fsrs';
 import { useApp } from '../../context/AppContext';
 import { useSwipeGesture } from '../../hooks/useSwipeGesture';
@@ -33,6 +33,7 @@ import { BilingualCardText } from '../common/BilingualCardText';
 import { ImageLightboxModal } from '../common/ImageLightboxModal';
 import { AdaptiveFlashcardImage } from '../common/AdaptiveFlashcardImage';
 import { normalizeBilingualText } from '../../utils/bilingualHelper';
+import { extractClassIdFromBook } from '../../services/classLifecycleService';
 import { 
   Plus, 
   Library, 
@@ -84,7 +85,8 @@ import {
   Maximize2,
   HelpCircle,
   Lock,
-  Unlock
+  Unlock,
+  School
 } from 'lucide-react';
 
 export interface PersonalSpaceProps {
@@ -310,6 +312,70 @@ export const PersonalSpace: React.FC<PersonalSpaceProps> = ({
 
     return Array.from(uniqueMap.values());
   };
+
+  // Helper: Find class name for a book (specifically useful for Class filter tab)
+  const getClassNameForBook = useCallback((b: Book): string | null => {
+    if (!b) return null;
+    const allClasses = [...myClasses, ...teachingClasses];
+
+    // 1. Direct classId on book
+    if (b.classId) {
+      const cls = allClasses.find(c => c.id === b.classId);
+      if (cls) return cls.name;
+    }
+
+    // 2. Extracted classId from id: class-book-{classId}-{masterBookId}
+    const extractedCid = extractClassIdFromBook(b);
+    if (extractedCid) {
+      const cls = allClasses.find(c => c.id === extractedCid);
+      if (cls) return cls.name;
+    }
+
+    // 3. Prefix match with class id
+    const prefixCls = allClasses.find(c => b.id.startsWith(`class-book-${c.id}-`));
+    if (prefixCls) return prefixCls.name;
+
+    // 4. In assignedBookIds
+    const assignedCls = allClasses.find(c => 
+      c.assignedBookIds?.includes(b.id) || 
+      Boolean(b.masterBookId && c.assignedBookIds?.includes(b.masterBookId!))
+    );
+    if (assignedCls) return assignedCls.name;
+
+    // 5. In assignedBooksData packages
+    const inPkgCls = allClasses.find(c => 
+      c.assignedBooksData?.some((p: any) => 
+        p?.book?.id === b.id || 
+        p?.book?.id === b.masterBookId || 
+        b.id.endsWith(`-${p?.book?.id}`) || 
+        b.id.endsWith(`-${p?.book?.masterBookId}`) ||
+        (b.title && p?.book?.title?.trim().toLowerCase() === b.title.trim().toLowerCase())
+      )
+    );
+    if (inPkgCls) return inPkgCls.name;
+
+    // 6. Same title in non-quran class
+    const titleMatch = allClasses.find(c => 
+      c.type === 'non-quran' && c.name.trim().toLowerCase() === b.title.trim().toLowerCase()
+    );
+    if (titleMatch) return titleMatch.name;
+
+    // 7. Fallback using getBookAssociatedClasses
+    const associated = getBookAssociatedClasses(b);
+    if (associated.length > 0) {
+      const joined = associated.find(c => myClasses.some(mc => mc.id === c.id));
+      if (joined) return joined.name;
+      return associated[0].name;
+    }
+
+    // 8. If still not found, check authorName format: "Nama Kelas • Pengajar"
+    if (b.category === 'class' && b.authorName && b.authorName.includes('•')) {
+      const parsedClassName = b.authorName.split('•')[0].trim();
+      if (parsedClassName) return parsedClassName;
+    }
+
+    return null;
+  }, [myClasses, teachingClasses, getBookAssociatedClasses]);
 
   const [selectedBookId, setSelectedBookId] = useState<string | null>(selectedPersonalBookId || editingClassBookId || initialBookId || null);
 
@@ -1355,6 +1421,16 @@ export const PersonalSpace: React.FC<PersonalSpaceProps> = ({
                           </span>
                         )}
 
+                        {!book.isReadonly && isImportedBook(book) && (
+                          <span 
+                            title={language === 'en' ? 'Open License (Editable Copy)' : 'Lisensi Terbuka (Salinan Bisa Diedit)'}
+                            className="bg-emerald-600/85 backdrop-blur-xs text-white text-[7px] sm:text-[8px] font-bold px-1.5 py-0.2 rounded flex items-center gap-0.5 shadow-2xs"
+                          >
+                            <Pencil className="w-2 h-2 shrink-0" />
+                            {language === 'en' ? 'Editable' : 'Bisa Edit'}
+                          </span>
+                        )}
+
                         {book.isPublic && isOwnerOfBook(book) && (
                           <span 
                             title={language === 'en' ? 'Published to Library' : 'Dipublikasikan ke Pustaka'}
@@ -1442,6 +1518,17 @@ export const PersonalSpace: React.FC<PersonalSpaceProps> = ({
                       >
                         {book.title}
                       </h4>
+
+                      {/* Display class name when filtering by "Kelas" */}
+                      {activeBookTab === 'class' && getClassNameForBook(book) && (
+                        <div 
+                          title={`${language === 'en' ? 'Class' : 'Kelas'}: ${getClassNameForBook(book)}`}
+                          className="mt-1 w-full max-w-[95%] px-1.5 py-0.5 rounded-lg bg-amber-500/10 dark:bg-amber-400/15 border border-amber-300/60 dark:border-amber-600/40 flex items-center justify-center gap-1 text-[9px] sm:text-[10px] font-bold text-amber-800 dark:text-amber-200 shadow-2xs group-hover:bg-amber-500/20 transition-all select-none"
+                        >
+                          <School className="w-2.5 h-2.5 shrink-0 text-amber-600 dark:text-amber-400" />
+                          <span className="truncate">{getClassNameForBook(book)}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 );

@@ -9,7 +9,7 @@
 FROM node:22-alpine AS deps
 WORKDIR /app
 
-RUN apk add --no-cache libc6-compat
+RUN apk add --no-cache libc6-compat openssl
 
 # Copy package manifests and Prisma schema for client generation
 COPY package.json package-lock.json ./
@@ -41,7 +41,7 @@ RUN npm run build
 FROM node:22-alpine AS prod-deps
 WORKDIR /app
 
-RUN apk add --no-cache libc6-compat
+RUN apk add --no-cache libc6-compat openssl
 
 COPY package.json package-lock.json ./
 COPY prisma ./prisma
@@ -62,7 +62,7 @@ ENV NODE_ENV=production
 ENV PORT=3000
 
 # Install runtime utilities
-RUN apk add --no-cache libc6-compat wget
+RUN apk add --no-cache libc6-compat wget openssl
 
 # Create unprivileged application user and group
 RUN addgroup --system --gid 1001 unlupa && \

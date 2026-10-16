@@ -1541,10 +1541,7 @@ export const bookService = {
     const existingClone = await prisma.book.findFirst({
       where: {
         userId: currentUserId,
-        OR: [
-          { masterBookId: masterBook.id },
-          { title: masterBook.title, isReadonly: true },
-        ],
+        masterBookId: masterBook.id,
       },
       include: {
         chapters: true,
@@ -1553,6 +1550,21 @@ export const bookService = {
     });
 
     if (existingClone) {
+      // If the master book license is editable (!isReadonly), synchronize clone to editable
+      if (existingClone.isReadonly && !masterBook.isReadonly) {
+        const updatedClone = await prisma.book.update({
+          where: { id: existingClone.id },
+          data: { isReadonly: false },
+          include: {
+            chapters: true,
+            items: true,
+          },
+        });
+        return {
+          isExisting: true,
+          book: updatedClone,
+        };
+      }
       return {
         isExisting: true,
         book: existingClone,

@@ -162,6 +162,7 @@ export interface ClassStudent {
   email: string;
   avatarUrl: string;
   activeItemsCount: number;
+  activePagesCount?: number;
   dueTodayCount: number;
   averageStability: number;
   lastActive: string;

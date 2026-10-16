@@ -14,10 +14,18 @@ if [ -z "$DATABASE_URL" ]; then
 fi
 
 echo "[Unlupa] Menjalankan Prisma Database Migrations (prisma migrate deploy)..."
-if ! npx prisma migrate deploy; then
-  echo "[Unlupa FATAL] Prisma migration gagal diterapkan! Startup aplikasi dibatalkan untuk mencegah inkonsistensi skema." >&2
-  exit 1
-fi
+MAX_RETRIES=15
+RETRY_COUNT=0
+
+until npx prisma migrate deploy; do
+  RETRY_COUNT=$((RETRY_COUNT + 1))
+  if [ $RETRY_COUNT -ge $MAX_RETRIES ]; then
+    echo "[Unlupa FATAL] Prisma migration gagal diterapkan setelah $MAX_RETRIES percobaan! Startup aplikasi dibatalkan." >&2
+    exit 1
+  fi
+  echo "[Unlupa] Database belum siap atau koneksi terputus, mencoba kembali dalam 2 detik ($RETRY_COUNT/$MAX_RETRIES)..."
+  sleep 2
+done
 echo "[Unlupa] Migrasi database berhasil diaplikasikan secara konsisten."
 
 echo "[Unlupa] Menjalankan aplikasi utama..."

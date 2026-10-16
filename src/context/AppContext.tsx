@@ -3474,7 +3474,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             updatedAt: new Date().toISOString()
           };
         }
-        if (b.masterBookId === id) {
+        if (b.masterBookId === id && (b.category === 'class' || Boolean(b.classId) || b.id.startsWith('class-book-'))) {
           return {
             ...b,
             title: data.title !== undefined ? data.title : b.title,
@@ -3698,12 +3698,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           return { ...c, ...data };
         }
         if (c.masterChapterId === id) {
-          return {
-            ...c,
-            title: data.title !== undefined ? data.title : c.title,
-            description: data.description !== undefined ? data.description : c.description,
-            order: data.order !== undefined ? data.order : c.order,
-          };
+          const chapBook = books.find(b => b.id === c.bookId);
+          if (chapBook && (chapBook.category === 'class' || Boolean(chapBook.classId) || chapBook.id.startsWith('class-book-'))) {
+            return {
+              ...c,
+              title: data.title !== undefined ? data.title : c.title,
+              description: data.description !== undefined ? data.description : c.description,
+              order: data.order !== undefined ? data.order : c.order,
+            };
+          }
         }
         return c;
       });
@@ -3741,7 +3744,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
     const masterIdsToDelete = [chapterId, ...getDescendants(chapterId, chapters)];
     const classChapterIdsToDelete = chapters
-      .filter(c => c.masterChapterId && masterIdsToDelete.includes(c.masterChapterId))
+      .filter(c => {
+        if (!c.masterChapterId || !masterIdsToDelete.includes(c.masterChapterId)) return false;
+        const chapBook = books.find(b => b.id === c.bookId);
+        return Boolean(chapBook && (chapBook.category === 'class' || Boolean(chapBook.classId) || chapBook.id.startsWith('class-book-')));
+      })
       .map(c => c.id);
     const allIdsToDelete = [...masterIdsToDelete, ...classChapterIdsToDelete];
 
@@ -3904,15 +3911,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         // If this is a class item mirroring the master item being updated:
         // Update content & layout, but PRESERVE student's activation, FSRS state, and review logs!
         if (i.masterItemId === id) {
-          return {
-            ...i,
-            question: data.question !== undefined ? normalizeBilingualText(data.question) : i.question,
-            answer: data.answer !== undefined ? normalizeBilingualText(data.answer) : i.answer,
-            explanation: data.explanation !== undefined ? (data.explanation ? normalizeBilingualText(data.explanation) : '') : i.explanation,
-            imageQ: data.imageQ !== undefined ? data.imageQ : i.imageQ,
-            imageA: data.imageA !== undefined ? data.imageA : i.imageA,
-            tags: data.tags !== undefined ? data.tags : i.tags,
-          };
+          const itemBook = books.find(b => b.id === i.bookId);
+          if (itemBook && (itemBook.category === 'class' || Boolean(itemBook.classId) || itemBook.id.startsWith('class-book-'))) {
+            return {
+              ...i,
+              question: data.question !== undefined ? normalizeBilingualText(data.question) : i.question,
+              answer: data.answer !== undefined ? normalizeBilingualText(data.answer) : i.answer,
+              explanation: data.explanation !== undefined ? (data.explanation ? normalizeBilingualText(data.explanation) : '') : i.explanation,
+              imageQ: data.imageQ !== undefined ? data.imageQ : i.imageQ,
+              imageA: data.imageA !== undefined ? data.imageA : i.imageA,
+              tags: data.tags !== undefined ? data.tags : i.tags,
+            };
+          }
         }
         return i;
       });
@@ -3940,7 +3950,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const deleteItem = (itemId: string) => {
     const previousItems = items;
-    setItems(prev => prev.filter(i => i.id !== itemId && i.masterItemId !== itemId));
+    setItems(prev => prev.filter(i => {
+      if (i.id === itemId) return false;
+      if (i.masterItemId === itemId) {
+        const itemBook = books.find(b => b.id === i.bookId);
+        if (itemBook && (itemBook.category === 'class' || Boolean(itemBook.classId) || itemBook.id.startsWith('class-book-'))) {
+          return false;
+        }
+      }
+      return true;
+    }));
 
     if (userProfile.id !== 'guest' && userProfile.backendId && isValidUUID(itemId)) {
       const currentUid = userProfile.id;
@@ -3976,26 +3995,69 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     }
 
-    // Fallback: Local in-memory clone
-    const resetItems = entry.items.map(i => ({
-      ...i,
-      isActive: false,
-      status: 'inactive' as const,
-      fsrsData: createInitialFSRSState(),
-      reviewLogs: []
-    }));
+    // Fallback: Local in-memory clone with decoupled unique IDs
+    const newBookId = crypto.randomUUID();
+    const chapterIdMap = new Map<string, string>();
+    const clonedChapters: Chapter[] = (entry.chapters || []).map((ch, idx) => {
+      const newChapId = crypto.randomUUID();
+      chapterIdMap.set(ch.id, newChapId);
+      return {
+        ...ch,
+        id: newChapId,
+        bookId: newBookId,
+        masterChapterId: ch.id,
+        parentId: null,
+        order: ch.order || (idx + 1),
+      };
+    });
+
+    // Remap parentId in hierarchy
+    clonedChapters.forEach(c => {
+      const orig = entry.chapters.find(oc => chapterIdMap.get(oc.id) === c.id);
+      if (orig && orig.parentId && chapterIdMap.has(orig.parentId)) {
+        c.parentId = chapterIdMap.get(orig.parentId) || null;
+      }
+    });
+
+    const clonedItems: BookItem[] = (entry.items || []).map((it) => {
+      const newItemId = crypto.randomUUID();
+      return {
+        ...it,
+        id: newItemId,
+        bookId: newBookId,
+        masterItemId: it.id,
+        chapterId: it.chapterId && chapterIdMap.has(it.chapterId) ? chapterIdMap.get(it.chapterId)! : null,
+        isActive: false,
+        status: 'inactive' as const,
+        fsrsData: createInitialFSRSState(),
+        reviewLogs: [],
+        createdAt: new Date().toISOString(),
+      };
+    });
 
     const importedBook: Book = {
       ...entry.book,
-      isPublic: true,
-      isReadonly: true,
+      id: newBookId,
+      userId: userProfile.id,
+      masterBookId: entry.book.id,
+      isPublic: false,
+      isReadonly: Boolean(entry.book.isReadonly),
       isImported: true,
+      category: 'imported',
       libraryEntryId: libId,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     };
 
     setBooks(prev => [importedBook, ...prev]);
-    setChapters(prev => [...prev, ...entry.chapters]);
-    setItems(prev => [...prev, ...resetItems]);
+    setChapters(prev => [...prev, ...clonedChapters]);
+    setItems(prev => [...prev, ...clonedItems]);
+
+    if (userProfile.id !== 'guest') {
+      syncToFirestore(userProfile.id, 'books', [importedBook, ...books]);
+      syncToFirestore(userProfile.id, 'chapters', [...chapters, ...clonedChapters]);
+      syncToFirestore(userProfile.id, 'items', [...items, ...clonedItems]);
+    }
   };
 
   const importFromJSON = (jsonStr: string): { success: boolean; message: string } => {
@@ -4052,12 +4114,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   ) => {
     const book = books.find(b => b.id === bookId);
     if (!book) return { success: false, message: 'Book not found' };
-    
-    // Check if already in library
-    if (library.some(l => l.book.id === bookId)) {
-      return { success: false, message: language === 'en' ? 'Book is already in the library' : 'Kitab ini sudah ada di Pustaka' };
-    }
-    
+
     const bookChapters = chapters.filter(c => c.bookId === bookId);
     const bookItems = items.filter(i => i.bookId === bookId).map(i => ({
       ...i,
@@ -4065,9 +4122,66 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       status: 'inactive' as const,
       fsrsData: { stability: 0, difficulty: 0, reps: 0, lapses: 0, state: 'new', lastReview: null, nextReview: null } as FSRSState
     }));
-
+    
     const isPaid = Boolean(pricing?.isPaid && (pricing.price || 0) > 0);
     const priceAmount = isPaid ? (pricing?.price || 0) : 0;
+
+    // Check if book was already published in library -> update existing library entry
+    const existingEntryIndex = library.findIndex(l => l.book?.id === bookId || l.id === bookId);
+    if (existingEntryIndex >= 0) {
+      const updatedEntry: LibraryEntry = {
+        ...library[existingEntryIndex],
+        title: book.title,
+        curator: book.authorName || 'Penulis Pribadi',
+        book: {
+          ...book,
+          isReadonly: !allowEdit,
+          price: priceAmount,
+          isPublic: true,
+        },
+        chapters: bookChapters,
+        items: bookItems,
+      };
+
+      if (userProfile.id !== 'guest' && userProfile.backendId && isValidUUID(bookId)) {
+        try {
+          await bookApiService.updateBook(bookId, { isPublic: true, isReadonly: !allowEdit });
+        } catch (err: any) {
+          console.error('[BookAPI] publishBookToLibrary error updating isPublic in DB:', err);
+        }
+      }
+
+      setBooks(prev => prev.map(b => b.id === bookId ? { ...b, isPublic: true, isReadonly: false } : b));
+      if (userProfile.id !== 'guest') {
+        publishToPublicLibrary(userProfile.id, updatedEntry).catch(console.error);
+      }
+
+      setLibrary(prev => {
+        const next = [...prev];
+        next[existingEntryIndex] = updatedEntry;
+        try {
+          localStorage.setItem('ai_quran_library', JSON.stringify(next));
+        } catch (e) {}
+        return next;
+      });
+
+      if (typeof BroadcastChannel !== 'undefined') {
+        try {
+          const ch = new BroadcastChannel('unlupa_class_sync');
+          ch.postMessage({ type: 'LIBRARY_BOOK_UPDATED', bookId });
+          setTimeout(() => ch.close(), 1000);
+        } catch (bcErr) {}
+      }
+
+      await refreshLibraryFromBackend();
+
+      return {
+        success: true,
+        message: language === 'en'
+          ? 'Book publication & license updated successfully!'
+          : 'Pengaturan publikasi & lisensi kitab di Pustaka berhasil diperbarui!'
+      };
+    }
     
     const newEntry = {
       id: `lib-${Date.now()}`,

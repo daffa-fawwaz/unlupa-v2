@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { ClassStudent, ClassGroup, QuranPageItem, QuranFeedbackItem, BookItem, Chapter } from '../../types';
 import { useApp } from '../../context/AppContext';
-import { isDue, getIntervalDays, updateNonQuranFSRS } from '../../lib/fsrs';
+import { isDue, getIntervalDays, updateNonQuranFSRS, calculateRetrievability } from '../../lib/fsrs';
 import { isPageInJuzList } from '../../data/quranData';
 import { MushafPageViewerModal } from '../quran/MushafPageViewerModal';
 import { BilingualCardText } from '../common/BilingualCardText';
@@ -28,6 +28,34 @@ import {
   Sparkles,
   BookMarked
 } from 'lucide-react';
+
+function formatLastActive(dateStr?: string | null): string {
+  if (!dateStr) return 'Baru saja';
+  try {
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return dateStr;
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    if (diffMs < 0) return 'Baru saja';
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMins / 60);
+    const diffDays = Math.floor(diffHours / 24);
+
+    if (diffMins < 1) return 'Baru saja';
+    if (diffMins < 60) return `${diffMins} menit lalu`;
+    if (diffHours < 24) return `${diffHours} jam lalu`;
+    if (diffDays === 1) return 'Kemarin';
+    if (diffDays < 7) return `${diffDays} hari lalu`;
+    
+    return date.toLocaleDateString('id-ID', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric'
+    });
+  } catch {
+    return dateStr;
+  }
+}
 
 function getNextReviewInfo(nextReviewStr?: string | null, isActive?: boolean): string {
   if (!nextReviewStr || !isActive) {
@@ -291,6 +319,124 @@ export const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
     }
   }, [isQuran, studentActivePages, studentActiveItems, student.averageStability]);
 
+  // Real retention rate calculated from active items/pages using official FSRS retrievability
+  const realRetentionRate = useMemo(() => {
+    const activeList = isQuran ? studentActivePages : studentActiveItems;
+    if (activeList.length === 0) {
+      return student.retentionRate || 0;
+    }
+
+    const now = Date.now();
+    let totalRetrievability = 0;
+    let counted = 0;
+
+    for (const item of activeList) {
+      const s = item.fsrsData?.stability || 0;
+      if (s <= 0) {
+        totalRetrievability += 0.90;
+        counted++;
+        continue;
+      }
+      const lastRev = item.fsrsData?.lastReview;
+      const daysPassed = lastRev 
+        ? Math.max(0, (now - new Date(lastRev).getTime()) / (1000 * 60 * 60 * 24))
+        : 0;
+      const r = calculateRetrievability(s, daysPassed);
+      totalRetrievability += r;
+      counted++;
+    }
+
+    if (counted === 0) return 0;
+    return Math.min(100, Math.max(0, Math.round((totalRetrievability / counted) * 100)));
+  }, [isQuran, studentActivePages, studentActiveItems, student.retentionRate]);
+
+  // Real projection curve based on FSRS-6 Power-Law forgetting equation R(t) = (1 + FACTOR*(t/S))^-DECAY
+  const realRetentionProjections = useMemo(() => {
+    const s = computedAverageStability;
+    const intervals = [
+      { day: 'Hari ke-1 (Setelah Setoran)', days: 1 },
+      { day: 'Hari ke-3', days: 3 },
+      { day: 'Hari ke-7 (Minggu Pertama)', days: 7 },
+      { day: 'Hari ke-14 (2 Minggu)', days: 14 },
+      { day: 'Hari ke-30 (1 Bulan)', days: 30 },
+      { day: 'Hari ke-60 (2 Bulan)', days: 60 },
+    ];
+
+    return intervals.map(intv => {
+      let prob = 0;
+      if (s > 0) {
+        prob = Math.round(calculateRetrievability(s, intv.days) * 100);
+      } else {
+        prob = Math.max(10, Math.round(100 / (1 + intv.days * 0.5)));
+      }
+
+      let color = 'bg-emerald-500';
+      if (prob < 60) color = 'bg-rose-500';
+      else if (prob < 75) color = 'bg-amber-500';
+      else if (prob < 85) color = 'bg-blue-500';
+      else if (prob < 93) color = 'bg-emerald-400';
+
+      return {
+        day: intv.day,
+        prob,
+        color
+      };
+    });
+  }, [computedAverageStability]);
+
+  // Real telemetry per item/page
+  const realActiveItemsTelemetry = useMemo(() => {
+    const now = Date.now();
+    if (isQuran) {
+      return studentActivePages.map(p => {
+        const s = p.fsrsData?.stability || 0;
+        const lastRev = p.fsrsData?.lastReview;
+        const daysPassed = lastRev 
+          ? Math.max(0, Math.round((now - new Date(lastRev).getTime()) / (1000 * 60 * 60 * 24)))
+          : null;
+        const currentR = s > 0 && daysPassed !== null
+          ? Math.round(calculateRetrievability(s, daysPassed) * 100)
+          : (p.fsrsData?.reps ? 90 : 80);
+
+        return {
+          id: `page-${p.pageNumber}`,
+          title: `Hal. ${p.pageNumber} (${p.surahNameEn || 'Juz ' + p.juzNumber})`,
+          stability: s,
+          reps: p.fsrsData?.reps || 0,
+          daysPassed,
+          currentR,
+          isDueNow: isDue(p.fsrsData?.nextReview, p.isActive, p.fsrsData?.lastReview),
+          status: p.status,
+        };
+      });
+    } else {
+      return studentActiveItems.map(item => {
+        const s = item.fsrsData?.stability || 0;
+        const lastRev = item.fsrsData?.lastReview;
+        const daysPassed = lastRev 
+          ? Math.max(0, Math.round((now - new Date(lastRev).getTime()) / (1000 * 60 * 60 * 24)))
+          : null;
+        const currentR = s > 0 && daysPassed !== null
+          ? Math.round(calculateRetrievability(s, daysPassed) * 100)
+          : (item.fsrsData?.reps ? 90 : 80);
+
+        const chapter = bookChapters.find(c => c.id === item.chapterId);
+
+        return {
+          id: item.id,
+          title: item.question,
+          chapterTitle: chapter?.title,
+          stability: s,
+          reps: item.fsrsData?.reps || 0,
+          daysPassed,
+          currentR,
+          isDueNow: isDue(item.fsrsData?.nextReview, item.isActive, item.fsrsData?.lastReview),
+          status: item.status,
+        };
+      });
+    }
+  }, [isQuran, studentActivePages, studentActiveItems, bookChapters]);
+
   // Handler for Quran review
   const handleQuranReview = (pageNumber: number, rating: 1 | 2) => {
     const note = inlineNotes[String(pageNumber)]?.trim();
@@ -385,7 +531,7 @@ export const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
                 </span>
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate">
-                {student.email || 'Akun Santri'} • Terakhir aktif: <strong className="text-slate-700 dark:text-slate-300 font-semibold">{student.lastActive || 'Baru saja'}</strong>
+                {student.email || 'Akun Santri'} • Terakhir aktif: <strong className="text-slate-700 dark:text-slate-300 font-semibold">{formatLastActive(student.lastActive)}</strong>
               </p>
             </div>
           </div>
@@ -1023,7 +1169,7 @@ export const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
                   <div className="p-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 text-center shadow-2xs">
                     <span className="text-[10px] uppercase font-bold text-slate-400 block">Tingkat Retensi</span>
                     <span className="text-base font-black text-emerald-700 dark:text-emerald-300">
-                      {Math.min(99, Math.round(85 + (computedAverageStability || 5) * 0.5))}%
+                      {realRetentionRate}%
                     </span>
                   </div>
                 </div>
@@ -1034,20 +1180,15 @@ export const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
                 <div className="flex items-center justify-between">
                   <h6 className="font-bold text-xs text-slate-900 dark:text-white flex items-center gap-1.5">
                     <TrendingUp className="w-3.5 h-3.5 text-indigo-600" />
-                    Simulasi Probabilitas Daya Ingat Seiring Waktu
+                    Proyeksi Retensi Daya Ingat (FSRS-6 Memory Model)
                   </h6>
-                  <span className="text-[10px] font-semibold text-slate-400">Model Kurva Daya Ingat</span>
+                  <span className="text-[10px] font-semibold text-slate-400">
+                    Stabilitas: {computedAverageStability} Hari
+                  </span>
                 </div>
 
                 <div className="space-y-2.5 pt-2">
-                  {[
-                    { day: 'Hari ke-1 (Setelah Setoran)', prob: 98, color: 'bg-emerald-500' },
-                    { day: 'Hari ke-3', prob: Math.max(70, Math.round(98 - (3 / Math.max(2, computedAverageStability)) * 25)), color: 'bg-emerald-400' },
-                    { day: 'Hari ke-7 (Minggu Pertama)', prob: Math.max(60, Math.round(92 - (7 / Math.max(3, computedAverageStability)) * 20)), color: 'bg-blue-500' },
-                    { day: 'Hari ke-14 (2 Minggu)', prob: Math.max(50, Math.round(88 - (14 / Math.max(5, computedAverageStability)) * 18)), color: 'bg-blue-400' },
-                    { day: 'Hari ke-30 (1 Bulan)', prob: Math.max(45, Math.round(85 - (30 / Math.max(8, computedAverageStability)) * 15)), color: 'bg-amber-500' },
-                    { day: 'Hari ke-60 (2 Bulan)', prob: Math.max(40, Math.round(80 - (60 / Math.max(12, computedAverageStability)) * 12)), color: 'bg-purple-500' },
-                  ].map((item, idx) => (
+                  {realRetentionProjections.map((item, idx) => (
                     <div key={idx} className="space-y-1">
                       <div className="flex justify-between text-[11px]">
                         <span className="font-semibold text-slate-700 dark:text-slate-300">{item.day}</span>
@@ -1064,8 +1205,76 @@ export const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
                 </div>
 
                 <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200/60 dark:border-slate-700 text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
-                  💡 <strong>Catatan Pengajar:</strong> Kurva di atas memproyeksikan estimasi daya ingat santri. Semakin konsisten santri menyimak dan murajaah tepat pada jadwal hari jatuh tempo (due), semakin tinggi stabilitas hafalan jangka panjang yang terbentuk.
+                  💡 <strong>Catatan Pengajar:</strong> Proyeksi di atas dihitung secara ilmiah menggunakan formula retrievability FSRS-6 berdasarkan stabilitas memori aktual santri ({computedAverageStability} hari). Saat santri melakukan setoran atau murajaah tepat pada hari jatuh tempo (due), stabilitas memori akan terus meningkat secara otomatis.
                 </div>
+              </div>
+
+              {/* Real Item-by-Item Telemetry */}
+              <div className="p-4 rounded-2xl bg-white dark:bg-slate-800/70 border border-slate-200 dark:border-slate-800 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h6 className="font-bold text-xs text-slate-900 dark:text-white flex items-center gap-1.5">
+                    <Layers className="w-3.5 h-3.5 text-emerald-600" />
+                    Status Daya Ingat Riil per Materi ({realActiveItemsTelemetry.length})
+                  </h6>
+                  <span className="text-[10px] font-semibold text-slate-400">
+                    Telemetri Aktual
+                  </span>
+                </div>
+
+                {realActiveItemsTelemetry.length === 0 ? (
+                  <p className="text-xs text-slate-400 italic py-2 text-center">
+                    Belum ada materi aktif yang dipelajari santri ini.
+                  </p>
+                ) : (
+                  <div className="space-y-2 pt-1">
+                    {realActiveItemsTelemetry.map((item, idx) => (
+                      <div 
+                        key={item.id || idx} 
+                        className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200/60 dark:border-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-2"
+                      >
+                        <div className="min-w-0 flex-1">
+                          {item.chapterTitle && (
+                            <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider block">
+                              {item.chapterTitle}
+                            </span>
+                          )}
+                          <p className="font-bold text-xs text-slate-800 dark:text-slate-200 line-clamp-1">
+                            {item.title}
+                          </p>
+                          <div className="flex flex-wrap items-center gap-2 mt-1 text-[10px] text-slate-500 dark:text-slate-400">
+                            <span>Stabilitas: <strong className="text-slate-700 dark:text-slate-300">{item.stability} hari</strong></span>
+                            <span>•</span>
+                            <span>Review: <strong className="text-slate-700 dark:text-slate-300">{item.reps}x</strong></span>
+                            <span>•</span>
+                            <span>
+                              {item.daysPassed === null ? 'Baru diaktifkan' : item.daysPassed === 0 ? 'Disimak hari ini' : `${item.daysPassed} hari sejak setoran`}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 shrink-0">
+                          <div className="text-right">
+                            <span className="text-xs font-black text-emerald-600 dark:text-emerald-400 block">
+                              {item.currentR}%
+                            </span>
+                            <span className="text-[9px] text-slate-400 block">
+                              {item.isDueNow ? 'Jatuh Tempo' : item.currentR >= 90 ? 'Mutqin' : 'Wajar'}
+                            </span>
+                          </div>
+                          <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold shrink-0 ${
+                            item.isDueNow 
+                              ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300' 
+                              : item.currentR >= 90
+                              ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300'
+                              : 'bg-blue-100 text-blue-800 dark:bg-blue-950/80 dark:text-blue-300'
+                          }`}>
+                            {item.isDueNow ? 'Due' : item.currentR >= 90 ? 'Kuat' : 'Stabil'}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           )}
