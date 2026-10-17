@@ -24,7 +24,7 @@ const FEATURES = [
   },
   {
     icon: BrainCircuit,
-    title: 'FSRS Adaptif',
+    title: 'Jadwal Adaptif',
     description: 'Dapatkan jadwal pengulangan yang menyesuaikan kekuatan daya ingat, bukan sekadar kalender tetap.',
     accent: 'violet' as const,
   },

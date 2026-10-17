@@ -13,8 +13,8 @@ const FAQ_ITEMS = [
     answer: 'Unlupa membaca riwayat review, tingkat kesulitan, dan stabilitas memori setiap materi. Data tersebut digunakan untuk menyusun Daily Review berdasarkan hafalan yang paling membutuhkan perhatian.',
   },
   {
-    question: 'Apa itu FSRS dan mengapa digunakan untuk murajaah?',
-    answer: 'FSRS adalah algoritma spaced repetition yang memperkirakan kekuatan memori dan menentukan interval review berikutnya. Jadwal menjadi lebih adaptif daripada pengulangan dengan kalender tetap.',
+    question: 'Bagaimana Unlupa menyusun jadwal murajaah?',
+    answer: 'Unlupa memadukan riwayat review, tingkat kesulitan, dan kekuatan daya ingat untuk menentukan kapan sebuah materi sebaiknya diulang. Jadwalnya menyesuaikan diri, bukan sekadar kalender tetap.',
   },
   {
     question: 'Apakah Unlupa hanya dapat digunakan untuk hafalan Al-Qur’an?',

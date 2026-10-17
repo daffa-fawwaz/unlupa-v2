@@ -3,7 +3,7 @@
   .landing-hero,
   .landing-feature-card,
   .landing-features-showcase,
-  .analytics-card,
+  .step-card,
   .pricing-card,
   .landing-faq-cta
 ) {
@@ -21,6 +21,7 @@
 
 .landing-page :is(
   .landing-feature-card:hover,
+  .step-card:hover,
   .pricing-card:hover
 ) {
   box-shadow:
@@ -28,11 +29,7 @@
     inset 0 1px 1px rgba(255, 255, 255, 0.84);
 }
 
-.landing-page :is(
-  .review-chart,
-  .fsrs-simulator,
-  .landing-mockup-note
-) {
+.landing-page .landing-mockup-note {
   box-shadow:
     0 6px 18px rgba(24, 35, 74, 0.07),
     inset 0 1px 1px rgba(255, 255, 255, 0.84);
@@ -42,7 +39,7 @@
   .landing-brand__mark,
   .landing-button,
   .landing-feature-card__icon,
-  .analytics-card__icon,
+  .step-card__icon,
   .landing-mockup-note__icon,
   .landing-features__cta,
   .pricing-card > button,

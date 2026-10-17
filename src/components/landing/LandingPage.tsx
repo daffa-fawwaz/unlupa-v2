@@ -3,7 +3,7 @@ import { useApp } from '../../context/AppContext';
 import { LandingHero } from './LandingHero';
 import { LandingNavbar } from './LandingNavbar';
 import { FeaturesSection } from './features';
-import { AnalyticsSection } from './analytics';
+import { HowItWorksSection } from './how-it-works';
 import { PricingSection } from './pricing';
 import { FAQSection } from './faq';
 import { LandingFooter } from './footer';
@@ -18,7 +18,7 @@ export const LandingPage: React.FC = () => {
       <LandingNavbar onLogin={openLoginModal} onRegister={openRegisterModal} />
       <LandingHero onGetStarted={openRegisterModal} />
       <FeaturesSection />
-      <AnalyticsSection />
+      <HowItWorksSection />
       <PricingSection onGetStarted={openRegisterModal} />
       <FAQSection onGetStarted={openRegisterModal} onLogin={openLoginModal} />
       <LandingFooter />

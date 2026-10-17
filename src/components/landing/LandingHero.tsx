@@ -104,7 +104,7 @@ export const LandingHero: React.FC<LandingHeroProps> = ({ onGetStarted }) => {
             <BrainCircuit aria-hidden="true" />
           </span>
           <span className="landing-mockup-note__copy">
-            <strong>FSRS Adaptif</strong>
+            <strong>Jadwal Adaptif</strong>
             <small>Jadwal sesuai daya ingat</small>
           </span>
           <span className="landing-mockup-note__status" aria-hidden="true" />

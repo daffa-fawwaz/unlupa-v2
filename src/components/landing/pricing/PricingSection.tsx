@@ -11,7 +11,7 @@ interface PricingSectionProps {
 const FREE_FEATURES = [
   { label: '3 buku dan 50 kartu per buku' },
   { label: '3 Juz Al-Qur’an aktif' },
-  { label: 'Daily Review & FSRS' },
+  { label: 'Daily Review & jadwal adaptif' },
   { label: '3 generasi AI per hari' },
   { label: 'Ekspor laporan', included: false },
 ];
