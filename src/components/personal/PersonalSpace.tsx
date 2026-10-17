@@ -119,7 +119,9 @@ export const PersonalSpace: React.FC<PersonalSpaceProps> = ({
     activateItem, 
     deactivateItem, 
     reviewItem,
-    createBook, updateBook, 
+    createBook, 
+    createBookWithContent,
+    updateBook, 
     deleteBook, 
     createChapter, 
     updateChapter,
@@ -3211,41 +3213,14 @@ export const PersonalSpace: React.FC<PersonalSpaceProps> = ({
         <AIBookBuilderModal
           language={language}
           onClose={() => setIsAIBookBuilderOpen(false)}
-          onImport={(bookData) => {
-            const newBookId = `book-${Date.now()}`;
-            createBook({
-              id: newBookId,
+          onImport={async (bookData) => {
+            const created = await createBookWithContent({
               title: bookData.title || (language === 'en' ? 'Generated Book' : 'Buku Baru'),
               description: bookData.description || '',
               coverUrl: '',
-              isPublic: false
+              chapters: bookData.chapters || []
             });
-            
-            if (bookData.chapters && Array.isArray(bookData.chapters)) {
-              bookData.chapters.forEach((ch: any, chIndex: number) => {
-                const newChapterId = `chap-${Date.now()}-${chIndex}`;
-                createChapter({
-                  id: newChapterId,
-                  bookId: newBookId,
-                  title: ch.title || (language === 'en' ? 'Untitled' : 'Tanpa Judul'),
-                  order: chIndex
-                });
-                
-                if (ch.cards && Array.isArray(ch.cards)) {
-                  ch.cards.forEach((card: any, cardIndex: number) => {
-                    createItem({
-                      id: `item-${Date.now()}-${chIndex}-${cardIndex}-${Math.random().toString(36).substr(2, 9)}`,
-                      bookId: newBookId,
-                      chapterId: newChapterId,
-                      question: normalizeBilingualText(card.question),
-                      answer: normalizeBilingualText(card.answer),
-                      order: Date.now()
-                    });
-                  });
-                }
-              });
-            }
-            
+            setSelectedBook(created);
             setIsAIBookBuilderOpen(false);
           }}
         />

@@ -188,6 +188,22 @@ interface AppContextType {
   reviewItem: (itemId: string, rating: 1 | 2 | 3 | 4) => void;
   
   createBook: (data: { id?: string; title: string; description: string; coverUrl?: string; isPublic?: boolean; category?: string; authorName?: string; price?: number; isReadonly?: boolean }) => Book;
+  createBookWithContent: (bookData: {
+    title: string;
+    description?: string;
+    coverUrl?: string;
+    category?: string;
+    chapters?: Array<{
+      title: string;
+      description?: string;
+      material?: string;
+      cards?: Array<{
+        question: string;
+        answer: string;
+        explanation?: string;
+      }>;
+    }>;
+  }) => Promise<Book>;
   updateBook: (id: string, data: Partial<Book>) => void;
   deleteBook: (id: string) => void;
   
@@ -435,9 +451,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const cleanAvatar = (!parsed.avatarUrl || parsed.avatarUrl.includes('photo-1534528741775-53994a69daeb'))
           ? DEFAULT_ISLAMIC_AVATAR
           : parsed.avatarUrl;
+        const token = getAuthToken();
+        const hasSession = Boolean(token);
         return {
           ...parsed,
-          backendId: parsed.backendId || (parsed.id && parsed.id !== 'guest' ? parsed.id : undefined),
+          id: hasSession ? (parsed.id || 'guest') : 'guest',
+          backendId: hasSession ? (parsed.backendId || (parsed.id && parsed.id !== 'guest' ? parsed.id : undefined)) : undefined,
+          fullName: hasSession ? (parsed.fullName || 'Tamu / Murid') : 'Tamu / Murid',
           avatarUrl: cleanAvatar,
           onboardingPreferences: {
             ...defaultOnboardingPreferences,
@@ -1451,6 +1471,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const token = getAuthToken();
     if (!token) {
       setBackendAuthStatus('unauthenticated');
+      setUserProfile(prev => {
+        if (prev.backendId || prev.id !== 'guest') {
+          return {
+            ...prev,
+            id: 'guest',
+            backendId: undefined,
+            fullName: 'Tamu / Murid',
+          };
+        }
+        return prev;
+      });
       return;
     }
 
@@ -2782,8 +2813,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       });
     });
 
+    const token = getAuthToken();
     const backendItemId = resolveBackendItemId(itemId);
-    if (userProfile.id !== 'guest' && userProfile.backendId && backendItemId) {
+    if (userProfile.id !== 'guest' && userProfile.backendId && token && backendAuthStatus === 'authenticated' && backendItemId) {
       const currentUid = userProfile.id;
       bookApiService.activateItem(backendItemId)
         .then(progress => {
@@ -2808,9 +2840,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         })
         .catch(err => {
           if (loadedUserIdRef.current !== currentUid) return;
-          console.error('[BookAPI] activateItem error, rolling back:', err);
-          setItems(previousSnapshot);
-          alert(language === 'en' ? `Failed to activate card on server: ${err.message}` : `Gagal mengaktifkan kartu di server: ${err.message}`);
+          console.warn('[BookAPI] activateItem sync notice, kept locally:', err?.message || err);
+          if (err?.status === 401 || err?.statusCode === 401 || err?.message?.includes('Token')) {
+            clearAuthToken();
+            setBackendAuthStatus('unauthenticated');
+          }
         });
     }
   };
@@ -2828,8 +2862,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       });
     });
 
+    const token = getAuthToken();
     const backendItemId = resolveBackendItemId(itemId);
-    if (userProfile.id !== 'guest' && userProfile.backendId && backendItemId) {
+    if (userProfile.id !== 'guest' && userProfile.backendId && token && backendAuthStatus === 'authenticated' && backendItemId) {
       const currentUid = userProfile.id;
       bookApiService.deactivateItem(backendItemId)
         .then(res => {
@@ -2844,9 +2879,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         })
         .catch(err => {
           if (loadedUserIdRef.current !== currentUid) return;
-          console.error('[BookAPI] deactivateItem error, rolling back:', err);
-          setItems(previousSnapshot);
-          alert(language === 'en' ? `Failed to deactivate card on server: ${err.message}` : `Gagal menonaktifkan kartu di server: ${err.message}`);
+          console.warn('[BookAPI] deactivateItem sync notice, kept locally:', err?.message || err);
+          if (err?.status === 401 || err?.statusCode === 401 || err?.message?.includes('Token')) {
+            clearAuthToken();
+            setBackendAuthStatus('unauthenticated');
+          }
         });
     }
   };
@@ -2874,8 +2911,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       });
     });
 
+    const token = getAuthToken();
     const backendItemId = resolveBackendItemId(itemId);
-    if (userProfile.id !== 'guest' && userProfile.backendId && backendItemId) {
+    if (userProfile.id !== 'guest' && userProfile.backendId && token && backendAuthStatus === 'authenticated' && backendItemId) {
       const currentUid = userProfile.id;
       bookApiService.reviewItem(backendItemId, rating)
         .then(res => {
@@ -2909,9 +2947,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         })
         .catch(err => {
           if (loadedUserIdRef.current !== currentUid) return;
-          console.error('[BookAPI] reviewItem error, rolling back:', err);
-          setItems(previousSnapshot);
-          alert(language === 'en' ? `Failed to record review on server: ${err.message}` : `Gagal mencatat review ke server: ${err.message}`);
+          console.warn('[BookAPI] reviewItem sync notice, kept locally:', err?.message || err);
+          if (err?.status === 401 || err?.statusCode === 401 || err?.message?.includes('Token')) {
+            clearAuthToken();
+            setBackendAuthStatus('unauthenticated');
+          }
         });
     }
   };
@@ -2944,7 +2984,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return next;
     });
 
-    if (userProfile.id !== 'guest' && userProfile.backendId) {
+    const token = getAuthToken();
+    if (userProfile.id !== 'guest' && userProfile.backendId && token && backendAuthStatus === 'authenticated') {
       const currentUid = userProfile.id;
       bookApiService.createBook({
         title: newBook.title,
@@ -2956,17 +2997,253 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       .then(res => {
         if (loadedUserIdRef.current !== currentUid) return;
         const backendBook = mapBackendBookToBook(res);
-        setBooks(prev => prev.map(b => b.id === tempId ? backendBook : b));
-        setChapters(prev => prev.map(c => c.bookId === tempId ? { ...c, bookId: backendBook.id } : c));
-        setItems(prev => prev.map(i => i.bookId === tempId ? { ...i, bookId: backendBook.id } : i));
+        setBooks(prev => {
+          const updated = prev.map(b => b.id === tempId ? backendBook : b);
+          try {
+            localStorage.setItem(getUserKey(currentUid, 'books'), JSON.stringify(updated));
+          } catch (e) {}
+          return updated;
+        });
+        setChapters(prev => {
+          const updated = prev.map(c => c.bookId === tempId ? { ...c, bookId: backendBook.id } : c);
+          try {
+            localStorage.setItem(getUserKey(currentUid, 'chapters'), JSON.stringify(updated));
+          } catch (e) {}
+          return updated;
+        });
+        setItems(prev => {
+          const updated = prev.map(i => i.bookId === tempId ? { ...i, bookId: backendBook.id } : i);
+          try {
+            localStorage.setItem(getUserKey(currentUid, 'items'), JSON.stringify(updated));
+          } catch (e) {}
+          return updated;
+        });
         setSelectedPersonalBookId(prev => prev === tempId ? backendBook.id : prev);
       })
       .catch(err => {
         if (loadedUserIdRef.current !== currentUid) return;
-        console.error('[BookAPI] createBook error, rolling back:', err);
-        setBooks(prev => prev.filter(b => b.id !== tempId));
-        alert(language === 'en' ? `Failed to save book to server: ${err.message}` : `Gagal menyimpan buku ke server: ${err.message}`);
+        console.warn('[BookAPI] createBook backend sync notice, book safely kept locally:', err?.message || err);
+        if (err?.status === 401 || err?.statusCode === 401 || err?.message?.includes('Token')) {
+          clearAuthToken();
+          setBackendAuthStatus('unauthenticated');
+        }
       });
+    }
+
+    return newBook;
+  };
+
+  const createBookWithContent = async (bookData: {
+    title: string;
+    description?: string;
+    coverUrl?: string;
+    category?: string;
+    chapters?: Array<{
+      title: string;
+      description?: string;
+      material?: string;
+      cards?: Array<{
+        question: string;
+        answer: string;
+        explanation?: string;
+      }>;
+    }>;
+  }): Promise<Book> => {
+    const bookId = crypto.randomUUID();
+    const newBook: Book = {
+      id: bookId,
+      userId: userProfile.id,
+      title: bookData.title.trim() || (language === 'en' ? 'New Book' : 'Buku Baru'),
+      description: bookData.description?.trim() || '',
+      coverUrl: bookData.coverUrl || 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=600&auto=format&fit=crop&q=80',
+      isPublic: false,
+      category: bookData.category?.trim() || '',
+      isReadonly: false,
+      authorName: userProfile.fullName || 'Tamu / Murid',
+      price: 0,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    const newChapters: Chapter[] = [];
+    const newItems: BookItem[] = [];
+
+    if (Array.isArray(bookData.chapters)) {
+      bookData.chapters.forEach((ch, chIdx) => {
+        const chapterId = crypto.randomUUID();
+        newChapters.push({
+          id: chapterId,
+          bookId: bookId,
+          masterChapterId: null,
+          title: ch.title?.trim() || (language === 'en' ? `Chapter ${chIdx + 1}` : `Bab ${chIdx + 1}`),
+          description: ch.description?.trim() || '',
+          material: ch.material || '',
+          parentId: null,
+          order: chIdx + 1,
+        });
+
+        if (Array.isArray(ch.cards)) {
+          ch.cards.forEach((card, cardIdx) => {
+            const itemId = crypto.randomUUID();
+            newItems.push({
+              id: itemId,
+              bookId: bookId,
+              chapterId: chapterId,
+              masterItemId: null,
+              question: normalizeBilingualText(card.question),
+              answer: normalizeBilingualText(card.answer),
+              explanation: card.explanation ? normalizeBilingualText(card.explanation) : '',
+              tags: [],
+              order: cardIdx + 1,
+              isActive: true,
+              status: 'active',
+              fsrsData: {
+                stability: 0,
+                difficulty: 5.0,
+                reps: 0,
+                lapses: 0,
+                state: 'new',
+                lastReview: null,
+                nextReview: null,
+              },
+              reviewLogs: [],
+              createdAt: new Date().toISOString(),
+            });
+          });
+        }
+      });
+    }
+
+    // 1. Instantly save all into local state & localStorage (synchronous & local-first)
+    setBooks(prev => {
+      const next = [newBook, ...prev];
+      try {
+        localStorage.setItem(getUserKey(userProfile.id, 'books'), JSON.stringify(next));
+        localStorage.setItem(getUserKey('guest', 'books'), JSON.stringify(next));
+        localStorage.setItem('unlupa_active_book_backup', JSON.stringify({ book: newBook, timestamp: Date.now() }));
+      } catch (e) {}
+      return next;
+    });
+
+    if (newChapters.length > 0) {
+      setChapters(prev => {
+        const next = [...prev, ...newChapters];
+        try {
+          localStorage.setItem(getUserKey(userProfile.id, 'chapters'), JSON.stringify(next));
+          localStorage.setItem(getUserKey('guest', 'chapters'), JSON.stringify(next));
+        } catch (e) {}
+        return next;
+      });
+    }
+
+    if (newItems.length > 0) {
+      setItems(prev => {
+        const next = [...prev, ...newItems];
+        try {
+          localStorage.setItem(getUserKey(userProfile.id, 'items'), JSON.stringify(next));
+          localStorage.setItem(getUserKey('guest', 'items'), JSON.stringify(next));
+        } catch (e) {}
+        return next;
+      });
+    }
+
+    setSelectedPersonalBookId(bookId);
+
+    // 2. If authenticated and token is valid, sync transactionally in background
+    const token = getAuthToken();
+    if (userProfile.id !== 'guest' && userProfile.backendId && token && backendAuthStatus === 'authenticated') {
+      const currentUid = userProfile.id;
+      const payload = {
+        legacyId: bookId,
+        title: newBook.title,
+        description: newBook.description,
+        coverUrl: newBook.coverUrl,
+        category: newBook.category || 'Umum',
+        isPublic: false,
+        chapters: newChapters.map(ch => ({
+          legacyId: ch.id,
+          title: ch.title,
+          order: ch.order,
+        })),
+        items: newItems.map(item => ({
+          legacyId: item.id,
+          legacyChapterId: item.chapterId,
+          question: item.question,
+          answer: item.answer,
+          explanation: item.explanation || null,
+          tags: item.tags || [],
+          order: item.order || 1,
+        })),
+        progresses: newItems.map(item => ({
+          legacyItemId: item.id,
+          isActive: true,
+          status: 'active',
+          stability: 0,
+          difficulty: 5.0,
+          reps: 0,
+          lapses: 0,
+          state: 'NEW',
+        })),
+      };
+
+      bookApiService.importBook(payload)
+        .then(res => {
+          if (loadedUserIdRef.current !== currentUid) return;
+          if (res?.book?.id) {
+            const serverBookId = res.book.id;
+            const chapterMapping = res.idMapping?.chapters || {};
+            const itemMapping = res.idMapping?.items || {};
+
+            setBooks(prev => {
+              const updated = prev.map(b => b.id === bookId ? { ...b, id: serverBookId } : b);
+              try {
+                localStorage.setItem(getUserKey(currentUid, 'books'), JSON.stringify(updated));
+              } catch (e) {}
+              return updated;
+            });
+
+            setChapters(prev => {
+              const updated = prev.map(c => {
+                if (c.bookId !== bookId) return c;
+                return {
+                  ...c,
+                  id: chapterMapping[c.id] || c.id,
+                  bookId: serverBookId,
+                };
+              });
+              try {
+                localStorage.setItem(getUserKey(currentUid, 'chapters'), JSON.stringify(updated));
+              } catch (e) {}
+              return updated;
+            });
+
+            setItems(prev => {
+              const updated = prev.map(i => {
+                if (i.bookId !== bookId) return i;
+                return {
+                  ...i,
+                  id: itemMapping[i.id] || i.id,
+                  bookId: serverBookId,
+                  chapterId: i.chapterId ? (chapterMapping[i.chapterId] || i.chapterId) : undefined,
+                };
+              });
+              try {
+                localStorage.setItem(getUserKey(currentUid, 'items'), JSON.stringify(updated));
+              } catch (e) {}
+              return updated;
+            });
+
+            setSelectedPersonalBookId(prev => prev === bookId ? serverBookId : prev);
+          }
+        })
+        .catch(err => {
+          if (loadedUserIdRef.current !== currentUid) return;
+          console.warn('[BookAPI] Bulk import background sync notice, book kept safely locally:', err?.message || err);
+          if (err?.status === 401 || err?.statusCode === 401 || err?.message?.includes('Token')) {
+            clearAuthToken();
+            setBackendAuthStatus('unauthenticated');
+          }
+        });
     }
 
     return newBook;
@@ -3002,7 +3279,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return updated;
     });
 
-    if (userProfile.id !== 'guest' && userProfile.backendId && isValidUUID(id)) {
+    const token = getAuthToken();
+    if (userProfile.id !== 'guest' && userProfile.backendId && token && backendAuthStatus === 'authenticated' && isValidUUID(id)) {
       const currentUid = userProfile.id;
       bookApiService.updateBook(id, {
         title: data.title,
@@ -3012,19 +3290,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         isPublic: data.isPublic,
       }).catch(err => {
         if (loadedUserIdRef.current !== currentUid) return;
-        console.error('[BookAPI] updateBook error, rolling back:', err);
-        setBooks(previousSnapshot);
-        alert(language === 'en' ? `Failed to update book on server: ${err.message}` : `Gagal memperbarui buku di server: ${err.message}`);
+        console.warn('[BookAPI] updateBook sync notice, kept locally:', err?.message || err);
+        if (err?.status === 401 || err?.statusCode === 401 || err?.message?.includes('Token')) {
+          clearAuthToken();
+          setBackendAuthStatus('unauthenticated');
+        }
       });
     }
   };
 
   const deleteBook = (id: string) => {
-    const previousBooks = books;
-    const previousChapters = chapters;
-    const previousItems = items;
-    const previousPages = pages;
-
     const classBookIds = books.filter(b => b.masterBookId === id).map(b => b.id);
     const allBookIdsToDelete = [id, ...classBookIds];
 
@@ -3033,16 +3308,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setItems(prev => prev.filter(i => !allBookIdsToDelete.includes(i.bookId)));
     setPages(prev => prev.filter(p => !allBookIdsToDelete.includes(p.bookId)));
 
-    if (userProfile.id !== 'guest' && userProfile.backendId && isValidUUID(id)) {
+    const token = getAuthToken();
+    if (userProfile.id !== 'guest' && userProfile.backendId && token && backendAuthStatus === 'authenticated' && isValidUUID(id)) {
       const currentUid = userProfile.id;
       bookApiService.deleteBook(id).catch(err => {
         if (loadedUserIdRef.current !== currentUid) return;
-        console.error('[BookAPI] deleteBook error, rolling back:', err);
-        setBooks(previousBooks);
-        setChapters(previousChapters);
-        setItems(previousItems);
-        setPages(previousPages);
-        alert(language === 'en' ? `Failed to delete book on server: ${err.message}` : `Gagal menghapus buku di server: ${err.message}`);
+        console.warn('[BookAPI] deleteBook sync notice:', err?.message || err);
+        if (err?.status === 401 || err?.statusCode === 401 || err?.message?.includes('Token')) {
+          clearAuthToken();
+          setBackendAuthStatus('unauthenticated');
+        }
       });
     }
   };
@@ -3168,7 +3443,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return nextChapters;
     });
 
-    if (userProfile.id !== 'guest' && userProfile.backendId && isValidUUID(data.bookId)) {
+    const token = getAuthToken();
+    if (userProfile.id !== 'guest' && userProfile.backendId && token && backendAuthStatus === 'authenticated' && isValidUUID(data.bookId)) {
       const currentUid = userProfile.id;
       bookApiService.createChapter(data.bookId, {
         title: newChapter.title,
@@ -3185,9 +3461,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       })
       .catch(err => {
         if (loadedUserIdRef.current !== currentUid) return;
-        console.error('[BookAPI] createChapter error, rolling back:', err);
-        setChapters(prev => prev.filter(c => c.id !== tempId));
-        alert(language === 'en' ? `Failed to create chapter on server: ${err.message}` : `Gagal membuat bab di server: ${err.message}`);
+        console.warn('[BookAPI] createChapter backend sync notice, chapter safely kept locally:', err?.message || err);
+        if (err?.status === 401 || err?.statusCode === 401 || err?.message?.includes('Token')) {
+          clearAuthToken();
+          setBackendAuthStatus('unauthenticated');
+        }
       });
     }
 
@@ -3217,7 +3495,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       });
     });
 
-    if (userProfile.id !== 'guest' && userProfile.backendId && isValidUUID(id)) {
+    const token = getAuthToken();
+    if (userProfile.id !== 'guest' && userProfile.backendId && token && backendAuthStatus === 'authenticated' && isValidUUID(id)) {
       const currentUid = userProfile.id;
       bookApiService.updateChapter(id, {
         title: data.title,
@@ -3227,18 +3506,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         order: data.order,
       }).catch(err => {
         if (loadedUserIdRef.current !== currentUid) return;
-        console.error('[BookAPI] updateChapter error, rolling back:', err);
-        setChapters(previousSnapshot);
-        alert(language === 'en' ? `Failed to update chapter on server: ${err.message}` : `Gagal memperbarui bab di server: ${err.message}`);
+        console.warn('[BookAPI] updateChapter sync notice, kept locally:', err?.message || err);
+        if (err?.status === 401 || err?.statusCode === 401 || err?.message?.includes('Token')) {
+          clearAuthToken();
+          setBackendAuthStatus('unauthenticated');
+        }
       });
     }
   };
 
   const deleteChapter = (chapterId: string) => {
-    const previousChapters = chapters;
-    const previousItems = items;
-    const previousPages = pages;
-
     const getDescendants = (id: string, all: Chapter[]): string[] => {
       const children = all.filter(c => c.parentId === id);
       let ids = children.map(c => c.id);
@@ -3261,15 +3538,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setItems(prevItems => prevItems.filter(i => i.chapterId ? !allIdsToDelete.includes(i.chapterId) : true));
     setPages(prevPages => prevPages.filter(p => p.chapterId ? !allIdsToDelete.includes(p.chapterId) : true));
 
-    if (userProfile.id !== 'guest' && userProfile.backendId && isValidUUID(chapterId)) {
+    const token = getAuthToken();
+    if (userProfile.id !== 'guest' && userProfile.backendId && token && backendAuthStatus === 'authenticated' && isValidUUID(chapterId)) {
       const currentUid = userProfile.id;
       bookApiService.deleteChapter(chapterId).catch(err => {
         if (loadedUserIdRef.current !== currentUid) return;
-        console.error('[BookAPI] deleteChapter error, rolling back:', err);
-        setChapters(previousChapters);
-        setItems(previousItems);
-        setPages(previousPages);
-        alert(language === 'en' ? `Failed to delete chapter on server: ${err.message}` : `Gagal menghapus bab di server: ${err.message}`);
+        console.warn('[BookAPI] deleteChapter sync notice:', err?.message || err);
+        if (err?.status === 401 || err?.statusCode === 401 || err?.message?.includes('Token')) {
+          clearAuthToken();
+          setBackendAuthStatus('unauthenticated');
+        }
       });
     }
   };
@@ -3364,7 +3642,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return nextItems;
     });
 
-    if (userProfile.id !== 'guest' && userProfile.backendId && isValidUUID(data.bookId)) {
+    const token = getAuthToken();
+    if (userProfile.id !== 'guest' && userProfile.backendId && token && backendAuthStatus === 'authenticated' && isValidUUID(data.bookId)) {
       const currentUid = userProfile.id;
       bookApiService.createItem(data.bookId, {
         question: newItem.question,
@@ -3383,9 +3662,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       })
       .catch(err => {
         if (loadedUserIdRef.current !== currentUid) return;
-        console.error('[BookAPI] createItem error, rolling back:', err);
-        setItems(prev => prev.filter(i => i.id !== tempId));
-        alert(language === 'en' ? `Failed to create card on server: ${err.message}` : `Gagal membuat kartu di server: ${err.message}`);
+        console.warn('[BookAPI] createItem backend sync notice, card safely kept locally:', err?.message || err);
+        if (err?.status === 401 || err?.statusCode === 401 || err?.message?.includes('Token')) {
+          clearAuthToken();
+          setBackendAuthStatus('unauthenticated');
+        }
       });
     }
 
@@ -3430,7 +3711,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       });
     });
 
-    if (userProfile.id !== 'guest' && userProfile.backendId && isValidUUID(id)) {
+    const token = getAuthToken();
+    if (userProfile.id !== 'guest' && userProfile.backendId && token && backendAuthStatus === 'authenticated' && isValidUUID(id)) {
       const currentUid = userProfile.id;
       bookApiService.updateItem(id, {
         question: data.question,
@@ -3443,15 +3725,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         order: data.order,
       }).catch(err => {
         if (loadedUserIdRef.current !== currentUid) return;
-        console.error('[BookAPI] updateItem error, rolling back:', err);
-        setItems(previousSnapshot);
-        alert(language === 'en' ? `Failed to update card on server: ${err.message}` : `Gagal memperbarui kartu di server: ${err.message}`);
+        console.warn('[BookAPI] updateItem sync notice, kept locally:', err?.message || err);
+        if (err?.status === 401 || err?.statusCode === 401 || err?.message?.includes('Token')) {
+          clearAuthToken();
+          setBackendAuthStatus('unauthenticated');
+        }
       });
     }
   };
 
   const deleteItem = (itemId: string) => {
-    const previousItems = items;
     setItems(prev => prev.filter(i => {
       if (i.id === itemId) return false;
       if (i.masterItemId === itemId) {
@@ -3463,13 +3746,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return true;
     }));
 
-    if (userProfile.id !== 'guest' && userProfile.backendId && isValidUUID(itemId)) {
+    const token = getAuthToken();
+    if (userProfile.id !== 'guest' && userProfile.backendId && token && backendAuthStatus === 'authenticated' && isValidUUID(itemId)) {
       const currentUid = userProfile.id;
       bookApiService.deleteItem(itemId).catch(err => {
         if (loadedUserIdRef.current !== currentUid) return;
-        console.error('[BookAPI] deleteItem error, rolling back:', err);
-        setItems(previousItems);
-        alert(language === 'en' ? `Failed to delete card on server: ${err.message}` : `Gagal menghapus kartu di server: ${err.message}`);
+        console.warn('[BookAPI] deleteItem sync notice:', err?.message || err);
+        if (err?.status === 401 || err?.statusCode === 401 || err?.message?.includes('Token')) {
+          clearAuthToken();
+          setBackendAuthStatus('unauthenticated');
+        }
       });
     }
   };
@@ -4958,7 +5244,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       books, chapters, items, pages, createPage, updatePage, deletePage, personalStats: bookStats, myClassesStats,
       currentStreak, totalActiveMaterials, totalMasteredMaterials,
       activateItem, deactivateItem, reviewItem,
-      createBook, updateBook, deleteBook, duplicateBookAsEditable,
+      createBook, createBookWithContent, updateBook, deleteBook, duplicateBookAsEditable,
       createChapter, updateChapter, deleteChapter,
       createItem, updateItem, deleteItem, reorderItems,
       importFromLibrary, importFromJSON, exportBookJSON, publishBookToLibrary, library,
