@@ -31,7 +31,6 @@ import { INITIAL_BOOKS, INITIAL_CHAPTERS, INITIAL_ITEMS, CURATED_LIBRARY, Librar
 import { INITIAL_CLASSES, createSampleStudentQuranPages, createSampleStudentBookItems } from '../data/sampleClasses';
 import { updateQuranFSRS, updateNonQuranFSRS, isDue, isReviewedToday, calculateNextMapanDate } from '../lib/fsrs';
 import { normalizeBilingualText } from '../utils/bilingualHelper';
-import { syncToFirestore, fetchFromFirestore, listenToFirestore, listenToClassStudentsGlobal, listenToStudentInClassGlobal, updateStudentInClassGlobal, fetchTeacherBookDataGlobal, publishToPublicLibrary, fetchPublicLibrary, syncClassToGlobal, findClassByCodeGlobal, enrollStudentInGlobalClass, fetchClassStudentsGlobal, getTeacherTeachingClasses, updateTeacherTeachingClasses, removeStudentFromGlobalClass, listenToClassGlobal } from '../lib/firestore-sync';
 import { api, ApiError, getAuthToken, clearAuthToken, BackendUserResponse } from '../lib/api';
 
 export interface AuthUser {
@@ -1155,52 +1154,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (loadedUserIdRef.current === currentUid) {
         if (Array.isArray(backendTeaching)) {
           setTeachingClasses(backendTeaching);
-          // Ensure real-time student listeners are active for all teaching classes
-          (window as any).__classStudentListeners = (window as any).__classStudentListeners || {};
-          backendTeaching.forEach((cls: ClassGroup) => {
-            if (cls && cls.id && !(window as any).__classStudentListeners[cls.id]) {
-              (window as any).__classStudentListeners[cls.id] = listenToClassStudentsGlobal(cls.id, (globalStudents) => {
-                if (!Array.isArray(globalStudents)) return;
-                setTeachingClasses(currentClasses => {
-                  return currentClasses.map(c => {
-                    if (c.id !== cls.id) return c;
-                    let newStudents = [...c.students];
-                    let modified = false;
-                    for (const gStd of globalStudents) {
-                      const index = newStudents.findIndex(s => 
-                        s.id === gStd.id || 
-                        s.id === gStd.id?.replace?.('std-user-', '') || 
-                        `std-user-${s.id}` === gStd.id ||
-                        (s.email && gStd.email && s.email.toLowerCase() === gStd.email.toLowerCase())
-                      );
-                      if (index === -1) {
-                        newStudents.push(gStd);
-                        modified = true;
-                      } else {
-                        const current = newStudents[index];
-                        const merged = {
-                          ...current,
-                          ...gStd,
-                          id: current.id,
-                          activeItemsCount: gStd.activeItemsCount ?? current.activeItemsCount,
-                          dueTodayCount: gStd.dueTodayCount ?? current.dueTodayCount,
-                          averageStability: gStd.averageStability ?? current.averageStability,
-                          frequentStruggles: (Array.isArray(gStd.frequentStruggles) && gStd.frequentStruggles.length > 0) ? gStd.frequentStruggles : current.frequentStruggles,
-                          bookItemsData: (Array.isArray(gStd.bookItemsData) && gStd.bookItemsData.length > 0) ? gStd.bookItemsData : current.bookItemsData,
-                          quranData: (Array.isArray(gStd.quranData) && gStd.quranData.length > 0) ? gStd.quranData : current.quranData,
-                        };
-                        if (JSON.stringify(current) !== JSON.stringify(merged)) {
-                          newStudents[index] = merged;
-                          modified = true;
-                        }
-                      }
-                    }
-                    return modified ? { ...c, students: newStudents } : c;
-                  });
-                });
-              });
-            }
-          });
         }
         if (Array.isArray(backendJoined)) {
           setMyClasses(backendJoined);
@@ -1491,221 +1444,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       console.warn('[Auth] Failed to load backend classes:', classErr);
     }
 
-    // Immediately sync local books/chapters/items to Firestore if user has them
-    if (!isNewRegistration && accountData.books.length > 0) {
-      syncToFirestore(targetId, 'books', accountData.books);
-      if (accountData.chapters.length > 0) syncToFirestore(targetId, 'chapters', accountData.chapters);
-      if (accountData.items.length > 0) syncToFirestore(targetId, 'items', accountData.items);
-    }
-
-    // Clean up previous listeners if any
-    if ((window as any).__unsubFirestoreListeners) {
-          (window as any).__unsubFirestoreListeners();
-        }
-
-        // Real-time listen to Cloud data if available
-        if (targetId !== 'guest') {
-          const unsub1 = listenToFirestore(targetId, 'quran_pages', (data) => {
-            if (!Array.isArray(data) || data.length === 0) return;
-            isRemoteSyncRef.current = true;
-            const fullPages = ensureComplete604Pages(data);
-            setQuranPages(prev => {
-              // Smart merge: Never overwrite locally active page with stale remote inactive page!
-              const merged = fullPages.map(remoteP => {
-                const pNum = Number(remoteP.pageNumber);
-                const localP = prev.find(p => Number(p.pageNumber) === pNum);
-                if (!localP) return { ...remoteP, pageNumber: pNum };
-
-                // If locally active on this device, do NOT allow stale remote snapshot to deactivate it!
-                if (localP.isActive && !remoteP.isActive) {
-                  return { ...localP, pageNumber: pNum };
-                }
-                // If local has newer review reps or review history, protect it
-                if ((localP.fsrsData?.reps || 0) > (remoteP.fsrsData?.reps || 0)) {
-                  return { ...localP, pageNumber: pNum };
-                }
-                return { ...remoteP, pageNumber: pNum };
-              });
-
-              if (JSON.stringify(prev) === JSON.stringify(merged)) return prev;
-              try {
-                localStorage.setItem(getUserKey(targetId, 'quran_pages'), JSON.stringify(merged));
-              } catch (e) {}
-              return merged;
-            });
-            setTimeout(() => { isRemoteSyncRef.current = false; }, 400);
-          });
-          const unsub2 = listenToFirestore(targetId, 'books', (cloudData) => {
-            if (!Array.isArray(cloudData)) return;
-            isRemoteSyncRef.current = true;
-            setBooks(prev => {
-              if (cloudData.length === 0 && prev.length > 0) return prev;
-              if (cloudData.length > 0 && prev.length === 0) {
-                try { localStorage.setItem(getUserKey(targetId, 'books'), JSON.stringify(cloudData)); } catch (e) {}
-                return cloudData;
-              }
-              const cloudMap = new Map(cloudData.map(b => [b.id, b]));
-              const merged = cloudData.map(cloudB => {
-                const localB = prev.find(b => b.id === cloudB.id);
-                if (!localB) return cloudB;
-                
-                // Timestamp check: if local was updated more recently, keep local properties
-                const localTime = localB.updatedAt ? new Date(localB.updatedAt).getTime() : 0;
-                const cloudTime = cloudB.updatedAt ? new Date(cloudB.updatedAt).getTime() : 0;
-                if (localTime > cloudTime) {
-                  return localB;
-                }
-
-                // If local has a coverUrl and cloud is empty or stripped, preserve local coverUrl
-                if (localB.coverUrl && (!cloudB.coverUrl || cloudB.coverUrl.trim() === '')) {
-                  return { ...cloudB, coverUrl: localB.coverUrl };
-                }
-                return cloudB;
-              });
-              const localNew = prev.filter(b => !cloudMap.has(b.id));
-              const finalMerged = [...merged, ...localNew];
-              try { localStorage.setItem(getUserKey(targetId, 'books'), JSON.stringify(finalMerged)); } catch (e) {}
-              if (JSON.stringify(prev) === JSON.stringify(finalMerged)) return prev;
-              return finalMerged;
-            });
-            setTimeout(() => { isRemoteSyncRef.current = false; }, 400);
-          });
-          const unsub3 = listenToFirestore(targetId, 'chapters', (cloudData) => {
-            if (!Array.isArray(cloudData)) return;
-            isRemoteSyncRef.current = true;
-            setChapters(prev => {
-              if (cloudData.length === 0 && prev.length > 0) return prev;
-              if (cloudData.length > 0 && prev.length === 0) {
-                try { localStorage.setItem(getUserKey(targetId, 'chapters'), JSON.stringify(cloudData)); } catch (e) {}
-                return cloudData;
-              }
-              const cloudMap = new Map(cloudData.map(c => [c.id, c]));
-              const localNew = prev.filter(c => !cloudMap.has(c.id));
-              const merged = [...cloudData, ...localNew];
-              try { localStorage.setItem(getUserKey(targetId, 'chapters'), JSON.stringify(merged)); } catch (e) {}
-              if (JSON.stringify(prev) === JSON.stringify(merged)) return prev;
-              return merged;
-            });
-            setTimeout(() => { isRemoteSyncRef.current = false; }, 400);
-          });
-          const unsub4 = listenToFirestore(targetId, 'items', (cloudData) => {
-            if (!Array.isArray(cloudData)) return;
-            isRemoteSyncRef.current = true;
-            setItems(prev => {
-              if (cloudData.length === 0 && prev.length > 0) return prev;
-              if (cloudData.length > 0 && prev.length === 0) {
-                try { localStorage.setItem(getUserKey(targetId, 'items'), JSON.stringify(cloudData)); } catch (e) {}
-                return cloudData;
-              }
-              const cloudMap = new Map(cloudData.map(i => [i.id, i]));
-              const localNew = prev.filter(i => !cloudMap.has(i.id));
-              const merged = [...cloudData, ...localNew];
-              try { localStorage.setItem(getUserKey(targetId, 'items'), JSON.stringify(merged)); } catch (e) {}
-              if (JSON.stringify(prev) === JSON.stringify(merged)) return prev;
-              return merged;
-            });
-            setTimeout(() => { isRemoteSyncRef.current = false; }, 400);
-          });
-          const unsubPages = listenToFirestore(targetId, 'pages', (data) => {
-            if (!Array.isArray(data)) return;
-            isRemoteSyncRef.current = true;
-            setPages(prev => {
-              const cloudMap = new Map(data.map((p: any) => [p.id, p]));
-              const localNew = prev.filter(p => !cloudMap.has(p.id));
-              const merged = [...data, ...localNew];
-              try { localStorage.setItem(getUserKey(targetId, 'pages'), JSON.stringify(merged)); } catch (e) {}
-              if (JSON.stringify(prev) === JSON.stringify(merged)) return prev;
-              return merged;
-            });
-            setTimeout(() => { isRemoteSyncRef.current = false; }, 400);
-          });
-          const unsub5 = listenToFirestore(targetId, 'my_classes', (data) => {
-            if (!Array.isArray(data)) return;
-            isRemoteSyncRef.current = true;
-            setMyClasses(prev => JSON.stringify(prev) !== JSON.stringify(data) ? data : prev);
-            setTimeout(() => { isRemoteSyncRef.current = false; }, 400);
-          });
-          const unsub6 = listenToFirestore(targetId, 'teacher_feedbacks', (data) => {
-            if (!Array.isArray(data)) return;
-            isRemoteSyncRef.current = true;
-            setTeacherFeedbacks(prev => JSON.stringify(prev) !== JSON.stringify(data) ? data : prev);
-            setTimeout(() => { isRemoteSyncRef.current = false; }, 400);
-          });
-          const unsub7 = listenToFirestore(targetId, 'attendance_exceptions', (data) => {
-            if (!data || typeof data !== 'object') return;
-            isRemoteSyncRef.current = true;
-            setAttendanceExceptions(prev => JSON.stringify(prev) !== JSON.stringify(data) ? data : prev);
-            setTimeout(() => { isRemoteSyncRef.current = false; }, 400);
-          });
-          
-          // We will store dynamic class student listeners here
-          (window as any).__classStudentListeners = (window as any).__classStudentListeners || {};
-
-          const unsub8 = listenToFirestore(targetId, 'teaching_classes', (data) => {
-            if (!Array.isArray(data)) return;
-            isRemoteSyncRef.current = true;
-            setTeachingClasses(prev => {
-              if (JSON.stringify(prev) === JSON.stringify(data)) return prev;
-              
-              data.forEach((cls: ClassGroup) => {
-                if (cls && cls.id && !(window as any).__classStudentListeners[cls.id]) {
-                  (window as any).__classStudentListeners[cls.id] = listenToClassStudentsGlobal(cls.id, (globalStudents) => {
-                    if (!Array.isArray(globalStudents)) return;
-                    setTeachingClasses(currentClasses => {
-                      return currentClasses.map(c => {
-                        if (c.id !== cls.id) return c;
-                        let newStudents = [...c.students];
-                        let modified = false;
-                        for (const gStd of globalStudents) {
-                          const index = newStudents.findIndex(s => 
-                            s.id === gStd.id || 
-                            s.id === gStd.id?.replace?.('std-user-', '') || 
-                            `std-user-${s.id}` === gStd.id ||
-                            (s.email && gStd.email && s.email.toLowerCase() === gStd.email.toLowerCase())
-                          );
-                          if (index === -1) {
-                            newStudents.push(gStd);
-                            modified = true;
-                          } else {
-                            const current = newStudents[index];
-                            const merged = {
-                              ...current,
-                              ...gStd,
-                              id: current.id,
-                              activeItemsCount: gStd.activeItemsCount ?? current.activeItemsCount,
-                              dueTodayCount: gStd.dueTodayCount ?? current.dueTodayCount,
-                              averageStability: gStd.averageStability ?? current.averageStability,
-                              frequentStruggles: (Array.isArray(gStd.frequentStruggles) && gStd.frequentStruggles.length > 0) ? gStd.frequentStruggles : current.frequentStruggles,
-                              bookItemsData: (Array.isArray(gStd.bookItemsData) && gStd.bookItemsData.length > 0) ? gStd.bookItemsData : current.bookItemsData,
-                              quranData: (Array.isArray(gStd.quranData) && gStd.quranData.length > 0) ? gStd.quranData : current.quranData,
-                            };
-                            if (JSON.stringify(current) !== JSON.stringify(merged)) {
-                              newStudents[index] = merged;
-                              modified = true;
-                            }
-                          }
-                        }
-                        return modified ? { ...c, students: newStudents } : c;
-                      });
-                    });
-                  });
-                }
-              });
-              
-              return data;
-            });
-            setTimeout(() => { isRemoteSyncRef.current = false; }, 400);
-          });
-          
-          // Store unsubs to cleanup on unmount/re-login
-          (window as any).__unsubFirestoreListeners = () => {
-            unsub1?.(); unsub2?.(); unsub3?.(); unsub4?.(); unsubPages?.(); unsub5?.(); unsub6?.(); unsub7?.(); unsub8?.();
-            if ((window as any).__classStudentListeners) {
-              Object.values((window as any).__classStudentListeners).forEach((unsub: any) => unsub && unsub());
-              (window as any).__classStudentListeners = {};
-            }
-          };
-        }
   };
 
   // Restore authenticated JWT session on mount
@@ -1757,9 +1495,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         activeMeAbortControllerRef.current.abort();
         activeMeAbortControllerRef.current = null;
       }
-      if ((window as any).__unsubFirestoreListeners) {
-        (window as any).__unsubFirestoreListeners();
-      }
     };
   }, []);
 
@@ -1784,12 +1519,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       // 1. Fetch authoritative public library entries from PostgreSQL backend
       const backendEntries = await bookApiService.getPublicLibrary();
 
-      // 2. Fallback check from Firestore
-      let firestoreEntries: any[] = [];
-      try {
-        firestoreEntries = await fetchPublicLibrary();
-      } catch (fe) {}
-
       setLibrary(prev => {
         const merged: LibraryEntry[] = [];
         const seenIds = new Set<string>();
@@ -1799,18 +1528,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (Array.isArray(backendEntries)) {
           backendEntries.forEach(entry => {
             if (entry && entry.id && !seenIds.has(entry.id)) {
-              seenIds.add(entry.id);
-              if (entry.book?.id) seenIds.add(entry.book.id);
-              if (entry.title) seenTitles.add(entry.title.trim().toLowerCase());
-              merged.push(entry);
-            }
-          });
-        }
-
-        // Priority 2: Firestore public books
-        if (Array.isArray(firestoreEntries)) {
-          firestoreEntries.forEach(entry => {
-            if (entry && entry.id && !seenIds.has(entry.id) && !seenTitles.has((entry.title || '').trim().toLowerCase())) {
               seenIds.add(entry.id);
               if (entry.book?.id) seenIds.add(entry.book.id);
               if (entry.title) seenTitles.add(entry.title.trim().toLowerCase());
@@ -1861,44 +1578,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (loadedUserIdRef.current !== userProfile.id) return;
     try {
       localStorage.setItem(getUserKey(userProfile.id, 'quran_pages'), JSON.stringify(quranPages));
-    
-      syncToFirestore(userProfile.id, 'quran_pages', quranPages);
-
-      // Sync quran progress to all enrolled quran classes
-      if (myClasses.length > 0 && userProfile.id !== 'guest') {
-        const activePages = quranPages.filter(p => p.isActive);
-        const duePages = quranPages.filter(p => isDue(p.fsrsData.nextReview, p.isActive, p.fsrsData.lastReview));
-        const avgStability = activePages.length > 0 
-          ? Number((activePages.reduce((acc, p) => acc + p.fsrsData.stability, 0) / activePages.length).toFixed(1))
-          : 0;
-
-        myClasses.filter(c => c.type === 'quran').forEach(cls => {
-          const studentUpdate = {
-            id: `std-user-${userProfile.id}`,
-            quranSpaceCode: quranSpaceCode,
-            name: userProfile.fullName || 'Santri',
-            email: userProfile.email,
-            avatarUrl: userProfile.avatarUrl,
-            activeItemsCount: activePages.length,
-            dueTodayCount: duePages.length,
-            averageStability: avgStability,
-            retentionRate: 95,
-            lastActive: new Date().toISOString(),
-            frequentStruggles: [],
-            quranData: quranPages,
-          };
-          enrollStudentInGlobalClass(cls.id, studentUpdate.id, studentUpdate);
-        });
-      }
     } catch (e) { /* ignore */ }
-  }, [quranPages, userProfile.id, myClasses, quranSpaceCode]);
+  }, [quranPages, userProfile.id]);
 
   useEffect(() => {
     if (loadedUserIdRef.current !== userProfile.id) return;
     try {
       localStorage.setItem(getUserKey(userProfile.id, 'books'), JSON.stringify(books));
-    
-      syncToFirestore(userProfile.id, 'books', books);
     } catch (e) { /* ignore */ }
   }, [books, userProfile.id]);
 
@@ -1906,8 +1592,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (loadedUserIdRef.current !== userProfile.id) return;
     try {
       localStorage.setItem(getUserKey(userProfile.id, 'chapters'), JSON.stringify(chapters));
-    
-      syncToFirestore(userProfile.id, 'chapters', chapters);
     } catch (e) { /* ignore */ }
   }, [chapters, userProfile.id]);
 
@@ -1915,50 +1599,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (loadedUserIdRef.current !== userProfile.id) return;
     try {
       localStorage.setItem(getUserKey(userProfile.id, 'items'), JSON.stringify(items));
-    
-      syncToFirestore(userProfile.id, 'items', items);
-
-      // Sync items progress to all enrolled non-quran classes
-      if (myClasses.length > 0 && userProfile.id !== 'guest') {
-        myClasses.filter(c => c.type === 'non-quran').forEach(cls => {
-          // Robust match: matches direct class book ID, or assigned book ID with or without prefix
-          const classItems = items.filter(i => 
-            i.bookId?.startsWith(`class-book-${cls.id}-`) ||
-            (cls.assignedBookIds || []).some(bId => i.bookId === bId || i.bookId === `class-book-${cls.id}-${bId}`)
-          );
-          const activeItems = classItems.filter(i => i.isActive);
-          const dueItems = classItems.filter(i => isDue(i.fsrsData.nextReview, i.isActive, i.fsrsData.lastReview));
-          const avgStability = activeItems.length > 0 
-            ? Number((activeItems.reduce((acc, p) => acc + (p.fsrsData.stability || 0), 0) / activeItems.length).toFixed(1))
-            : 0;
-
-          const struggles = dueItems.map(i => i.question).filter(Boolean).slice(0, 5);
-          const studentUpdate = {
-            id: userProfile.id,
-            quranSpaceCode: quranSpaceCode,
-            name: userProfile.fullName || 'Santri',
-            email: userProfile.email,
-            avatarUrl: userProfile.avatarUrl,
-            activeItemsCount: activeItems.length,
-            dueTodayCount: dueItems.length,
-            averageStability: avgStability,
-            retentionRate: 95,
-            lastActive: new Date().toISOString(),
-            frequentStruggles: struggles,
-            bookItemsData: classItems,
-          };
-          enrollStudentInGlobalClass(cls.id, studentUpdate.id, studentUpdate);
-          enrollStudentInGlobalClass(cls.id, `std-user-${userProfile.id}`, { ...studentUpdate, id: `std-user-${userProfile.id}` });
-        });
-      }
     } catch (e) { /* ignore */ }
-  }, [items, userProfile.id, myClasses, quranSpaceCode]);
+  }, [items, userProfile.id]);
 
   useEffect(() => {
     if (loadedUserIdRef.current !== userProfile.id) return;
     try {
       localStorage.setItem(getUserKey(userProfile.id, 'pages'), JSON.stringify(pages));
-      syncToFirestore(userProfile.id, 'pages', pages);
     } catch (e) { /* ignore */ }
   }, [pages, userProfile.id]);
 
@@ -1966,8 +1613,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (loadedUserIdRef.current !== userProfile.id) return;
     try {
       localStorage.setItem(getUserKey(userProfile.id, 'my_classes'), JSON.stringify(myClasses));
-    
-      syncToFirestore(userProfile.id, 'my_classes', myClasses);
     } catch (e) { /* ignore */ }
   }, [myClasses, userProfile.id]);
 
@@ -1975,8 +1620,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (loadedUserIdRef.current !== userProfile.id) return;
     try {
       localStorage.setItem(getUserKey(userProfile.id, 'teaching_classes'), JSON.stringify(teachingClasses));
-    
-      syncToFirestore(userProfile.id, 'teaching_classes', teachingClasses);
     } catch (e) { /* ignore */ }
   }, [teachingClasses, userProfile.id]);
 
@@ -1984,8 +1627,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (loadedUserIdRef.current !== userProfile.id) return;
     try {
       localStorage.setItem(getUserKey(userProfile.id, 'teacher_feedbacks'), JSON.stringify(teacherFeedbacks));
-    
-      syncToFirestore(userProfile.id, 'teacher_feedbacks', teacherFeedbacks);
     } catch (e) { /* ignore */ }
   }, [teacherFeedbacks, userProfile.id]);
 
@@ -1993,135 +1634,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (loadedUserIdRef.current !== userProfile.id) return;
     try {
       localStorage.setItem(getUserKey(userProfile.id, 'attendance_exceptions'), JSON.stringify(attendanceExceptions));
-    
-      syncToFirestore(userProfile.id, 'attendance_exceptions', attendanceExceptions);
     } catch (e) { /* ignore */ }
   }, [attendanceExceptions, userProfile.id]);
-
-  // Real-time listener for enrolled students: sync teacher feedbacks & activations to student's room
-  useEffect(() => {
-    if (!userProfile.id || userProfile.id === 'guest' || myClasses.length === 0) return;
-    (window as any).__studentEnrolledClassListeners = (window as any).__studentEnrolledClassListeners || {};
-
-    myClasses.forEach(cls => {
-      const listenerKey = `${cls.id}_std-user-${userProfile.id}`;
-      if (!(window as any).__studentEnrolledClassListeners[listenerKey]) {
-        const unsub = listenToStudentInClassGlobal(cls.id, `std-user-${userProfile.id}`, (studentData) => {
-          if (!studentData) return;
-
-          // 1. Sync any teacher feedbacks
-          if (Array.isArray(studentData.teacherFeedbacks) && studentData.teacherFeedbacks.length > 0) {
-            setTeacherFeedbacks(prev => {
-              const existingIds = new Set(prev.map(f => f.id));
-              const newFeedbacks = studentData.teacherFeedbacks.filter((f: any) => !existingIds.has(f.id));
-              if (newFeedbacks.length === 0) return prev;
-              return [...newFeedbacks, ...prev];
-            });
-          }
-
-          // 2. If it's a Quran class, sync teacher page activations
-          if (cls.type === 'quran' && Array.isArray(studentData.quranData) && studentData.quranData.length > 0) {
-            setQuranPages(prevPages => {
-              let changed = false;
-              const remotePages = studentData.quranData as QuranPageItem[];
-              const updated = prevPages.map(localP => {
-                const remoteP = remotePages.find(rp => rp.pageNumber === localP.pageNumber);
-                if (remoteP && remoteP.isActive && !localP.isActive) {
-                  changed = true;
-                  return remoteP;
-                }
-                return localP;
-              });
-              return changed ? updated : prevPages;
-            });
-          }
-
-          // 3. If it's a non-Quran class, sync teacher book item activations AND reviews
-          if (cls.type === 'non-quran' && Array.isArray(studentData.bookItemsData) && studentData.bookItemsData.length > 0) {
-            setItems(prevItems => {
-              let changed = false;
-              const remoteItems = studentData.bookItemsData as BookItem[];
-              const updated = prevItems.map(localItem => {
-                const localBackendId = resolveBackendItemId(localItem.id);
-                const remoteItem = remoteItems.find(ri => {
-                  if (ri.id === localItem.id) return true;
-                  if (ri.masterItemId && ri.masterItemId === localItem.id) return true;
-                  if (localItem.masterItemId && localItem.masterItemId === ri.id) return true;
-                  if (ri.masterItemId && localItem.masterItemId && ri.masterItemId === localItem.masterItemId) return true;
-                  const riBackendId = resolveBackendItemId(ri.id);
-                  if (localBackendId && riBackendId && localBackendId === riBackendId) return true;
-                  return false;
-                });
-
-                if (remoteItem) {
-                  const activationChanged = Boolean(remoteItem.isActive) && !localItem.isActive;
-                  const remoteReps = remoteItem.fsrsData?.reps || 0;
-                  const localReps = localItem.fsrsData?.reps || 0;
-                  const remoteLastReview = remoteItem.fsrsData?.lastReview;
-                  const localLastReview = localItem.fsrsData?.lastReview;
-
-                  const reviewChanged = Boolean(
-                    remoteLastReview && (
-                      !localLastReview || 
-                      new Date(remoteLastReview).getTime() > new Date(localLastReview).getTime() ||
-                      remoteReps > localReps
-                    )
-                  );
-
-                  if (activationChanged || reviewChanged) {
-                    changed = true;
-                    return {
-                      ...localItem,
-                      isActive: Boolean(remoteItem.isActive),
-                      status: remoteItem.status || localItem.status,
-                      fsrsData: remoteItem.fsrsData || localItem.fsrsData,
-                      reviewLogs: (remoteItem.reviewLogs && remoteItem.reviewLogs.length >= (localItem.reviewLogs?.length || 0))
-                        ? remoteItem.reviewLogs
-                        : localItem.reviewLogs,
-                    };
-                  }
-                }
-                return localItem;
-              });
-              return changed ? updated : prevItems;
-            });
-          }
-        });
-        (window as any).__studentEnrolledClassListeners[listenerKey] = unsub;
-      }
-    });
-  }, [myClasses, userProfile.id]);
-
-  // Real-time Firestore listener for class document updates (e.g. assignedBooksData sync by teacher)
-  useEffect(() => {
-    if (!userProfile.id || userProfile.id === 'guest' || myClasses.length === 0) return;
-
-    if (!(window as any).__studentEnrolledClassDocListeners) {
-      (window as any).__studentEnrolledClassDocListeners = {};
-    }
-
-    myClasses.forEach(cls => {
-      const listenerKey = `doc_${cls.id}`;
-      if (!(window as any).__studentEnrolledClassDocListeners[listenerKey]) {
-        const unsub = listenToClassGlobal(cls.id, (classData) => {
-          if (!classData) return;
-          setMyClasses(prev => prev.map(c => {
-            if (c.id === cls.id) {
-              return {
-                ...c,
-                ...classData,
-                assignedBooksData: classData.assignedBooksData || c.assignedBooksData,
-              };
-            }
-            return c;
-          }));
-        });
-        if (unsub) {
-          (window as any).__studentEnrolledClassDocListeners[listenerKey] = unsub;
-        }
-      }
-    });
-  }, [myClasses, userProfile.id]);
 
   // Manual sync of book changes to teaching classes (only executed when class owner chooses "Ya")
   const syncBookToClasses = useCallback(async (bookId: string, targetClassIds?: string[]) => {
@@ -2201,7 +1715,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
       }
 
-      syncClassToGlobal(updatedCls);
       setTeachingClasses(prev => prev.map(c => c.id === cls.id ? updatedCls : c));
       // Also update myClasses if enrolled on the same device/session!
       setMyClasses(prev => prev.map(c => c.id === cls.id ? updatedCls : c));
@@ -2847,8 +2360,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (loadedUserIdRef.current !== userProfile.id) return;
     try {
       localStorage.setItem(getUserKey(userProfile.id, 'purchased_books'), JSON.stringify(purchasedBookIds));
-    
-      syncToFirestore(userProfile.id, 'purchased_books', purchasedBookIds);
     } catch (e) { /* ignore */ }
   }, [purchasedBookIds, userProfile.id]);
 
@@ -3464,8 +2975,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setBooks(prev => prev.filter(b => b.id !== tempId));
         alert(language === 'en' ? `Failed to save book to server: ${err.message}` : `Gagal menyimpan buku ke server: ${err.message}`);
       });
-    } else if (userProfile.id !== 'guest') {
-      syncToFirestore(userProfile.id, 'books', [newBook, ...books]);
     }
 
     return newBook;
@@ -3498,9 +3007,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       try {
         localStorage.setItem(getUserKey(userProfile.id, 'books'), JSON.stringify(updated));
       } catch (e) {}
-      if (userProfile.id !== 'guest') {
-        syncToFirestore(userProfile.id, 'books', updated);
-      }
       return updated;
     });
 
@@ -3667,9 +3173,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         localStorage.setItem(getUserKey(userProfile.id, 'chapters'), JSON.stringify(nextChapters));
         localStorage.setItem(getUserKey('guest', 'chapters'), JSON.stringify(nextChapters));
       } catch (e) {}
-      if (userProfile.id !== 'guest') {
-        syncToFirestore(userProfile.id, 'chapters', nextChapters);
-      }
       return nextChapters;
     });
 
@@ -3866,9 +3369,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         localStorage.setItem(getUserKey(userProfile.id, 'items'), JSON.stringify(nextItems));
         localStorage.setItem(getUserKey('guest', 'items'), JSON.stringify(nextItems));
       } catch (e) {}
-      if (userProfile.id !== 'guest') {
-        syncToFirestore(userProfile.id, 'items', nextItems);
-      }
       return nextItems;
     });
 
@@ -4062,12 +3562,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setBooks(prev => [importedBook, ...prev]);
     setChapters(prev => [...prev, ...clonedChapters]);
     setItems(prev => [...prev, ...clonedItems]);
-
-    if (userProfile.id !== 'guest') {
-      syncToFirestore(userProfile.id, 'books', [importedBook, ...books]);
-      syncToFirestore(userProfile.id, 'chapters', [...chapters, ...clonedChapters]);
-      syncToFirestore(userProfile.id, 'items', [...items, ...clonedItems]);
-    }
   };
 
   const importFromJSON = (jsonStr: string): { success: boolean; message: string } => {
@@ -4162,9 +3656,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
 
       setBooks(prev => prev.map(b => b.id === bookId ? { ...b, isPublic: true, isReadonly: false } : b));
-      if (userProfile.id !== 'guest') {
-        publishToPublicLibrary(userProfile.id, updatedEntry).catch(console.error);
-      }
 
       setLibrary(prev => {
         const next = [...prev];
@@ -4224,11 +3715,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     // 2. Update local books state so this book is marked isPublic: true, while author ALWAYS retains edit access (isReadonly: false)
     setBooks(prev => prev.map(b => b.id === bookId ? { ...b, isPublic: true, isReadonly: false } : b));
-
-    // 3. Sync to public library in Firestore if available
-    if (userProfile.id !== 'guest') {
-      publishToPublicLibrary(userProfile.id, newEntry).catch(console.error);
-    }
     
     setLibrary(prev => [newEntry, ...prev]);
 
@@ -4297,12 +3783,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     }
 
-    // Fallback: local teachingClasses or Firestore
+    // Fallback: local teachingClasses
     if (!targetClass) {
       targetClass = teachingClasses.find(c => c.code.toUpperCase() === cleanCode) || null;
-      if (!targetClass) {
-        targetClass = await findClassByCodeGlobal(cleanCode);
-      }
     }
     
     if (!targetClass) {
@@ -4341,16 +3824,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         let sourceItems = bookPkg?.items || items.filter(i => i.bookId === masterBookId);
         if (sourceItems.length === 0) {
           sourceItems = INITIAL_ITEMS.filter(i => i.bookId === masterBookId);
-        }
-
-        // 2. Fallback: if not found, fetch live from teacher's Firestore user_data app state
-        if (!masterBook && targetClass.teacherId) {
-          const remoteData = await fetchTeacherBookDataGlobal(targetClass.teacherId, masterBookId);
-          if (remoteData?.book) {
-            masterBook = remoteData.book;
-            sourceChapters = remoteData.chapters || [];
-            sourceItems = remoteData.items || [];
-          }
         }
 
         if (!masterBook) continue;
@@ -4468,14 +3941,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           students: [userStudent, ...cls.students]
         };
       }));
-    } else {
-      // Teacher will see the student via real-time listenToClassStudentsGlobal()
     }
 
-    // 5. Enroll in Global Class IMMEDIATELY (no debounce delay for initial join!)
-    await enrollStudentInGlobalClass(targetClass.id, userStudent.id, userStudent, true);
-
-    // 6. CRITICAL: Add class to student's myClasses so it appears in "Kelas Saya"
+    // 5. CRITICAL: Add class to student's myClasses so it appears in "Kelas Saya"
     setMyClasses(prev => {
       if (prev.some(c => c.id === studentClassRecord.id)) return prev;
       return [studentClassRecord, ...prev];
@@ -4599,40 +4067,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         createdAt: new Date().toISOString(),
       };
     }
-    
-    // Sync class globally so other users can discover it by code
-    syncClassToGlobal(newClass);
-    
-    // Set up real-time student listener immediately for this newly created class!
-    if (!(window as any).__classStudentListeners) {
-      (window as any).__classStudentListeners = {};
-    }
-    if (!(window as any).__classStudentListeners[newClass.id]) {
-      (window as any).__classStudentListeners[newClass.id] = listenToClassStudentsGlobal(newClass.id, (globalStudents) => {
-        if (!Array.isArray(globalStudents)) return;
-        setTeachingClasses(currentClasses => {
-          return currentClasses.map(c => {
-            if (c.id !== newClass.id) return c;
-            let newStudents = [...c.students];
-            let modified = false;
-            for (const gStd of globalStudents) {
-              const index = newStudents.findIndex(s => s.id === gStd.id);
-              if (index === -1) {
-                newStudents.push(gStd);
-                modified = true;
-              } else {
-                if (JSON.stringify(newStudents[index]) !== JSON.stringify(gStd)) {
-                  newStudents[index] = gStd;
-                  modified = true;
-                }
-              }
-            }
-            return modified ? { ...c, students: newStudents } : c;
-          });
-        });
-      });
-    }
-    
     setTeachingClasses(prev => [newClass, ...prev]);
     return newClass;
   };
@@ -4674,18 +4108,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const leaveClass = (classId: string) => {
     classApiService.leaveClass(classId).catch(err => console.warn('[Classes] Backend leave notice:', err));
-    removeStudentFromGlobalClass(classId, `std-user-${userProfile.id}`);
     setMyClasses(prev => prev.filter(c => c.id !== classId));
     setBooks(prev => prev.filter(b => b.classId !== classId && !b.id.startsWith(`class-book-${classId}-`)));
     setChapters(prev => prev.filter(c => !c.bookId.startsWith(`class-book-${classId}-`)));
     setItems(prev => prev.filter(i => !i.bookId.startsWith(`class-book-${classId}-`)));
-    
-    // Find the class to leave to get the teacherId
-    const clsToLeave = myClasses.find(c => c.id === classId);
-    
-    if (clsToLeave && clsToLeave.teacherId !== userProfile.id) {
-       // The global removal via removeStudentFromGlobalClass is sufficient.
-    }
 
     setTeachingClasses(prev => prev.map(cls => {
       if (cls.id !== classId) return cls;
@@ -4698,7 +4124,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const removeStudentFromClass = (classId: string, studentId: string) => {
     classApiService.removeStudent(classId, studentId).catch(err => console.warn('[Classes] Backend remove student notice:', err));
-    removeStudentFromGlobalClass(classId, studentId);
     setTeachingClasses(prev => prev.map(cls => {
       if (cls.id !== classId) return cls;
       return {
@@ -4766,13 +4191,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             };
           });
           const activeCount = newPages.filter(p => p.isActive).length;
-          const updatedStd = {
+          return {
             ...std,
             quranData: newPages,
             activeItemsCount: activeCount,
           };
-          updateStudentInClassGlobal(classId, studentId, updatedStd);
-          return updatedStd;
         })
       };
     }));
@@ -4803,13 +4226,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             };
           });
           const activeCount = newPages.filter(p => p.isActive).length;
-          const updatedStd = {
+          return {
             ...std,
             quranData: newPages,
             activeItemsCount: activeCount,
           };
-          updateStudentInClassGlobal(classId, studentId, updatedStd);
-          return updatedStd;
         })
       };
     }));
@@ -4846,9 +4267,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               }
             };
           });
-          const updatedStd = { ...std, quranData: newPages };
-          updateStudentInClassGlobal(classId, studentId, updatedStd);
-          return updatedStd;
+          return { ...std, quranData: newPages };
         })
       };
     }));
@@ -4880,9 +4299,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               }
             };
           });
-          const updatedStd = { ...std, quranData: newPages };
-          updateStudentInClassGlobal(classId, studentId, updatedStd);
-          return updatedStd;
+          return { ...std, quranData: newPages };
         })
       };
     }));
@@ -4942,7 +4359,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             ? Math.round(activePages.reduce((acc, p) => acc + (p.fsrsData.stability || 0), 0) / activePages.length)
             : 0;
 
-          const updatedStd = {
+          return {
             ...std,
             quranData: newQuranData,
             activeItemsCount,
@@ -4950,8 +4367,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             averageStability: avgStability,
             teacherFeedbacks: [feedback, ...(std.teacherFeedbacks || [])]
           };
-          updateStudentInClassGlobal(classId, studentId, updatedStd);
-          return updatedStd;
         })
       };
     }));
@@ -4973,12 +4388,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         ...cls,
         students: cls.students.map(std => {
           if (std.id !== studentId) return std;
-          const updatedStd = {
+          return {
             ...std,
             teacherFeedbacks: [feedback, ...(std.teacherFeedbacks || [])]
           };
-          updateStudentInClassGlobal(classId, studentId, updatedStd);
-          return updatedStd;
         })
       };
     }));
@@ -5040,14 +4453,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           });
           const activeCount = updatedItems.filter(i => i.isActive).length;
           const dueCount = updatedItems.filter(i => isDue(i.fsrsData?.nextReview, i.isActive, i.fsrsData?.lastReview)).length;
-          const updatedStd = {
+          return {
             ...std,
             bookItemsData: updatedItems,
             activeItemsCount: activeCount,
             dueTodayCount: dueCount,
           };
-          updateStudentInClassGlobal(classId, studentId, updatedStd);
-          return updatedStd;
         })
       };
     }));
@@ -5075,14 +4486,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           });
           const activeCount = updatedItems.filter(i => i.isActive).length;
           const dueCount = updatedItems.filter(i => isDue(i.fsrsData?.nextReview, i.isActive, i.fsrsData?.lastReview)).length;
-          const updatedStd = {
+          return {
             ...std,
             bookItemsData: updatedItems,
             activeItemsCount: activeCount,
             dueTodayCount: dueCount,
           };
-          updateStudentInClassGlobal(classId, studentId, updatedStd);
-          return updatedStd;
         })
       };
     }));
@@ -5116,12 +4525,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               }
             };
           });
-          const updatedStd = {
+          return {
             ...std,
             bookItemsData: updatedItems,
           };
-          updateStudentInClassGlobal(classId, studentId, updatedStd);
-          return updatedStd;
         })
       };
     }));
@@ -5150,12 +4557,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               }
             };
           });
-          const updatedStd = {
+          return {
             ...std,
             bookItemsData: updatedItems,
           };
-          updateStudentInClassGlobal(classId, studentId, updatedStd);
-          return updatedStd;
         })
       };
     }));
@@ -5253,7 +4658,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             ? Math.round(updatedItems.filter(i => i.isActive).reduce((acc, i) => acc + (i.fsrsData.stability || 0), 0) / activeCount)
             : 0;
 
-          const updatedStd = {
+          return {
             ...std,
             bookItemsData: updatedItems,
             activeItemsCount: activeCount,
@@ -5261,15 +4666,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             averageStability: avgStability,
             teacherFeedbacks: [feedback, ...(std.teacherFeedbacks || [])]
           };
-
-          // Synchronize to Firestore for all ID permutations
-          updateStudentInClassGlobal(classId, studentId, updatedStd);
-          if (cleanStudentId !== studentId) {
-            updateStudentInClassGlobal(classId, cleanStudentId, { ...updatedStd, id: cleanStudentId });
-          }
-          updateStudentInClassGlobal(classId, `std-user-${cleanStudentId}`, { ...updatedStd, id: `std-user-${cleanStudentId}` });
-
-          return updatedStd;
         })
       };
     }));
@@ -5351,9 +4747,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                     }
                     return it;
                   });
-                  const freshStd = { ...s, bookItemsData: itemsWithBackend };
-                  updateStudentInClassGlobal(classId, s.id, freshStd);
-                  return freshStd;
+                  return { ...s, bookItemsData: itemsWithBackend };
                 })
               };
             }));

@@ -1,15 +1,3 @@
-import { 
-  collection, 
-  doc, 
-  getDocs, 
-  query, 
-  where, 
-  deleteDoc, 
-  updateDoc, 
-  writeBatch,
-  getDoc
-} from 'firebase/firestore';
-import { db, auth } from '../lib/firebase';
 import { Book, Chapter, BookItem, ClassGroup } from '../types';
 
 export enum OperationType {
@@ -19,44 +7,6 @@ export enum OperationType {
   LIST = 'list',
   GET = 'get',
   WRITE = 'write',
-}
-
-interface FirestoreErrorInfo {
-  error: string;
-  operationType: OperationType;
-  path: string | null;
-  authInfo: {
-    userId?: string | null;
-    email?: string | null;
-    emailVerified?: boolean | null;
-    isAnonymous?: boolean | null;
-    tenantId?: string | null;
-    providerInfo?: {
-      providerId?: string | null;
-      email?: string | null;
-    }[];
-  };
-}
-
-export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null): FirestoreErrorInfo {
-  const errInfo: FirestoreErrorInfo = {
-    error: error instanceof Error ? error.message : String(error),
-    authInfo: {
-      userId: auth.currentUser?.uid,
-      email: auth.currentUser?.email,
-      emailVerified: auth.currentUser?.emailVerified,
-      isAnonymous: auth.currentUser?.isAnonymous,
-      tenantId: auth.currentUser?.tenantId,
-      providerInfo: auth.currentUser?.providerData?.map(provider => ({
-        providerId: provider.providerId,
-        email: provider.email,
-      })) || []
-    },
-    operationType,
-    path
-  };
-  console.warn('Firestore Class Lifecycle Notice:', JSON.stringify(errInfo));
-  return errInfo;
 }
 
 /**
@@ -77,9 +27,7 @@ export function extractClassIdFromBook(book: Book): string | null {
   if (book.classId) return book.classId;
   if (book.id.startsWith('class-book-')) {
     const parts = book.id.split('-');
-    // Pattern: ['class', 'book', classId, ...rest]
     if (parts.length >= 3) {
-      // parts[2] might be the classId prefix, or classId has format cls-1234
       const match = book.id.match(/^class-book-([^-]+(?:-[^-]+)?)-/);
       if (match && match[1]) {
         return match[1];
@@ -106,98 +54,21 @@ export interface ClassCleanupOptions {
 }
 
 /**
- * Trigger cascaded update in Firestore database to remove associated Class Books
- * and synchronize the class document and student references.
+ * Cleanup class helper (Database cleanup is handled authoritatively by backend classApiService)
  */
 export async function cleanupClassFromDatabase(
-  classId: string, 
-  options: ClassCleanupOptions = { action: 'delete' }
+  _classId: string, 
+  _options: ClassCleanupOptions = { action: 'delete' }
 ): Promise<{ success: boolean; affectedBooksCount: number; message: string }> {
-  let affectedBooksCount = 0;
-  const isDelete = options.action === 'delete';
-
-  try {
-    const classDocPath = `classes/${classId}`;
-    const classRef = doc(db, 'classes', classId);
-
-    // 1. Update or Delete the Class document in Firestore
-    try {
-      const classSnap = await getDoc(classRef);
-      if (classSnap.exists()) {
-        if (isDelete) {
-          await deleteDoc(classRef);
-        } else {
-          await updateDoc(classRef, {
-            status: 'closed',
-            closedAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-          });
-        }
-      }
-    } catch (err) {
-      handleFirestoreError(err, isDelete ? OperationType.DELETE : OperationType.UPDATE, classDocPath);
-    }
-
-    // 2. Clean up students subcollection in Firestore if present
-    try {
-      const studentsPath = `classes/${classId}/students`;
-      const studentsSnap = await getDocs(collection(db, 'classes', classId, 'students'));
-      if (!studentsSnap.empty) {
-        const batch = writeBatch(db);
-        studentsSnap.docs.forEach(d => {
-          batch.delete(d.ref);
-        });
-        await batch.commit();
-      }
-    } catch (err) {
-      handleFirestoreError(err, OperationType.DELETE, `classes/${classId}/students`);
-    }
-
-    // 3. Query and cascaded remove associated Class Books from the database
-    try {
-      const booksPath = 'books';
-      const q = query(collection(db, booksPath), where('classId', '==', classId));
-      const querySnap = await getDocs(q);
-      
-      if (!querySnap.empty) {
-        const batch = writeBatch(db);
-        for (const bookDoc of querySnap.docs) {
-          affectedBooksCount++;
-          // Clean up subcollections if needed
-          try {
-            const chapSnap = await getDocs(collection(db, 'books', bookDoc.id, 'chapters'));
-            chapSnap.docs.forEach(c => batch.delete(c.ref));
-            const itemSnap = await getDocs(collection(db, 'books', bookDoc.id, 'items'));
-            itemSnap.docs.forEach(it => batch.delete(it.ref));
-          } catch {
-            // ignore subcollection read errors
-          }
-          batch.delete(bookDoc.ref);
-        }
-        await batch.commit();
-      }
-    } catch (err) {
-      handleFirestoreError(err, OperationType.DELETE, 'books');
-    }
-
-    return {
-      success: true,
-      affectedBooksCount,
-      message: `Successfully cascaded cleanup for class ${classId}`
-    };
-  } catch (error) {
-    const errorInfo = handleFirestoreError(error, OperationType.WRITE, `classes/${classId}`);
-    return {
-      success: false,
-      affectedBooksCount,
-      message: errorInfo.error
-    };
-  }
+  return {
+    success: true,
+    affectedBooksCount: 0,
+    message: 'Class cleanup processed.'
+  };
 }
 
 /**
- * Cascaded cleanup across all members' local storage data for this class.
- * Removes associated Class Books and updates class membership for every user profile stored.
+ * Removes associated Class Books and updates class membership for every user profile stored in localStorage.
  */
 export function cleanupClassFromAllMembersStorage(
   classId: string,
@@ -231,7 +102,6 @@ export function cleanupClassFromAllMembersStorage(
         if (!Array.isArray(userBooks)) return;
 
         const initialLength = userBooks.length;
-        // Filter out books belonging to this deleted/closed class
         const filteredBooks = userBooks.filter(b => {
           if (b.classId === classId) return false;
           if (b.id.startsWith(classBookPrefix)) return false;
@@ -260,13 +130,11 @@ export function cleanupClassFromAllMembersStorage(
         let updatedClasses: ClassGroup[] = [];
 
         if (isDelete) {
-          // Completely remove class from enrolled list
           updatedClasses = userClasses.filter(c => c.id !== classId);
           if (updatedClasses.length !== userClasses.length) {
             modified = true;
           }
         } else {
-          // Closed: remove or mark as closed so it no longer grants active membership
           updatedClasses = userClasses.filter(c => c.id !== classId);
           modified = true;
         }

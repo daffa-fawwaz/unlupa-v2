@@ -1,5 +1,4 @@
 import { Book, Chapter, BookItem } from '../types';
-import { fetchFromFirestore } from '../lib/firestore-sync';
 import { bookApiService, ImportResponsePayload } from './bookApiService';
 
 export interface LegacyBookSnapshot {
@@ -159,51 +158,13 @@ export function readLocalStorageSnapshot(userId: string): LegacySnapshot {
 /**
  * Reads legacy snapshot from Firestore for the current user
  */
-export async function readFirestoreSnapshot(firebaseUid: string): Promise<LegacySnapshot> {
-  let rawBooks: Book[] = [];
-  let rawChapters: Chapter[] = [];
-  let rawItems: BookItem[] = [];
-
-  try {
-    const [fetchedBooks, fetchedChapters, fetchedItems] = await Promise.all([
-      fetchFromFirestore(firebaseUid, 'books'),
-      fetchFromFirestore(firebaseUid, 'chapters'),
-      fetchFromFirestore(firebaseUid, 'items'),
-    ]);
-
-    if (Array.isArray(fetchedBooks)) rawBooks = fetchedBooks.filter(b => b && b.id && b.title);
-    if (Array.isArray(fetchedChapters)) rawChapters = fetchedChapters.filter(c => c && c.id && c.bookId);
-    if (Array.isArray(fetchedItems)) rawItems = fetchedItems.filter(i => i && i.id && i.bookId);
-  } catch (e) {
-    console.warn('[Reconciliation] Error fetching Firestore snapshot:', e);
-  }
-
-  const books: LegacyBookSnapshot[] = rawBooks.map(book => {
-    const bookChapters = rawChapters.filter(c => c.bookId === book.id);
-    const bookItems = rawItems.filter(i => i.bookId === book.id);
-    const sampleCheck = detectSampleBook(book, bookItems);
-    return {
-      book,
-      chapters: bookChapters,
-      items: bookItems,
-      isSample: sampleCheck.isSample,
-      sampleReason: sampleCheck.reason,
-    };
-  });
-
-  const totalCards = books.reduce((acc, b) => acc + b.items.length, 0);
-  const activeCards = books.reduce((acc, b) => acc + b.items.filter(i => i.isActive).length, 0);
-  const totalReviews = books.reduce(
-    (acc, b) => acc + b.items.reduce((r, i) => r + (i.reviewLogs?.length || 0), 0),
-    0
-  );
-
+export async function readFirestoreSnapshot(_firebaseUid: string): Promise<LegacySnapshot> {
   return {
     source: 'firestore',
-    books,
-    totalCards,
-    activeCards,
-    totalReviews,
+    books: [],
+    totalCards: 0,
+    activeCards: 0,
+    totalReviews: 0,
   };
 }
 

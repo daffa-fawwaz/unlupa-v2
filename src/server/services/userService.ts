@@ -1,8 +1,14 @@
 import crypto from 'crypto';
-import { DecodedIdToken } from 'firebase-admin/auth';
 import { prisma } from '../db';
 import { User, Role, Plan, Prisma } from '@prisma/client';
 import { createError } from '../middleware/errorHandler';
+
+export interface DecodedIdToken {
+  uid: string;
+  email?: string;
+  name?: string;
+  picture?: string;
+}
 
 /**
  * Generate a unique, formatted Quran Space Code for a user

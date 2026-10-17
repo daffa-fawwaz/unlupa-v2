@@ -32,8 +32,6 @@
     "dotenv": "^17.2.3",
     "esbuild": "^0.28.2",
     "express": "^5.2.1",
-    "firebase": "^12.19.0",
-    "firebase-admin": "^13.1.0",
     "gsap": "^3.15.0",
     "html2canvas": "^1.4.1",
     "jspdf": "^4.2.1",
@@ -64,7 +62,6 @@
     "@types/ws": "^8.18.2"
   },
   "allowScripts": {
-    "@firebase/util@1.15.3": true,
     "@google/genai": true,
     "@prisma/client@6.4.1": true,
     "@prisma/engines@6.4.1": true,

@@ -4,24 +4,12 @@ import { GoogleGenAI, Type } from "@google/genai";
 import cors from "cors";
 import multer from "multer";
 import os from "os";
-import * as adminApp from "firebase-admin/app";
 import fsModule from "fs";
 import { env } from "./src/server/env";
 import { prisma, checkDatabaseConnection } from "./src/server/db";
 import { apiRouter } from "./src/server/routes/api.routes";
 import { errorHandler } from "./src/server/middleware/errorHandler";
-import { getFirebaseAdminApp } from "./src/server/firebaseAdmin";
 import { wsManager } from "./src/server/websocket";
-
-function ensureFirebaseAdmin() {
-  try {
-    getFirebaseAdminApp();
-    return true;
-  } catch (error) {
-    console.warn("Firebase Admin lazy init notice (non-fatal):", error);
-    return false;
-  }
-}
 
 // Lazy Gemini AI Client Initialization
 let aiClient: GoogleGenAI | null = null;
@@ -128,7 +116,6 @@ async function startServer() {
   // 2. Migration endpoint for future FSRS and books migration
   app.post("/api/migration/sync-local-data", async (req, res) => {
     try {
-      ensureFirebaseAdmin();
       const data = req.body;
       console.log("Received migration payload size:", JSON.stringify(data).length, "bytes");
       res.json({ success: true, message: "Migration payload received successfully" });
