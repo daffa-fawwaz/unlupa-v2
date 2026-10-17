@@ -1,6 +1,6 @@
 import crypto from 'crypto';
 import { prisma } from '../db';
-import { Book, Chapter, BookItem, Prisma } from '@prisma/client';
+import { Book, Chapter, BookItem, Prisma, Role } from '@prisma/client';
 import { createError } from '../middleware/errorHandler';
 
 export const UNLUPA_LEGACY_IMPORT_NAMESPACE = '7b9c3e41-6a2d-4f80-9e15-8c7a2d4e6f90';
@@ -1641,6 +1641,9 @@ export const bookService = {
     const books = await prisma.book.findMany({
       where: { isPublic: true },
       include: {
+        user: {
+          select: { role: true },
+        },
         chapters: {
           orderBy: [{ order: 'asc' }, { createdAt: 'asc' }],
         },
@@ -1659,7 +1662,7 @@ export const bookService = {
       curator: b.authorName || 'Penulis Komunitas',
       downloads: b.downloads || 0,
       rating: b.rating || 5.0,
-      verified: true,
+      verified: Boolean(b.user?.role === Role.ADMIN || b.user?.role === Role.SUPERADMIN),
       book: {
         id: b.id,
         userId: b.userId || null,

@@ -1499,13 +1499,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, []);
 
   const [library, setLibrary] = useState<LibraryEntry[]>(() => {
-    const saved = localStorage.getItem('ai_quran_library');
-    if (saved) {
-      try { 
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      } catch (e) { }
-    }
     return CURATED_LIBRARY;
   });
   
@@ -1513,13 +1506,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     localStorage.setItem('ai_quran_library', JSON.stringify(library));
   }, [library]);
 
-  // Authoritative Public Library Sync from PostgreSQL backend & Firestore
+  // Authoritative Public Library Sync from PostgreSQL backend
   const refreshLibraryFromBackend = useCallback(async () => {
     try {
       // 1. Fetch authoritative public library entries from PostgreSQL backend
       const backendEntries = await bookApiService.getPublicLibrary();
 
-      setLibrary(prev => {
+      setLibrary(_prev => {
         const merged: LibraryEntry[] = [];
         const seenIds = new Set<string>();
         const seenTitles = new Set<string>();
@@ -1536,9 +1529,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           });
         }
 
-        // Priority 3: Curated foundation books
-        const foundationList = prev.length > 0 ? prev : CURATED_LIBRARY;
-        foundationList.forEach(entry => {
+        // Priority 2: Official Curated foundation books (strict from CURATED_LIBRARY)
+        CURATED_LIBRARY.forEach(entry => {
           const entryBookId = entry.book?.id || entry.id;
           const entryTitle = (entry.title || entry.book?.title || '').trim().toLowerCase();
           if (!seenIds.has(entry.id) && !seenIds.has(entryBookId) && !seenTitles.has(entryTitle)) {
