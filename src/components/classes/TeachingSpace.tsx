@@ -11,7 +11,6 @@ import { StudentDetailModal } from './StudentDetailModal';
 import { JuzRangeSelector } from './JuzRangeSelector';
 import { PersonalSpace } from '../personal/PersonalSpace';
 import { ClassSearchModal } from './ClassSearchModal';
-import { JoinClassModal } from '../common/JoinClassModal';
 import { isDue } from '../../lib/fsrs';
 import { isPageInJuzList } from '../../data/quranData';
 import { uploadOrCompressImage } from '../../lib/imageUtils';
@@ -47,7 +46,6 @@ import {
   GraduationCap,
   TrendingUp,
   Brain,
-  KeyRound
 } from 'lucide-react';
 
 // Preset cover images as aesthetic alternatives
@@ -177,20 +175,6 @@ export const TeachingSpace: React.FC = () => {
   const [isClassSearchOpen, setIsClassSearchOpen] = useState(false);
   const [selectedClassId, setSelectedClassId] = useState<string | null>(selectedTeachingClassId || null);
 
-  const [isRefreshing, setIsRefreshing] = useState(false);
-
-  const handleManualSync = async () => {
-    if (isRefreshing) return;
-    setIsRefreshing(true);
-    try {
-      await refreshClassesFromBackend();
-    } catch (e) {
-      console.warn('[TeachingSpace] Manual sync notice:', e);
-    } finally {
-      setTimeout(() => setIsRefreshing(false), 600);
-    }
-  };
-
   useEffect(() => {
     refreshClassesFromBackend();
   }, [refreshClassesFromBackend]);
@@ -209,7 +193,6 @@ export const TeachingSpace: React.FC = () => {
   const [analyticsTab, setAnalyticsTab] = useState<'intervals' | 'backlog' | 'champions'>('intervals');
   const [reportStudent, setReportStudent] = useState<ClassStudent | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [isJoinClassOpen, setIsJoinClassOpen] = useState(false);
   const [createdClassSuccess, setCreatedClassSuccess] = useState<ClassGroup | null>(null);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
   const [studentToRemove, setStudentToRemove] = useState<{ id: string; name: string } | null>(null);
@@ -1795,16 +1778,6 @@ export const TeachingSpace: React.FC = () => {
           }}
         />
       )}
-
-
-      {/* --------------------------------------------------------------------- */}
-      {/* MODAL: GABUNG KELAS DENGAN KODE (STUDENT JOIN) */}
-      {/* --------------------------------------------------------------------- */}
-      <JoinClassModal
-        isOpen={isJoinClassOpen}
-        onClose={() => setIsJoinClassOpen(false)}
-        language={language}
-      />
     </>
   );
 
@@ -2512,28 +2485,6 @@ export const TeachingSpace: React.FC = () => {
             <kbd className="hidden sm:inline-block ml-1 px-1.5 py-0.5 text-[10px] font-mono text-slate-400 dark:text-slate-500 bg-white/70 dark:bg-black/20 rounded shadow-2xs border border-black/5 dark:border-white/5">
               ⌘K
             </kbd>
-          </button>
-
-          {/* Quick Join Class Button */}
-          <button
-            type="button"
-            onClick={() => setIsJoinClassOpen(true)}
-            className="flex items-center gap-1.5 px-3 h-9 rounded-2xl clay-pill text-xs font-bold text-[#18234A] dark:text-[#F8FAFC] hover:text-[#FF6F3D] transition-all cursor-pointer shadow-2xs shrink-0"
-            title={language === 'en' ? 'Join class with code...' : 'Gabung kelas dengan kode...'}
-          >
-            <KeyRound className="w-3.5 h-3.5 text-[#FF6F3D] shrink-0" />
-            <span className="hidden sm:inline">{language === 'en' ? 'Join Class' : 'Gabung Kelas'}</span>
-          </button>
-
-          {/* Manual Sync Button */}
-          <button
-            type="button"
-            onClick={handleManualSync}
-            disabled={isRefreshing}
-            className="flex items-center justify-center w-9 h-9 rounded-2xl clay-pill text-[#18234A] dark:text-[#F8FAFC] hover:text-[#FF6F3D] transition-all cursor-pointer shadow-2xs shrink-0 disabled:opacity-60"
-            title={language === 'en' ? 'Sync classes from cloud' : 'Sinkronkan data kelas'}
-          >
-            <RotateCcw className={`w-3.5 h-3.5 text-[#FF6F3D] shrink-0 ${isRefreshing ? 'animate-spin' : ''}`} />
           </button>
         </div>
       </div>
