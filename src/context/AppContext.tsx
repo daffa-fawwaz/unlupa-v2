@@ -3095,8 +3095,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               explanation: card.explanation ? normalizeBilingualText(card.explanation) : '',
               tags: [],
               order: cardIdx + 1,
-              isActive: true,
-              status: 'active',
+              isActive: false,
+              status: 'inactive',
               fsrsData: {
                 stability: 0,
                 difficulty: 5.0,
@@ -3174,16 +3174,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           tags: item.tags || [],
           order: item.order || 1,
         })),
-        progresses: newItems.map(item => ({
-          legacyItemId: item.id,
-          isActive: true,
-          status: 'active',
-          stability: 0,
-          difficulty: 5.0,
-          reps: 0,
-          lapses: 0,
-          state: 'NEW',
-        })),
+        progresses: [],
       };
 
       bookApiService.importBook(payload)
