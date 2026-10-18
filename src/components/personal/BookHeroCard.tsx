@@ -1348,6 +1348,18 @@ export const BookHeroCard: React.FC<BookHeroCardProps> = ({
         </div>
       </div>
 
+      {/* Notice Banner if Paid Book Under Development */}
+      {((book.price && book.price > 0) || ['lib-book-7', 'lib-book-8', 'lib-book-9'].includes(book.masterBookId || '') || ['lib-book-7', 'lib-book-8', 'lib-book-9'].includes(book.id)) && (
+        <div className="w-full px-3 py-2 rounded-xl bg-amber-500/10 border border-amber-500/25 flex items-center gap-2 text-xs font-semibold text-amber-700 dark:text-amber-400">
+          <AlertTriangle className="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400" />
+          <span>
+            {language === 'en'
+              ? 'This book is currently under development and cannot be used for review yet.'
+              : 'Fitur buku ini masih dalam tahap pengembangan sehingga sementara waktu belum dapat digunakan untuk review.'}
+          </span>
+        </div>
+      )}
+
       {/* ========================================================
           2. MASTER HERO CONTENT ROW:
           - KIRI: COVER BUKU (PROPORSIONAL, ELEGAN)

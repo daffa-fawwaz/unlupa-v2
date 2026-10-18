@@ -24,7 +24,8 @@ import {
   Check,
   ExternalLink,
   ChevronRight,
-  ChevronDown
+  ChevronDown,
+  AlertCircle
 } from 'lucide-react';
 
 interface Props {
@@ -57,6 +58,7 @@ export const LibraryModal: React.FC<Props> = ({ isOpen, onClose }) => {
   const [previewEntry, setPreviewEntry] = useState<LibraryEntry | null>(null);
   const [previewSelectedChapterId, setPreviewSelectedChapterId] = useState<string | null>(null);
   const [justImportedId, setJustImportedId] = useState<string | null>(null);
+  const [developmentAlertEntry, setDevelopmentAlertEntry] = useState<LibraryEntry | null>(null);
 
   useSwipeGesture(null, {
     disabled: !isOpen,
@@ -414,7 +416,7 @@ export const LibraryModal: React.FC<Props> = ({ isOpen, onClose }) => {
                       ) : !isPurchased && isPaid ? (
                         <button
                           type="button"
-                          onClick={() => openCheckoutModal(entry)}
+                          onClick={() => setDevelopmentAlertEntry(entry)}
                           className="px-3.5 py-1.5 rounded-xl clay-btn-primary text-white font-extrabold text-xs hover:scale-105 active:scale-95 transition-all flex items-center gap-1.5 shadow-xs cursor-pointer"
                         >
                           <span>Beli ({formatIDR(entry.book.price || 0)})</span>
@@ -582,9 +584,7 @@ export const LibraryModal: React.FC<Props> = ({ isOpen, onClose }) => {
                   <button
                     type="button"
                     onClick={() => {
-                      const entryToBuy = previewEntry;
-                      setPreviewEntry(null);
-                      openCheckoutModal(entryToBuy);
+                      setDevelopmentAlertEntry(previewEntry);
                     }}
                     className="px-5 py-2 rounded-xl clay-btn-primary text-white font-extrabold text-xs sm:text-sm shadow-xs hover:scale-105 active:scale-95 transition-all flex items-center gap-2 cursor-pointer"
                   >
@@ -606,6 +606,34 @@ export const LibraryModal: React.FC<Props> = ({ isOpen, onClose }) => {
                 )}
               </div>
 
+            </div>
+          </div>
+        )}
+
+        {/* Modal Alert: Fitur Masih Dalam Pengembangan */}
+        {developmentAlertEntry && (
+          <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-md animate-in fade-in">
+            <div className="clay-card w-full max-w-md rounded-3xl p-6 sm:p-7 shadow-2xl border border-black/[0.04] dark:border-white/[0.06] text-center flex flex-col items-center">
+              <div className="w-14 h-14 rounded-2xl bg-amber-500/10 text-amber-500 dark:text-amber-400 flex items-center justify-center mb-4 shadow-inner">
+                <AlertCircle className="w-8 h-8" />
+              </div>
+              <h3 className="text-lg font-black text-[#18234A] dark:text-[#F8FAFC] mb-2 tracking-tight">
+                {language === 'en' ? 'Feature Under Development' : 'Fitur Masih Dalam Pengembangan'}
+              </h3>
+              <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed mb-6 font-medium">
+                {language === 'en'
+                  ? `The purchase feature for "${developmentAlertEntry.book.title}" is currently under development. For now, this book cannot be purchased or used yet.`
+                  : `Fitur pembelian untuk buku "${developmentAlertEntry.book.title}" saat ini masih dalam tahap integrasi & pengembangan. Untuk sementara waktu, buku ini belum dapat dibeli atau digunakan.`}
+              </p>
+              <div className="w-full flex justify-center">
+                <button
+                  type="button"
+                  onClick={() => setDevelopmentAlertEntry(null)}
+                  className="w-full sm:w-auto px-6 py-2.5 rounded-xl clay-btn-primary text-white font-extrabold text-xs sm:text-sm hover:scale-105 active:scale-95 transition-all shadow-xs cursor-pointer"
+                >
+                  {language === 'en' ? 'Got It' : 'Saya Mengerti'}
+                </button>
+              </div>
             </div>
           </div>
         )}

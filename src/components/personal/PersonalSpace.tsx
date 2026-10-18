@@ -1623,6 +1623,14 @@ export const PersonalSpace: React.FC<PersonalSpaceProps> = ({
               }
               onToggleExpanded={() => setIsBookDetailsExpanded(prev => !prev)}
               onStartReview={() => {
+                if ((selectedBook.price && selectedBook.price > 0) || ['lib-book-7', 'lib-book-8', 'lib-book-9'].includes(selectedBook.masterBookId || '') || ['lib-book-7', 'lib-book-8', 'lib-book-9'].includes(selectedBook.id)) {
+                  alert(
+                    language === 'en'
+                      ? 'This book is currently under development and cannot be used for review yet.'
+                      : 'Fitur buku ini masih dalam tahap pengembangan sehingga sementara waktu belum dapat digunakan untuk review.'
+                  );
+                  return;
+                }
                 setReviewBookId(selectedBook.id);
                 setIsReviewOpen(true);
               }}

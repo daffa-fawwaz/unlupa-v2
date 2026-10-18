@@ -2390,8 +2390,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [selectedCheckoutEntry, setSelectedCheckoutEntry] = useState<LibraryEntry | null>(null);
 
   const openCheckoutModal = (entry: LibraryEntry) => {
-    setSelectedCheckoutEntry(entry);
-    setIsCheckoutModalOpen(true);
+    alert(
+      language === 'en'
+        ? `The purchase feature for "${entry.book.title}" is currently under development. For now, this book cannot be purchased or used yet.`
+        : `Fitur pembelian untuk buku "${entry.book.title}" saat ini masih dalam tahap integrasi & pengembangan. Untuk sementara waktu, buku ini belum dapat dibeli atau digunakan.`
+    );
   };
 
   const closeCheckoutModal = () => {
@@ -3755,6 +3758,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const importFromLibrary = async (libId: string) => {
     const entry = library.find(l => l.id === libId);
     if (!entry) return;
+
+    if ((entry.book.price || 0) > 0) {
+      alert(
+        language === 'en'
+          ? `The purchase feature for "${entry.book.title}" is currently under development. For now, this book cannot be used yet.`
+          : `Fitur pembelian untuk buku "${entry.book.title}" saat ini masih dalam tahap pengembangan sehingga belum bisa digunakan.`
+      );
+      return;
+    }
 
     // Check if already imported
     const alreadyImported = books.some(b => b.id === entry.book.id || b.masterBookId === entry.book.id);
