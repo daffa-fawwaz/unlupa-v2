@@ -24,6 +24,7 @@ import {
   Share2,
   Trash2,
   PlusCircle,
+  Copy,
   Calendar,
   TrendingUp,
   History,
@@ -64,6 +65,7 @@ export interface BookHeroCardProps {
   onEditBook?: () => void;
   onSyncToClasses?: () => void;
   onPublishBook?: () => void;
+  onDuplicateBook?: () => void;
   onDeleteBook?: () => void;
   onAddChapter?: () => void;
   onBack?: () => void;
@@ -201,6 +203,7 @@ export const BookHeroCard: React.FC<BookHeroCardProps> = ({
   onEditBook,
   onSyncToClasses,
   onPublishBook,
+  onDuplicateBook,
   onDeleteBook,
   onAddChapter,
   onBack,
@@ -1307,7 +1310,22 @@ export const BookHeroCard: React.FC<BookHeroCardProps> = ({
                     </span>
                   </button>
                 )}
-                {!isReadonly && onDeleteBook && (
+                {onDuplicateBook && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsMenuOpen(false);
+                      onDuplicateBook();
+                    }}
+                    className="w-full px-3 py-1.5 text-left text-xs font-bold text-[#18234A] dark:text-[#F8FAFC] hover:bg-[#FF6F3D]/10 hover:text-[#FF6F3D] flex items-center gap-2 transition-colors cursor-pointer"
+                  >
+                    <Copy className="w-3.5 h-3.5 text-indigo-500" />
+                    <span>
+                      {language === "en" ? "Duplicate as Editable" : "Salin untuk Diedit"}
+                    </span>
+                  </button>
+                )}
+                {onDeleteBook && (
                   <button
                     type="button"
                     onClick={() => {
@@ -1318,7 +1336,9 @@ export const BookHeroCard: React.FC<BookHeroCardProps> = ({
                   >
                     <Trash2 className="w-3.5 h-3.5 text-rose-500" />
                     <span>
-                      {language === "en" ? "Delete Book" : "Hapus Buku"}
+                      {isReadonly
+                        ? (language === "en" ? "Remove from Space" : "Hapus dari Ruang Saya")
+                        : (language === "en" ? "Delete Book" : "Hapus Buku")}
                     </span>
                   </button>
                 )}

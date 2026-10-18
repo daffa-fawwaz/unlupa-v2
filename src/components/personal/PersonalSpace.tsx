@@ -122,7 +122,8 @@ export const PersonalSpace: React.FC<PersonalSpaceProps> = ({
     createBook, 
     createBookWithContent,
     updateBook, 
-    deleteBook, 
+    deleteBook,
+    duplicateBookAsEditable, 
     createChapter, 
     updateChapter,
     deleteChapter, 
@@ -1657,10 +1658,18 @@ export const PersonalSpace: React.FC<PersonalSpaceProps> = ({
                 setPublishPreselectedId(selectedBook.id);
                 setIsPublishOpen(true);
               }}
+              onDuplicateBook={() => {
+                const duplicated = duplicateBookAsEditable(selectedBook.id);
+                if (duplicated) {
+                  setSelectedBook(duplicated);
+                }
+              }}
               onDeleteBook={() => {
                 setConfirmDialog({
                   isOpen: true,
-                  message: language === 'en' ? 'Are you sure you want to delete this book?' : 'Hapus buku ini beserta seluruh isinya?',
+                  message: language === 'en'
+                    ? (isCurrentBookReadonly ? 'Remove this book from your space?' : 'Are you sure you want to delete this book?')
+                    : (isCurrentBookReadonly ? 'Hapus buku ini dari ruang belajar Anda?' : 'Hapus buku ini beserta seluruh isinya?'),
                   onConfirm: () => {
                     deleteBook(selectedBook.id);
                     setSelectedBook(null);
