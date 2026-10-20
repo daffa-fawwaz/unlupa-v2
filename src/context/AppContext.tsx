@@ -1031,14 +1031,32 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setIsAuthModalOpen(true);
   };
 
-  const refreshBooksFromBackend = useCallback(async () => {
+  // In-flight request deduplication and timestamp throttling to prevent request burst / rate limit
+  const inFlightBooksRefreshRef = useRef<Promise<void> | null>(null);
+  const lastBooksRefreshTimeRef = useRef<number>(0);
+  const inFlightClassesRefreshRef = useRef<Promise<void> | null>(null);
+  const lastClassesRefreshTimeRef = useRef<number>(0);
+  const inFlightLibraryRefreshRef = useRef<Promise<void> | null>(null);
+  const lastLibraryRefreshTimeRef = useRef<number>(0);
+
+  const refreshBooksFromBackend = useCallback(async (force = false) => {
     const currentUid = loadedUserIdRef.current;
     if (currentUid === 'guest') return;
 
-    try {
-      setIsBooksLoading(true);
-      const bookListRes = await bookApiService.listBooks('personal', { limit: 100 });
-      if (loadedUserIdRef.current !== currentUid) return;
+    if (inFlightBooksRefreshRef.current) {
+      return inFlightBooksRefreshRef.current;
+    }
+
+    const now = Date.now();
+    if (!force && now - lastBooksRefreshTimeRef.current < 15000) {
+      return;
+    }
+
+    const runSync = async () => {
+      try {
+        setIsBooksLoading(true);
+        const bookListRes = await bookApiService.listBooks('personal', { limit: 100 });
+        if (loadedUserIdRef.current !== currentUid) return;
 
       const mappedBooks = (bookListRes.items || []).map(mapBackendBookToBook);
       const allChapters: Chapter[] = [];
@@ -1156,32 +1174,55 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setBooksError(err?.message || 'Gagal menyinkronkan buku dari backend');
       }
     } finally {
+      lastBooksRefreshTimeRef.current = Date.now();
+      inFlightBooksRefreshRef.current = null;
       if (loadedUserIdRef.current === currentUid) {
         setIsBooksLoading(false);
       }
     }
+  };
+
+    inFlightBooksRefreshRef.current = runSync();
+    return inFlightBooksRefreshRef.current;
   }, []);
 
-  const refreshClassesFromBackend = useCallback(async () => {
+  const refreshClassesFromBackend = useCallback(async (force = false) => {
     const currentUid = loadedUserIdRef.current;
     if (currentUid === 'guest') return;
 
-    try {
-      const [backendTeaching, backendJoined] = await Promise.all([
-        classApiService.getTeachingClasses(),
-        classApiService.getJoinedClasses(),
-      ]);
-      if (loadedUserIdRef.current === currentUid) {
-        if (Array.isArray(backendTeaching)) {
-          setTeachingClasses(backendTeaching);
-        }
-        if (Array.isArray(backendJoined)) {
-          setMyClasses(backendJoined);
-        }
-      }
-    } catch (err) {
-      console.warn('[Sync] Failed to refresh classes from backend:', err);
+    if (inFlightClassesRefreshRef.current) {
+      return inFlightClassesRefreshRef.current;
     }
+
+    const now = Date.now();
+    if (!force && now - lastClassesRefreshTimeRef.current < 15000) {
+      return;
+    }
+
+    const runSync = async () => {
+      try {
+        const [backendTeaching, backendJoined] = await Promise.all([
+          classApiService.getTeachingClasses(),
+          classApiService.getJoinedClasses(),
+        ]);
+        if (loadedUserIdRef.current === currentUid) {
+          if (Array.isArray(backendTeaching)) {
+            setTeachingClasses(backendTeaching);
+          }
+          if (Array.isArray(backendJoined)) {
+            setMyClasses(backendJoined);
+          }
+        }
+      } catch (err) {
+        console.warn('[Sync] Failed to refresh classes from backend:', err);
+      } finally {
+        lastClassesRefreshTimeRef.current = Date.now();
+        inFlightClassesRefreshRef.current = null;
+      }
+    };
+
+    inFlightClassesRefreshRef.current = runSync();
+    return inFlightClassesRefreshRef.current;
   }, []);
 
   const openReconciliationModal = useCallback(async () => {
@@ -1538,49 +1579,66 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [library]);
 
   // Authoritative Public Library Sync from PostgreSQL backend
-  const refreshLibraryFromBackend = useCallback(async () => {
-    try {
-      // 1. Fetch authoritative public library entries from PostgreSQL backend
-      const backendEntries = await bookApiService.getPublicLibrary();
+  const refreshLibraryFromBackend = useCallback(async (force = false) => {
+    if (inFlightLibraryRefreshRef.current) {
+      return inFlightLibraryRefreshRef.current;
+    }
 
-      setLibrary(_prev => {
-        const merged: LibraryEntry[] = [];
-        const seenIds = new Set<string>();
-        const seenTitles = new Set<string>();
+    const now = Date.now();
+    if (!force && now - lastLibraryRefreshTimeRef.current < 15000) {
+      return;
+    }
 
-        // Priority 1: PostgreSQL backend public books
-        if (Array.isArray(backendEntries)) {
-          backendEntries.forEach(entry => {
-            if (entry && entry.id && !seenIds.has(entry.id)) {
+    const runSync = async () => {
+      try {
+        // 1. Fetch authoritative public library entries from PostgreSQL backend
+        const backendEntries = await bookApiService.getPublicLibrary();
+
+        setLibrary(_prev => {
+          const merged: LibraryEntry[] = [];
+          const seenIds = new Set<string>();
+          const seenTitles = new Set<string>();
+
+          // Priority 1: PostgreSQL backend public books
+          if (Array.isArray(backendEntries)) {
+            backendEntries.forEach(entry => {
+              if (entry && entry.id && !seenIds.has(entry.id)) {
+                seenIds.add(entry.id);
+                if (entry.book?.id) seenIds.add(entry.book.id);
+                if (entry.title) seenTitles.add(entry.title.trim().toLowerCase());
+                merged.push(entry);
+              }
+            });
+          }
+
+          // Priority 2: Official Curated foundation books (strict from CURATED_LIBRARY)
+          CURATED_LIBRARY.forEach(entry => {
+            const entryBookId = entry.book?.id || entry.id;
+            const entryTitle = (entry.title || entry.book?.title || '').trim().toLowerCase();
+            if (!seenIds.has(entry.id) && !seenIds.has(entryBookId) && !seenTitles.has(entryTitle)) {
               seenIds.add(entry.id);
-              if (entry.book?.id) seenIds.add(entry.book.id);
-              if (entry.title) seenTitles.add(entry.title.trim().toLowerCase());
+              seenIds.add(entryBookId);
+              seenTitles.add(entryTitle);
               merged.push(entry);
             }
           });
-        }
 
-        // Priority 2: Official Curated foundation books (strict from CURATED_LIBRARY)
-        CURATED_LIBRARY.forEach(entry => {
-          const entryBookId = entry.book?.id || entry.id;
-          const entryTitle = (entry.title || entry.book?.title || '').trim().toLowerCase();
-          if (!seenIds.has(entry.id) && !seenIds.has(entryBookId) && !seenTitles.has(entryTitle)) {
-            seenIds.add(entry.id);
-            seenIds.add(entryBookId);
-            seenTitles.add(entryTitle);
-            merged.push(entry);
-          }
+          try {
+            localStorage.setItem('ai_quran_library', JSON.stringify(merged));
+          } catch (e) {}
+
+          return merged;
         });
+      } catch (err) {
+        console.warn('[Library] Failed to refresh library from backend:', err);
+      } finally {
+        lastLibraryRefreshTimeRef.current = Date.now();
+        inFlightLibraryRefreshRef.current = null;
+      }
+    };
 
-        try {
-          localStorage.setItem('ai_quran_library', JSON.stringify(merged));
-        } catch (e) {}
-
-        return merged;
-      });
-    } catch (err) {
-      console.warn('[Library] Failed to refresh library from backend:', err);
-    }
+    inFlightLibraryRefreshRef.current = runSync();
+    return inFlightLibraryRefreshRef.current;
   }, []);
 
   // Initial load of public library on mount
@@ -2198,8 +2256,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
 
     const unsubClassBook = wsService.on('CLASS_BOOK_UPDATED', () => {
-      refreshClassesFromBackend();
-      refreshBooksFromBackend();
+      refreshClassesFromBackend(true);
+      refreshBooksFromBackend(true);
     });
 
     return () => {
@@ -2207,7 +2265,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       unsubQuran();
       unsubClassBook();
     };
-  }, [userProfile.id, myClasses, teachingClasses, refreshBooksFromBackend, refreshClassesFromBackend]);
+  }, [userProfile.id, refreshBooksFromBackend, refreshClassesFromBackend]);
 
   // Real-time: Cross-device push notifications via Server-Sent Events (SSE) (fallback)
   useEffect(() => {
@@ -2244,9 +2302,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               }
               return c;
             }));
-            refreshClassesFromBackend();
+            refreshClassesFromBackend(true);
           } else if (payload?.type === 'LIBRARY_BOOK_UPDATED' || payload?.type === 'LIBRARY_UPDATED') {
-            refreshLibraryFromBackend();
+            refreshLibraryFromBackend(true);
           }
         } catch (err) {}
       };
@@ -2261,21 +2319,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   }, [userProfile.backendId, refreshClassesFromBackend, refreshLibraryFromBackend]);
 
-  // Real-time: Auto-sync on window focus & 10s heartbeat polling across all devices
+  // Real-time: Auto-sync on window focus (throttled 60s) & relaxed 90s fallback polling
   useEffect(() => {
     if (userProfile.id === 'guest' || !userProfile.backendId) return;
 
+    let lastFocusSync = 0;
     const handleFocus = () => {
+      const now = Date.now();
+      if (now - lastFocusSync < 60000) return; // at most once every 60s
+      lastFocusSync = now;
       refreshClassesFromBackend();
       refreshBooksFromBackend();
       refreshLibraryFromBackend();
     };
     window.addEventListener('focus', handleFocus);
 
+    // Fallback polling relaxed from 10s to 90s
     const interval = setInterval(() => {
       refreshClassesFromBackend();
       refreshLibraryFromBackend();
-    }, 10000);
+    }, 90000);
 
     return () => {
       window.removeEventListener('focus', handleFocus);

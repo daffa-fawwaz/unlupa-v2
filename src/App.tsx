@@ -95,10 +95,8 @@ class AppErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundary
   render() {
     if (this.state.hasError) {
       const errorMsg = this.state.error?.message || '';
-      const isQuotaOrRate = errorMsg.toLowerCase().includes('rate') || 
-                            errorMsg.toLowerCase().includes('quota') || 
-                            errorMsg.toLowerCase().includes('resource_exhausted') || 
-                            errorMsg.toLowerCase().includes('429');
+      // Accurate regex for true rate limit / quota exhaustion (avoid false positives on words like disciplineRate, generate, curator, etc.)
+      const isQuotaOrRate = /\b(rate[\s_-]?limit|rate[\s_-]?exceeded|too[\s_-]?many[\s_-]?requests|quota[\s_-]?exceeded|resource[\s_-]?exhausted|429)\b/i.test(errorMsg);
 
       return (
         <div className="min-h-screen bg-[#EEF2F7] dark:bg-[#0F172A] flex items-center justify-center p-4">
@@ -113,14 +111,35 @@ class AppErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundary
             
             <div className="space-y-1.5">
               <h2 className="text-xl font-bold text-slate-800 dark:text-white">
-                {isQuotaOrRate ? 'Batas Frekuensi Permintaan (Rate Limit)' : 'Memuat Ulang Tampilan'}
+                {isQuotaOrRate ? 'Batas Frekuensi Permintaan (Rate Limit)' : 'Terjadi Kendala Tampilan'}
               </h2>
               <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
                 {isQuotaOrRate 
-                  ? 'Layanan menerima banyak permintaan dalam waktu singkat (Rate Exceeded). Data Anda tetap aman tersimpan. Silakan klik tombol di bawah untuk menyegarkan.'
-                  : 'Terjadi kendala saat memuat antarmuka. Silakan klik tombol di bawah untuk menyegarkan tampilan tanpa kehilangan data.'}
+                  ? 'Layanan menerima terlalu banyak permintaan dalam waktu singkat (Rate Limit). Data Anda tetap aman tersimpan. Silakan tunggu beberapa saat atau klik tombol di bawah.'
+                  : 'Terjadi kendala saat memuat antarmuka. Silakan klik tombol di bawah untuk menyegarkan tampilan tanpa kehilangan data Anda.'}
               </p>
             </div>
+
+            {/* Technical Error Details */}
+            {errorMsg && (
+              <div className="text-left w-full bg-slate-100/70 dark:bg-slate-950/60 p-3 rounded-2xl border border-slate-200/60 dark:border-slate-800 text-xs">
+                <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 font-mono text-[10px] mb-1">
+                  <span>Pesan Teknis:</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard?.writeText(this.state.error?.stack || errorMsg);
+                    }}
+                    className="hover:text-slate-800 dark:hover:text-slate-200 transition-colors cursor-pointer text-[10px] underline"
+                  >
+                    Salin
+                  </button>
+                </div>
+                <div className="font-mono text-slate-700 dark:text-slate-300 break-words text-[11px] max-h-20 overflow-y-auto select-all">
+                  {errorMsg}
+                </div>
+              </div>
+            )}
 
             <div className="pt-2 flex flex-col gap-2.5">
               <button
