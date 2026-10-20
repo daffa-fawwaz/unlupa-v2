@@ -41,6 +41,9 @@ class AppErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundary
 
   componentDidMount() {
     try {
+      // Purge legacy heavyweight cache that clogs browser quota
+      localStorage.removeItem('ai_quran_library');
+
       // Validate and sanitize localStorage keys to prevent blank screens
       const keysToCheck = [
         'unlupa_user_profile_v1', 
@@ -59,6 +62,7 @@ class AppErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundary
       try {
         localStorage.removeItem('unlupa_user_profile_v1');
         localStorage.removeItem('unlupa_system_transactions_v1');
+        localStorage.removeItem('ai_quran_library');
         localStorage.setItem('unlupa_active_space_v2', 'dashboard');
       } catch (err) { /* ignore */ }
     }
@@ -74,6 +78,7 @@ class AppErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundary
 
   handleReload = () => {
     try {
+      localStorage.removeItem('ai_quran_library');
       localStorage.setItem('unlupa_active_space_v2', 'dashboard');
     } catch (e) { /* ignore */ }
     this.setState({ hasError: false, error: null });
@@ -81,6 +86,7 @@ class AppErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundary
 
   handleResetState = () => {
     try {
+      localStorage.removeItem('ai_quran_library');
       localStorage.removeItem('unlupa_active_space_v2');
       localStorage.removeItem('unlupa_books_v3');
       localStorage.removeItem('unlupa_chapters_v3');

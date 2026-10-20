@@ -1574,9 +1574,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return CURATED_LIBRARY;
   });
   
+  // Auto-purge legacy massive library cache from localStorage to prevent QuotaExceededError
   useEffect(() => {
-    localStorage.setItem('ai_quran_library', JSON.stringify(library));
-  }, [library]);
+    try {
+      localStorage.removeItem('ai_quran_library');
+    } catch (e) { /* ignore */ }
+  }, []);
 
   // Authoritative Public Library Sync from PostgreSQL backend
   const refreshLibraryFromBackend = useCallback(async (force = false) => {
@@ -1623,10 +1626,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             }
           });
 
-          try {
-            localStorage.setItem('ai_quran_library', JSON.stringify(merged));
-          } catch (e) {}
-
           return merged;
         });
       } catch (err) {
@@ -1648,11 +1647,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Sync to localStorage scoped by user
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.ACTIVE_SPACE, activeSpace);
+    try {
+      localStorage.setItem(STORAGE_KEYS.ACTIVE_SPACE, activeSpace);
+    } catch (e) { /* ignore */ }
   }, [activeSpace]);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.LANGUAGE, language);
+    try {
+      localStorage.setItem(STORAGE_KEYS.LANGUAGE, language);
+    } catch (e) { /* ignore */ }
   }, [language]);
 
   useEffect(() => {
@@ -4004,9 +4007,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setLibrary(prev => {
         const next = [...prev];
         next[existingEntryIndex] = updatedEntry;
-        try {
-          localStorage.setItem('ai_quran_library', JSON.stringify(next));
-        } catch (e) {}
         return next;
       });
 
