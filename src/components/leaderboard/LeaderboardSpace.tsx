@@ -21,7 +21,8 @@ import {
   TrendingUp,
   Award,
   Zap,
-  Target
+  Target,
+  Medal
 } from 'lucide-react';
 import { 
   calculateUserGamificationStats, 
@@ -256,6 +257,7 @@ export const LeaderboardSpace: React.FC = () => {
       return list.map((item, idx) => ({
         ...item,
         rank: idx + 1,
+        disciplineRank: idx + 1,
       }));
     }
 
@@ -322,7 +324,7 @@ export const LeaderboardSpace: React.FC = () => {
       list.sort((a, b) => b.totalXp - a.totalXp);
     }
 
-    return list.map((item, idx) => ({ ...item, rank: idx + 1 }));
+    return list.map((item, idx) => ({ ...item, rank: idx + 1, disciplineRank: idx + 1 }));
   }, [selectedQuranClass, userProfile, quranPages, currentStreak, userStats, rankingCriterion]);
 
   // Santri di Kelas Non Al-Qur'an (Kitab) Terpilih
@@ -381,7 +383,7 @@ export const LeaderboardSpace: React.FC = () => {
       list.sort((a, b) => b.totalXp - a.totalXp);
     }
 
-    return list.map((item, idx) => ({ ...item, rank: idx + 1 }));
+    return list.map((item, idx) => ({ ...item, rank: idx + 1, disciplineRank: idx + 1 }));
   }, [selectedBookClass, userProfile, items, currentStreak, userStats, rankingCriterion]);
 
   // Hasil Pencarian Cepat
@@ -410,7 +412,12 @@ export const LeaderboardSpace: React.FC = () => {
       }
     }
 
-    const myIndex = currentList.findIndex(u => u.isCurrentUser || u.id === userProfile.id);
+    const myIndex = currentList.findIndex(u => 
+      u.isCurrentUser || 
+      u.id === userProfile.id || 
+      u.id === `std-user-${userProfile.id}` ||
+      (u.quranSpaceCode && u.quranSpaceCode === userProfile.quranSpaceCode)
+    );
     const myRank = myIndex >= 0 ? myIndex + 1 : 1;
     const totalParticipants = currentList.length;
     const userAboveMe = myIndex > 0 ? currentList[myIndex - 1] : null;
@@ -441,12 +448,79 @@ export const LeaderboardSpace: React.FC = () => {
     globalLeaderboard, 
     quranClassStudentsSorted, 
     bookClassStudentsSorted, 
-    userProfile.id, 
+    userProfile.id,
+    userProfile.quranSpaceCode,
     selectedQuranClass, 
     selectedBookClass,
     rankingCriterion,
     currentUserEntry
   ]);
+
+  // ==============================================================
+  // DATA 10 BESAR & POSISI SANTRI AKTIF (TOP 10 + USER RANK)
+  // ==============================================================
+  // 1. Peringkat Nasional (Al-Qur'an)
+  const top10Global = useMemo(() => {
+    return globalLeaderboard.slice(0, 10);
+  }, [globalLeaderboard]);
+
+  const currentUserInGlobal = useMemo(() => {
+    return globalLeaderboard.find(u => 
+      u.isCurrentUser || 
+      u.id === userProfile.id || 
+      (u.quranSpaceCode && u.quranSpaceCode === userProfile.quranSpaceCode)
+    );
+  }, [globalLeaderboard, userProfile.id, userProfile.quranSpaceCode]);
+
+  const isCurrentUserInTop10Global = useMemo(() => {
+    return top10Global.some(u => 
+      u.isCurrentUser || 
+      u.id === userProfile.id || 
+      (u.quranSpaceCode && u.quranSpaceCode === userProfile.quranSpaceCode)
+    );
+  }, [top10Global, userProfile.id, userProfile.quranSpaceCode]);
+
+  // 2. Peringkat Kelas Al-Qur'an
+  const top10QuranClass = useMemo(() => {
+    return quranClassStudentsSorted.slice(0, 10);
+  }, [quranClassStudentsSorted]);
+
+  const currentUserInQuranClass = useMemo(() => {
+    return quranClassStudentsSorted.find(s => 
+      s.isCurrentUser || 
+      s.id === `std-user-${userProfile.id}` || 
+      s.id === userProfile.id
+    );
+  }, [quranClassStudentsSorted, userProfile.id]);
+
+  const isCurrentUserInTop10QuranClass = useMemo(() => {
+    return top10QuranClass.some(s => 
+      s.isCurrentUser || 
+      s.id === `std-user-${userProfile.id}` || 
+      s.id === userProfile.id
+    );
+  }, [top10QuranClass, userProfile.id]);
+
+  // 3. Peringkat Kelas Kitab
+  const top10BookClass = useMemo(() => {
+    return bookClassStudentsSorted.slice(0, 10);
+  }, [bookClassStudentsSorted]);
+
+  const currentUserInBookClass = useMemo(() => {
+    return bookClassStudentsSorted.find(s => 
+      s.isCurrentUser || 
+      s.id === `std-user-${userProfile.id}` || 
+      s.id === userProfile.id
+    );
+  }, [bookClassStudentsSorted, userProfile.id]);
+
+  const isCurrentUserInTop10BookClass = useMemo(() => {
+    return top10BookClass.some(s => 
+      s.isCurrentUser || 
+      s.id === `std-user-${userProfile.id}` || 
+      s.id === userProfile.id
+    );
+  }, [top10BookClass, userProfile.id]);
 
   const handleJoinClassSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -820,22 +894,43 @@ export const LeaderboardSpace: React.FC = () => {
       {mainScope === 'quran' && (
         <div className="space-y-4">
           <div className="space-y-3">
-            {/* Cakupan Wilayah Nasional Santri Unlupa & Status Realtime */}
-            <div className="flex items-center justify-between gap-2 neumorph-card p-2.5 sm:p-3 rounded-2xl">
-              <div className="flex items-center gap-2">
+            {/* Header Leaderboard 10 Besar & Posisi Peringkat Santri */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 neumorph-card p-2.5 sm:p-3.5 rounded-2xl">
+              <div className="flex items-center gap-2 flex-wrap">
                 <div className="flex items-center gap-1.5">
-                  <Globe className="w-3.5 h-3.5 text-[#FF6F3D]" />
-                  <span className="text-xs font-bold text-[#18234A] dark:text-[#F8FAFC]">Cakupan: Nasional (Seluruh Santri Unlupa)</span>
+                  <Trophy className="w-4 h-4 text-amber-500 shrink-0" />
+                  <span className="text-xs sm:text-sm font-black text-[#18234A] dark:text-[#F8FAFC]">
+                    10 Besar Nasional
+                  </span>
+                  <span className="text-[11px] font-medium text-[#5E6D88] dark:text-[#94A3B8] hidden md:inline">
+                    (Santri Terbaik Unlupa)
+                  </span>
                 </div>
-                <div className="hidden sm:inline-flex items-center gap-1 text-[10px] text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full font-bold">
+                <div className="inline-flex items-center gap-1 text-[10px] text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full font-bold">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                   <span>Leaderboard Aktif</span>
                 </div>
               </div>
 
-              <span className="text-[11px] font-bold text-[#5E6D88] dark:text-[#94A3B8]">
-                {globalLeaderboard.length} Santri Terdaftar
-              </span>
+              {/* Keterangan Posisi Peringkat User (Sesuai Permintaan) */}
+              <div className="flex items-center gap-2 shrink-0 flex-wrap justify-between sm:justify-end">
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-gradient-to-r from-[#FF6F3D]/15 via-amber-500/10 to-transparent border border-[#FF6F3D]/30 shadow-2xs">
+                  <Medal className="w-3.5 h-3.5 text-[#FF6F3D] shrink-0" />
+                  <span className="text-[11px] font-bold text-[#18234A] dark:text-[#F8FAFC]">
+                    Peringkat Anda:
+                  </span>
+                  <span className="px-2 py-0.5 rounded-lg bg-gradient-to-r from-[#FF7E4A] to-[#E65320] text-white text-[11px] font-black shadow-xs">
+                    #{activeRankingContext.myRank}
+                  </span>
+                  <span className="text-[10px] font-bold text-[#5E6D88] dark:text-[#94A3B8]">
+                    dari {activeRankingContext.totalParticipants} Santri
+                  </span>
+                </div>
+
+                <span className="text-[10px] font-bold text-[#5E6D88] dark:text-[#94A3B8] hidden lg:inline">
+                  • Total {globalLeaderboard.length} Santri
+                </span>
+              </div>
             </div>
 
               {/* Tabel Peringkat Seluruh Pengguna Unlupa Terbuka */}
@@ -867,65 +962,137 @@ export const LeaderboardSpace: React.FC = () => {
                           </td>
                         </tr>
                       ) : (
-                        globalLeaderboard.map((user, idx) => {
-                          const currentRank = rankingCriterion === 'discipline' ? (user.disciplineRank || idx + 1) : (user.rank || idx + 1);
-                          return (
-                            <tr 
-                              key={user.id} 
-                              className={`transition-colors ${
-                                user.isCurrentUser 
-                                  ? 'bg-[#FF6F3D]/10 font-bold' 
-                                  : 'hover:bg-black/[0.02]'
-                              }`}
-                            >
-                              <td className="py-2.5 px-3 text-center">
-                                {currentRank === 1 ? '🥇' : currentRank === 2 ? '🥈' : currentRank === 3 ? '🥉' : `#${currentRank}`}
-                              </td>
-                              <td className="py-2.5 px-3">
-                                <div className="flex items-center gap-2">
-                                  <img 
-                                    src={user.avatarUrl || ISLAMIC_AVATARS.malePeci} 
-                                    alt={user.name} 
-                                    onError={(e) => {
-                                      (e.target as HTMLImageElement).src = ISLAMIC_AVATARS.malePeci;
-                                    }}
-                                    className="w-7 h-7 rounded-xl object-cover shrink-0 ring-1 ring-black/10" 
-                                  />
-                                  <div className="min-w-0">
-                                    <span className="font-bold text-[#18234A] dark:text-[#F8FAFC] truncate block">
-                                      {user.name} {user.isCurrentUser && '(Anda)'}
-                                    </span>
-                                    <span className="text-[9px] text-[#5E6D88] block truncate">
-                                      {user.tierTitleId}
-                                    </span>
+                        <>
+                          {top10Global.map((user, idx) => {
+                            const currentRank = rankingCriterion === 'discipline' ? (user.disciplineRank || idx + 1) : (user.rank || idx + 1);
+                            return (
+                              <tr 
+                                key={user.id} 
+                                className={`transition-colors ${
+                                  user.isCurrentUser 
+                                    ? 'bg-[#FF6F3D]/12 dark:bg-[#FF6F3D]/20 font-bold border-l-4 border-l-[#FF6F3D]' 
+                                    : 'hover:bg-black/[0.02]'
+                                }`}
+                              >
+                                <td className="py-2.5 px-3 text-center">
+                                  {currentRank === 1 ? '🥇' : currentRank === 2 ? '🥈' : currentRank === 3 ? '🥉' : `#${currentRank}`}
+                                </td>
+                                <td className="py-2.5 px-3">
+                                  <div className="flex items-center gap-2">
+                                    <img 
+                                      src={user.avatarUrl || ISLAMIC_AVATARS.malePeci} 
+                                      alt={user.name} 
+                                      onError={(e) => {
+                                        (e.target as HTMLImageElement).src = ISLAMIC_AVATARS.malePeci;
+                                      }}
+                                      className="w-7 h-7 rounded-xl object-cover shrink-0 ring-1 ring-black/10" 
+                                    />
+                                    <div className="min-w-0">
+                                      <span className="font-bold text-[#18234A] dark:text-[#F8FAFC] truncate flex items-center gap-1.5">
+                                        <span className="truncate">{user.name.replace(' (Anda)', '')}</span>
+                                        {user.isCurrentUser && (
+                                          <span className="px-1.5 py-0.5 rounded-md text-[9px] font-black bg-[#FF6F3D] text-white shrink-0">
+                                            Anda
+                                          </span>
+                                        )}
+                                      </span>
+                                      <span className="text-[9px] text-[#5E6D88] block truncate">
+                                        {user.tierTitleId}
+                                      </span>
+                                    </div>
                                   </div>
-                                </div>
-                              </td>
-                            <td className="py-2.5 px-3 hidden sm:table-cell text-[#5E6D88] text-[11px]">
-                              {user.region}
-                            </td>
-                            <td className="py-2.5 px-3 text-center text-orange-500 font-bold">
-                              {user.streakDays}h
-                            </td>
-                            <td className="py-2.5 px-3 text-center">
-                              {rankingCriterion === 'discipline' ? (
-                                <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-                                  {user.disciplineRate || 95}% Tepat
-                                </span>
-                              ) : (
-                                <span className="text-[#5E6D88]">
-                                  {user.activePagesCount} hal
-                                </span>
-                              )}
-                            </td>
-                            <td className="py-2.5 px-3 text-right font-black text-[#18234A] dark:text-[#F8FAFC]">
-                              {rankingCriterion === 'discipline' 
-                                ? `${(user.disciplineScore || (user.disciplineRate || 95) * 10).toLocaleString()} pt` 
-                                : user.totalXp.toLocaleString()}
-                            </td>
-                          </tr>
-                        );
-                      }))}
+                                </td>
+                                <td className="py-2.5 px-3 hidden sm:table-cell text-[#5E6D88] text-[11px]">
+                                  {user.region}
+                                </td>
+                                <td className="py-2.5 px-3 text-center text-orange-500 font-bold">
+                                  {user.streakDays}h
+                                </td>
+                                <td className="py-2.5 px-3 text-center">
+                                  {rankingCriterion === 'discipline' ? (
+                                    <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                                      {user.disciplineRate || 95}% Tepat
+                                    </span>
+                                  ) : (
+                                    <span className="text-[#5E6D88]">
+                                      {user.activePagesCount} hal
+                                    </span>
+                                  )}
+                                </td>
+                                <td className="py-2.5 px-3 text-right font-black text-[#18234A] dark:text-[#F8FAFC]">
+                                  {rankingCriterion === 'discipline' 
+                                    ? `${(user.disciplineScore || (user.disciplineRate || 95) * 10).toLocaleString()} pt` 
+                                    : user.totalXp.toLocaleString()}
+                                </td>
+                              </tr>
+                            );
+                          })}
+
+                          {/* Jika Santri Saat Ini Berada di Luar 10 Besar, Sematkan Baris Peringkatnya di Bawah */}
+                          {!isCurrentUserInTop10Global && currentUserInGlobal && (
+                            <>
+                              <tr className="bg-black/[0.02] dark:bg-white/[0.02] border-y border-dashed border-black/10 dark:border-white/10">
+                                <td colSpan={6} className="py-2 text-center text-xs text-[#8E9BAE] font-black tracking-widest">
+                                  • • •
+                                </td>
+                              </tr>
+                              <tr 
+                                key={`pinned-${currentUserInGlobal.id}`}
+                                className="bg-[#FF6F3D]/12 dark:bg-[#FF6F3D]/20 font-bold border-l-4 border-l-[#FF6F3D] transition-colors"
+                              >
+                                <td className="py-2.5 px-3 text-center text-[#FF6F3D] font-black">
+                                  #{activeRankingContext.myRank}
+                                </td>
+                                <td className="py-2.5 px-3">
+                                  <div className="flex items-center gap-2">
+                                    <img 
+                                      src={currentUserInGlobal.avatarUrl || ISLAMIC_AVATARS.malePeci} 
+                                      alt={currentUserInGlobal.name} 
+                                      onError={(e) => {
+                                        (e.target as HTMLImageElement).src = ISLAMIC_AVATARS.malePeci;
+                                      }}
+                                      className="w-7 h-7 rounded-xl object-cover shrink-0 ring-2 ring-[#FF6F3D]" 
+                                    />
+                                    <div className="min-w-0">
+                                      <span className="font-bold text-[#18234A] dark:text-[#F8FAFC] truncate flex items-center gap-1.5">
+                                        <span className="truncate">{currentUserInGlobal.name.replace(' (Anda)', '')}</span>
+                                        <span className="px-1.5 py-0.5 rounded-md text-[9px] font-black bg-[#FF6F3D] text-white shrink-0">
+                                          Anda
+                                        </span>
+                                      </span>
+                                      <span className="text-[9px] text-[#5E6D88] block truncate">
+                                        {currentUserInGlobal.tierTitleId}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </td>
+                                <td className="py-2.5 px-3 hidden sm:table-cell text-[#5E6D88] text-[11px]">
+                                  {currentUserInGlobal.region}
+                                </td>
+                                <td className="py-2.5 px-3 text-center text-orange-500 font-bold">
+                                  {currentUserInGlobal.streakDays}h
+                                </td>
+                                <td className="py-2.5 px-3 text-center">
+                                  {rankingCriterion === 'discipline' ? (
+                                    <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                                      {currentUserInGlobal.disciplineRate || 95}% Tepat
+                                    </span>
+                                  ) : (
+                                    <span className="text-[#5E6D88]">
+                                      {currentUserInGlobal.activePagesCount} hal
+                                    </span>
+                                  )}
+                                </td>
+                                <td className="py-2.5 px-3 text-right font-black text-[#18234A] dark:text-[#F8FAFC]">
+                                  {rankingCriterion === 'discipline' 
+                                    ? `${(currentUserInGlobal.disciplineScore || (currentUserInGlobal.disciplineRate || 95) * 10).toLocaleString()} pt` 
+                                    : currentUserInGlobal.totalXp.toLocaleString()}
+                                </td>
+                              </tr>
+                            </>
+                          )}
+                        </>
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -944,17 +1111,35 @@ export const LeaderboardSpace: React.FC = () => {
             <div className="space-y-3">
               {quranClasses.length > 0 ? (
                 <>
-                  <div className="neumorph-card p-2.5 sm:p-3 rounded-2xl flex items-center justify-between gap-2">
-                    <span className="text-xs font-bold text-[#18234A] dark:text-[#F8FAFC]">Pilih Kelas Al-Qur'an:</span>
-                    <select
-                      value={selectedQuranClassId}
-                      onChange={(e) => setSelectedQuranClassId(e.target.value)}
-                      className="bg-[#EBEEF5] dark:bg-[#10192A] text-xs font-bold text-[#18234A] dark:text-[#F8FAFC] px-3 py-1.5 rounded-xl border border-black/10 focus:outline-none focus:ring-2 focus:ring-[#FF6F3D] cursor-pointer"
-                    >
-                      {quranClasses.map(cls => (
-                        <option key={cls.id} value={cls.id}>{cls.name} ({cls.code})</option>
-                      ))}
-                    </select>
+                  <div className="neumorph-card p-2.5 sm:p-3.5 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-xs font-bold text-[#18234A] dark:text-[#F8FAFC]">Pilih Kelas Al-Qur'an:</span>
+                      <select
+                        value={selectedQuranClassId}
+                        onChange={(e) => setSelectedQuranClassId(e.target.value)}
+                        className="bg-[#EBEEF5] dark:bg-[#10192A] text-xs font-bold text-[#18234A] dark:text-[#F8FAFC] px-3 py-1.5 rounded-xl border border-black/10 focus:outline-none focus:ring-2 focus:ring-[#FF6F3D] cursor-pointer"
+                      >
+                        {quranClasses.map(cls => (
+                          <option key={cls.id} value={cls.id}>{cls.name} ({cls.code})</option>
+                        ))}
+                      </select>
+                      <span className="text-[10px] font-black text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">
+                        10 Besar Kelas
+                      </span>
+                    </div>
+
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-gradient-to-r from-[#FF6F3D]/15 via-amber-500/10 to-transparent border border-[#FF6F3D]/30 shadow-2xs self-start sm:self-auto">
+                      <Medal className="w-3.5 h-3.5 text-[#FF6F3D] shrink-0" />
+                      <span className="text-[11px] font-bold text-[#18234A] dark:text-[#F8FAFC]">
+                        Peringkat Anda di Kelas:
+                      </span>
+                      <span className="px-2 py-0.5 rounded-lg bg-gradient-to-r from-[#FF7E4A] to-[#E65320] text-white text-[11px] font-black shadow-xs">
+                        #{activeRankingContext.myRank}
+                      </span>
+                      <span className="text-[10px] font-bold text-[#5E6D88] dark:text-[#94A3B8]">
+                        dari {quranClassStudentsSorted.length} Santri
+                      </span>
+                    </div>
                   </div>
 
                   <div className="neumorph-card rounded-2xl overflow-hidden border border-white/60 dark:border-white/5">
@@ -973,17 +1158,31 @@ export const LeaderboardSpace: React.FC = () => {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-black/[0.03]">
-                        {quranClassStudentsSorted.map((student, idx) => {
+                        {top10QuranClass.map((student, idx) => {
                           const rankNum = idx + 1;
                           return (
-                            <tr key={student.id} className={student.isCurrentUser ? 'bg-[#FF6F3D]/10 font-bold' : ''}>
+                            <tr 
+                              key={student.id} 
+                              className={`transition-colors ${
+                                student.isCurrentUser 
+                                  ? 'bg-[#FF6F3D]/12 dark:bg-[#FF6F3D]/20 font-bold border-l-4 border-l-[#FF6F3D]' 
+                                  : 'hover:bg-black/[0.02]'
+                              }`}
+                            >
                               <td className="py-2.5 px-3 text-center">
                                 {rankNum === 1 ? '🥇' : rankNum === 2 ? '🥈' : rankNum === 3 ? '🥉' : `#${rankNum}`}
                               </td>
                               <td className="py-2.5 px-3">
                                 <div className="flex items-center gap-2">
-                                  <img src={student.avatarUrl || ISLAMIC_AVATARS.malePeci} alt={student.name} className="w-6 h-6 rounded-lg object-cover" />
-                                  <span>{student.name}</span>
+                                  <img src={student.avatarUrl || ISLAMIC_AVATARS.malePeci} alt={student.name} className="w-6 h-6 rounded-lg object-cover ring-1 ring-black/10 shrink-0" />
+                                  <span className="truncate flex items-center gap-1.5 font-bold text-[#18234A] dark:text-[#F8FAFC]">
+                                    <span className="truncate">{student.name.replace(' (Anda)', '')}</span>
+                                    {student.isCurrentUser && (
+                                      <span className="px-1.5 py-0.5 rounded-md text-[9px] font-black bg-[#FF6F3D] text-white shrink-0">
+                                        Anda
+                                      </span>
+                                    )}
+                                  </span>
                                 </div>
                               </td>
                               <td className="py-2.5 px-3 text-center text-orange-500 font-bold">{student.streakDays}h</td>
@@ -1004,6 +1203,51 @@ export const LeaderboardSpace: React.FC = () => {
                             </tr>
                           );
                         })}
+
+                        {/* Jika Santri Berada di Luar 10 Besar Kelas, Sematkan Baris Peringkatnya di Bawah */}
+                        {!isCurrentUserInTop10QuranClass && currentUserInQuranClass && (
+                          <>
+                            <tr className="bg-black/[0.02] dark:bg-white/[0.02] border-y border-dashed border-black/10 dark:border-white/10">
+                              <td colSpan={5} className="py-2 text-center text-xs text-[#8E9BAE] font-black tracking-widest">
+                                • • •
+                              </td>
+                            </tr>
+                            <tr 
+                              key={`pinned-${currentUserInQuranClass.id}`}
+                              className="bg-[#FF6F3D]/12 dark:bg-[#FF6F3D]/20 font-bold border-l-4 border-l-[#FF6F3D]"
+                            >
+                              <td className="py-2.5 px-3 text-center text-[#FF6F3D] font-black">
+                                #{activeRankingContext.myRank}
+                              </td>
+                              <td className="py-2.5 px-3">
+                                <div className="flex items-center gap-2">
+                                  <img src={currentUserInQuranClass.avatarUrl || ISLAMIC_AVATARS.malePeci} alt={currentUserInQuranClass.name} className="w-6 h-6 rounded-lg object-cover ring-1 ring-[#FF6F3D] shrink-0" />
+                                  <span className="truncate flex items-center gap-1.5 font-bold text-[#18234A] dark:text-[#F8FAFC]">
+                                    <span className="truncate">{currentUserInQuranClass.name.replace(' (Anda)', '')}</span>
+                                    <span className="px-1.5 py-0.5 rounded-md text-[9px] font-black bg-[#FF6F3D] text-white shrink-0">
+                                      Anda
+                                    </span>
+                                  </span>
+                                </div>
+                              </td>
+                              <td className="py-2.5 px-3 text-center text-orange-500 font-bold">{currentUserInQuranClass.streakDays}h</td>
+                              <td className="py-2.5 px-3 text-center">
+                                {rankingCriterion === 'discipline' ? (
+                                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                                    {currentUserInQuranClass.disciplineRate || 95}% Tepat
+                                  </span>
+                                ) : (
+                                  <span className="text-[#5E6D88]">{currentUserInQuranClass.activePagesCount} hal</span>
+                                )}
+                              </td>
+                              <td className="py-2.5 px-3 text-right font-black">
+                                {rankingCriterion === 'discipline' 
+                                  ? `${(currentUserInQuranClass.disciplineScore || (currentUserInQuranClass.disciplineRate || 95) * 10).toLocaleString()} pt` 
+                                  : currentUserInQuranClass.totalXp.toLocaleString()}
+                              </td>
+                            </tr>
+                          </>
+                        )}
                       </tbody>
                     </table>
                   </div>
@@ -1030,17 +1274,35 @@ export const LeaderboardSpace: React.FC = () => {
             <div className="space-y-3">
               {nonQuranClasses.length > 0 ? (
                 <>
-                  <div className="neumorph-card p-2.5 sm:p-3 rounded-2xl flex items-center justify-between gap-2">
-                    <span className="text-xs font-bold text-[#18234A] dark:text-[#F8FAFC]">Pilih Kelas Kitab:</span>
-                    <select
-                      value={selectedBookClassId}
-                      onChange={(e) => setSelectedBookClassId(e.target.value)}
-                      className="bg-[#EBEEF5] dark:bg-[#10192A] text-xs font-bold text-[#18234A] dark:text-[#F8FAFC] px-3 py-1.5 rounded-xl border border-black/10 focus:outline-none focus:ring-2 focus:ring-[#FF6F3D] cursor-pointer"
-                    >
-                      {nonQuranClasses.map(cls => (
-                        <option key={cls.id} value={cls.id}>{cls.name} ({cls.code})</option>
-                      ))}
-                    </select>
+                  <div className="neumorph-card p-2.5 sm:p-3.5 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-xs font-bold text-[#18234A] dark:text-[#F8FAFC]">Pilih Kelas Kitab:</span>
+                      <select
+                        value={selectedBookClassId}
+                        onChange={(e) => setSelectedBookClassId(e.target.value)}
+                        className="bg-[#EBEEF5] dark:bg-[#10192A] text-xs font-bold text-[#18234A] dark:text-[#F8FAFC] px-3 py-1.5 rounded-xl border border-black/10 focus:outline-none focus:ring-2 focus:ring-[#FF6F3D] cursor-pointer"
+                      >
+                        {nonQuranClasses.map(cls => (
+                          <option key={cls.id} value={cls.id}>{cls.name} ({cls.code})</option>
+                        ))}
+                      </select>
+                      <span className="text-[10px] font-black text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">
+                        10 Besar Kelas
+                      </span>
+                    </div>
+
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-gradient-to-r from-[#FF6F3D]/15 via-amber-500/10 to-transparent border border-[#FF6F3D]/30 shadow-2xs self-start sm:self-auto">
+                      <Medal className="w-3.5 h-3.5 text-[#FF6F3D] shrink-0" />
+                      <span className="text-[11px] font-bold text-[#18234A] dark:text-[#F8FAFC]">
+                        Peringkat Anda di Kelas:
+                      </span>
+                      <span className="px-2 py-0.5 rounded-lg bg-gradient-to-r from-[#FF7E4A] to-[#E65320] text-white text-[11px] font-black shadow-xs">
+                        #{activeRankingContext.myRank}
+                      </span>
+                      <span className="text-[10px] font-bold text-[#5E6D88] dark:text-[#94A3B8]">
+                        dari {bookClassStudentsSorted.length} Santri
+                      </span>
+                    </div>
                   </div>
 
                   <div className="neumorph-card rounded-2xl overflow-hidden border border-white/60 dark:border-white/5">
@@ -1057,17 +1319,31 @@ export const LeaderboardSpace: React.FC = () => {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-black/[0.03]">
-                        {bookClassStudentsSorted.map((student, idx) => {
+                        {top10BookClass.map((student, idx) => {
                           const rankNum = idx + 1;
                           return (
-                            <tr key={student.id} className={student.isCurrentUser ? 'bg-[#FF6F3D]/10 font-bold' : ''}>
+                            <tr 
+                              key={student.id} 
+                              className={`transition-colors ${
+                                student.isCurrentUser 
+                                  ? 'bg-[#FF6F3D]/12 dark:bg-[#FF6F3D]/20 font-bold border-l-4 border-l-[#FF6F3D]' 
+                                  : 'hover:bg-black/[0.02]'
+                              }`}
+                            >
                               <td className="py-2.5 px-3 text-center">
                                 {rankNum === 1 ? '🥇' : rankNum === 2 ? '🥈' : rankNum === 3 ? '🥉' : `#${rankNum}`}
                               </td>
                               <td className="py-2.5 px-3">
                                 <div className="flex items-center gap-2">
-                                  <img src={student.avatarUrl || ISLAMIC_AVATARS.malePeci} alt={student.name} className="w-6 h-6 rounded-lg object-cover" />
-                                  <span>{student.name}</span>
+                                  <img src={student.avatarUrl || ISLAMIC_AVATARS.malePeci} alt={student.name} className="w-6 h-6 rounded-lg object-cover ring-1 ring-black/10 shrink-0" />
+                                  <span className="truncate flex items-center gap-1.5 font-bold text-[#18234A] dark:text-[#F8FAFC]">
+                                    <span className="truncate">{student.name.replace(' (Anda)', '')}</span>
+                                    {student.isCurrentUser && (
+                                      <span className="px-1.5 py-0.5 rounded-md text-[9px] font-black bg-[#FF6F3D] text-white shrink-0">
+                                        Anda
+                                      </span>
+                                    )}
+                                  </span>
                                 </div>
                               </td>
                               <td className="py-2.5 px-3 text-center text-orange-500 font-bold">{student.streakDays}h</td>
@@ -1080,6 +1356,43 @@ export const LeaderboardSpace: React.FC = () => {
                             </tr>
                           );
                         })}
+
+                        {/* Jika Santri Berada di Luar 10 Besar Kelas Kitab, Sematkan Baris Peringkatnya di Bawah */}
+                        {!isCurrentUserInTop10BookClass && currentUserInBookClass && (
+                          <>
+                            <tr className="bg-black/[0.02] dark:bg-white/[0.02] border-y border-dashed border-black/10 dark:border-white/10">
+                              <td colSpan={5} className="py-2 text-center text-xs text-[#8E9BAE] font-black tracking-widest">
+                                • • •
+                              </td>
+                            </tr>
+                            <tr 
+                              key={`pinned-${currentUserInBookClass.id}`}
+                              className="bg-[#FF6F3D]/12 dark:bg-[#FF6F3D]/20 font-bold border-l-4 border-l-[#FF6F3D]"
+                            >
+                              <td className="py-2.5 px-3 text-center text-[#FF6F3D] font-black">
+                                #{activeRankingContext.myRank}
+                              </td>
+                              <td className="py-2.5 px-3">
+                                <div className="flex items-center gap-2">
+                                  <img src={currentUserInBookClass.avatarUrl || ISLAMIC_AVATARS.malePeci} alt={currentUserInBookClass.name} className="w-6 h-6 rounded-lg object-cover ring-1 ring-[#FF6F3D] shrink-0" />
+                                  <span className="truncate flex items-center gap-1.5 font-bold text-[#18234A] dark:text-[#F8FAFC]">
+                                    <span className="truncate">{currentUserInBookClass.name.replace(' (Anda)', '')}</span>
+                                    <span className="px-1.5 py-0.5 rounded-md text-[9px] font-black bg-[#FF6F3D] text-white shrink-0">
+                                      Anda
+                                    </span>
+                                  </span>
+                                </div>
+                              </td>
+                              <td className="py-2.5 px-3 text-center text-orange-500 font-bold">{currentUserInBookClass.streakDays}h</td>
+                              <td className="py-2.5 px-3 text-center text-[#5E6D88]">{currentUserInBookClass.activePagesCount} materi</td>
+                              <td className="py-2.5 px-3 text-right font-black">
+                                {rankingCriterion === 'discipline'
+                                  ? `${(currentUserInBookClass.disciplineScore || (currentUserInBookClass.disciplineRate || 95) * 10).toLocaleString()} pt`
+                                  : currentUserInBookClass.totalXp.toLocaleString()}
+                              </td>
+                            </tr>
+                          </>
+                        )}
                       </tbody>
                     </table>
                   </div>
