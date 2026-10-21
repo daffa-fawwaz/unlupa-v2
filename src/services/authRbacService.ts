@@ -4,6 +4,8 @@ import { UserProfile } from '../types';
  * Known default administrator emails configured during registration
  */
 export const DEFAULT_ADMIN_EMAILS = [
+  'admin@unlupa.id',
+  'superadmin@unlupa.id',
   'admin@anlupa.id',
   'admin@unlupa.com',
   'admin.unlupa@gmail.com',
