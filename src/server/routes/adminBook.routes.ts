@@ -13,7 +13,7 @@ function getParam(param: string | string[] | undefined): string {
 /**
  * All admin book routes require authentication and ADMIN or SUPERADMIN role
  */
-adminBookRouter.use(authenticate, requireRole(Role.ADMIN, Role.SUPERADMIN));
+adminBookRouter.use('/admin/books', authenticate, requireRole(Role.ADMIN, Role.SUPERADMIN));
 
 /**
  * GET /api/v1/admin/books

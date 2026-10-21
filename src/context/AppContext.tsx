@@ -4119,6 +4119,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     // 1. Try finding and joining via PostgreSQL backend first!
     let targetClass: ClassGroup | null = null;
+    let backendErrorMessage: string | null = null;
     if (userProfile.id !== 'guest' && userProfile.backendId) {
       try {
         const backendJoined = await classApiService.joinClassByCode(cleanCode);
@@ -4136,6 +4137,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           // If not found in PostgreSQL, allow checking local or Firestore below
         } else {
           console.warn('[Classes] Backend join error:', apiErr);
+          backendErrorMessage = apiErr?.message || null;
         }
       }
     }
@@ -4146,7 +4148,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
     
     if (!targetClass) {
-      return { success: false, message: language === 'en' ? 'Class not found.' : 'Kelas tidak ditemukan.' };
+      return { 
+        success: false, 
+        message: backendErrorMessage || (language === 'en' ? 'Class not found.' : 'Kelas tidak ditemukan.') 
+      };
     }
 
     // 2. Check if user is already in that class

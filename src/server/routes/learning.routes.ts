@@ -7,8 +7,8 @@ import { prisma } from '../db';
 
 export const learningRouter = Router();
 
-// Protect all learning endpoints with Firebase Authentication
-learningRouter.use(authenticate);
+// Protect all learning endpoints with Authentication
+learningRouter.use('/learning', authenticate);
 
 function getParam(val: string | string[] | undefined): string {
   if (Array.isArray(val)) return val[0] || '';

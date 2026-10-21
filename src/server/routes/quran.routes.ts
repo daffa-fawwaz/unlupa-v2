@@ -7,7 +7,7 @@ import { createError } from '../middleware/errorHandler';
 export const quranRouter = Router();
 
 // Require JWT authentication for all Quran endpoints
-quranRouter.use(authenticate);
+quranRouter.use('/quran', authenticate);
 
 function parsePageNumber(param: string | string[] | undefined): number {
   const raw = Array.isArray(param) ? param[0] : param;

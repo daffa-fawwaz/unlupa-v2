@@ -34,7 +34,7 @@ bookRouter.get('/books/public/library', async (req: Request, res: Response, next
 });
 
 // Protect all remaining book endpoints with Authentication
-bookRouter.use(authenticate);
+bookRouter.use('/books', authenticate);
 
 function getParam(val: string | string[] | undefined): string {
   if (Array.isArray(val)) return val[0] || '';
