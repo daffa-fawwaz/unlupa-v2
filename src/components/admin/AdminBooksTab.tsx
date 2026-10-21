@@ -8,7 +8,6 @@ import {
   CheckCircle2,
   Trash2,
   Eye,
-  EyeOff,
   Layers,
   HelpCircle,
   X,
@@ -85,15 +84,11 @@ export const AdminBooksTab: React.FC = () => {
     }
   };
 
-  const handleUnpublish = async (book: AdminBookItem) => {
-    if (
-      !window.confirm(
-        `Tarik buku "${book.title}" dari pustaka publik?\n\nBuku ini tidak akan tampil lagi di Pustaka Unlupa, tetapi salinan milik pembuat tetap tersimpan.`,
-      )
-    ) {
-      return;
-    }
-
+  /**
+   * Remove book from library: unpublishes it so it no longer appears in public library,
+   * while completely preserving the original book and cards in the creator's account.
+   */
+  const handleRemoveFromLibrary = async (book: AdminBookItem) => {
     try {
       setActionLoadingId(book.id);
       const res = await adminBookApiService.unpublishBook(book.id);
@@ -102,13 +97,14 @@ export const AdminBooksTab: React.FC = () => {
         setBookDetails(null);
         setSelectedBookId(null);
       }
+      setConfirmDeleteBook(null);
       setFeedback({
-        text: res.message || `Buku "${book.title}" berhasil ditarik dari publikasi.`,
+        text: `Buku "${book.title}" berhasil ditarik dan dihapus dari pustaka library. Buku tetap tersimpan aman pada akun pemilik aslinya.`,
         isError: false,
       });
     } catch (err: any) {
       setFeedback({
-        text: err?.message || "Gagal menarik buku dari publikasi.",
+        text: err?.message || "Gagal menghapus buku dari library.",
         isError: true,
       });
     } finally {
@@ -116,29 +112,6 @@ export const AdminBooksTab: React.FC = () => {
     }
   };
 
-  const handleDeleteBook = async (book: AdminBookItem) => {
-    try {
-      setActionLoadingId(book.id);
-      const res = await adminBookApiService.deleteBook(book.id);
-      setBooks((prev) => prev.filter((b) => b.id !== book.id));
-      if (bookDetails?.id === book.id) {
-        setBookDetails(null);
-        setSelectedBookId(null);
-      }
-      setConfirmDeleteBook(null);
-      setFeedback({
-        text: res.message || `Buku "${book.title}" berhasil dihapus permanen.`,
-        isError: false,
-      });
-    } catch (err: any) {
-      setFeedback({
-        text: err?.message || "Gagal menghapus buku dari database.",
-        isError: true,
-      });
-    } finally {
-      setActionLoadingId(null);
-    }
-  };
 
   // Categories extraction
   const categories = Array.from(
@@ -440,23 +413,13 @@ export const AdminBooksTab: React.FC = () => {
                   </button>
 
                   <button
-                    onClick={() => handleUnpublish(book)}
-                    disabled={isBusy}
-                    className="py-2 px-2.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 text-xs font-bold cursor-pointer transition-all flex items-center gap-1"
-                    title="Tarik dari pustaka publik (unpublish)"
-                  >
-                    <EyeOff className="w-3.5 h-3.5" />
-                    <span className="hidden sm:inline">Tarik</span>
-                  </button>
-
-                  <button
                     onClick={() => setConfirmDeleteBook(book)}
                     disabled={isBusy}
-                    className="py-2 px-2.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-bold cursor-pointer transition-all flex items-center gap-1"
-                    title="Hapus permanen dari database"
+                    className="py-2 px-3.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-bold cursor-pointer transition-all flex items-center gap-1.5"
+                    title="Hapus dari pustaka library"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
-                    <span className="hidden sm:inline">Hapus</span>
+                    <span>Hapus</span>
                   </button>
                 </div>
               </div>
@@ -648,26 +611,16 @@ export const AdminBooksTab: React.FC = () => {
             {/* Modal Footer Actions */}
             {bookDetails && (
               <div className="p-4 border-t border-black/5 dark:border-white/5 flex items-center justify-between gap-3 bg-slate-50/50 dark:bg-slate-900/50">
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => handleUnpublish(bookDetails)}
-                    className="px-3 py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 text-xs font-bold cursor-pointer transition-all flex items-center gap-1.5"
-                  >
-                    <EyeOff className="w-3.5 h-3.5" />
-                    <span>Tarik dari Publikasi</span>
-                  </button>
-
-                  <button
-                    onClick={() => {
-                      setConfirmDeleteBook(bookDetails);
-                      setSelectedBookId(null);
-                    }}
-                    className="px-3 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-bold cursor-pointer transition-all flex items-center gap-1.5"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                    <span>Hapus Permanen</span>
-                  </button>
-                </div>
+                <button
+                  onClick={() => {
+                    setConfirmDeleteBook(bookDetails);
+                    setSelectedBookId(null);
+                  }}
+                  className="px-3.5 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-bold cursor-pointer transition-all flex items-center gap-1.5"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Hapus dari Library</span>
+                </button>
 
                 <button
                   onClick={() => setSelectedBookId(null)}
@@ -681,7 +634,7 @@ export const AdminBooksTab: React.FC = () => {
         </div>
       )}
 
-      {/* Delete Confirmation Modal */}
+      {/* Remove from Library Confirmation Modal */}
       {confirmDeleteBook && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
@@ -695,18 +648,20 @@ export const AdminBooksTab: React.FC = () => {
               <Trash2 className="w-6 h-6" />
             </div>
 
-            <div className="text-center space-y-1.5">
+            <div className="text-center space-y-2">
               <h3 className="text-base font-bold text-[#18234A] dark:text-[#F8FAFC]">
                 Hapus Buku dari Library?
               </h3>
               <p className="text-xs text-[#687086] dark:text-[#94A3B8] leading-relaxed">
-                Anda akan menghapus buku{" "}
-                <strong className="text-rose-600 dark:text-rose-400">
+                Buku{" "}
+                <strong className="text-[#18234A] dark:text-[#F8FAFC]">
                   "{confirmDeleteBook.title}"
                 </strong>{" "}
-                beserta seluruh bab ({confirmDeleteBook.stats?.totalChapters || 0} bab)
-                dan kartu ({confirmDeleteBook.stats?.totalItems || 0} kartu) secara permanen dari database.
+                akan ditarik dari pustaka publik Unlupa sehingga tidak lagi terlihat oleh pengguna lain.
               </p>
+              <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-[11px] text-emerald-700 dark:text-emerald-300 font-medium text-left">
+                🛡️ <strong>Aman:</strong> Buku ini tetap tersimpan pada akun pemilik aslinya dan tidak akan terhapus dari ruang pribadi mereka.
+              </div>
             </div>
 
             <div className="flex items-center gap-2.5 pt-2">
@@ -717,7 +672,7 @@ export const AdminBooksTab: React.FC = () => {
                 Batal
               </button>
               <button
-                onClick={() => handleDeleteBook(confirmDeleteBook)}
+                onClick={() => handleRemoveFromLibrary(confirmDeleteBook)}
                 disabled={actionLoadingId === confirmDeleteBook.id}
                 className="flex-1 py-2.5 px-4 rounded-xl bg-gradient-to-r from-rose-500 to-red-600 text-white text-xs font-bold cursor-pointer hover:shadow-lg active:scale-95 transition-all flex items-center justify-center gap-1.5"
               >
@@ -726,7 +681,7 @@ export const AdminBooksTab: React.FC = () => {
                 ) : (
                   <Trash2 className="w-3.5 h-3.5" />
                 )}
-                <span>Hapus Permanen</span>
+                <span>Hapus dari Library</span>
               </button>
             </div>
           </div>
