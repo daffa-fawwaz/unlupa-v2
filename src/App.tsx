@@ -186,12 +186,16 @@ const MainContent: React.FC = () => {
     setIsOnboardingSettingsOpen
   } = useApp();
 
-  // Protect Admin space: only allow superadmin/admin or preconfigured admin@anlupa.id
+  const isAdmin = isUserAdmin(userProfile);
+
+  // Guarantee Admin users land directly in Admin Dashboard without regular user spaces
   useEffect(() => {
-    if (activeSpace === 'admin' && !isUserAdmin(userProfile)) {
+    if (isAdmin && activeSpace !== 'admin') {
+      setActiveSpace('admin');
+    } else if (!isAdmin && activeSpace === 'admin') {
       setActiveSpace('dashboard');
     }
-  }, [activeSpace, userProfile, setActiveSpace]);
+  }, [isAdmin, activeSpace, setActiveSpace]);
 
   // Route to the Public Report Viewer if the URL has the ?report parameter
   useDailyReminder(quranStats, personalStats);
@@ -207,37 +211,44 @@ const MainContent: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#EBEEF5] dark:bg-[#0E1626] text-[#18234A] dark:text-[#F8FAFC] flex flex-col font-sans selection:bg-[#FF6F3D]/20 selection:text-[#18234A] transition-colors duration-200">
-      <FloatingXpOverlay />
+      {!isAdmin && <FloatingXpOverlay />}
       <OfflineIndicator />
-      {/* Navigation Header & Mobile Nav */}
+      {/* Navigation Header */}
       <Navigation />
 
       {/* Main Workspace View */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 pb-28">
-        {activeSpace === 'dashboard' && <HomeSpace />}
-        {activeSpace === 'quran' && <QuranSpace />}
-        {activeSpace === 'personal' && <PersonalSpace />}
-        {activeSpace === 'teaching' && <TeachingSpace />}
-        {activeSpace === 'leaderboard' && <LeaderboardSpace />}
-        {activeSpace === 'admin' && <AdminSpace />}
-        {!['dashboard', 'quran', 'personal', 'teaching', 'leaderboard', 'admin'].includes(activeSpace) && <HomeSpace />}
+        {isAdmin ? (
+          <AdminSpace />
+        ) : (
+          <>
+            {activeSpace === 'dashboard' && <HomeSpace />}
+            {activeSpace === 'quran' && <QuranSpace />}
+            {activeSpace === 'personal' && <PersonalSpace />}
+            {activeSpace === 'teaching' && <TeachingSpace />}
+            {activeSpace === 'leaderboard' && <LeaderboardSpace />}
+            {!['dashboard', 'quran', 'personal', 'teaching', 'leaderboard'].includes(activeSpace) && <HomeSpace />}
+          </>
+        )}
       </main>
 
-      {/* Professional Per-Page Walkthrough Modal */}
-      <ProfessionalWalkthroughModal
-        isOpen={isWalkthroughOpen}
-        onClose={closePageWalkthrough}
-        initialPageKey={activeWalkthroughPage}
-      />
-
-      {/* Per-Page Onboarding Settings Modal */}
-      <OnboardingSettingsModal
-        isOpen={isOnboardingSettingsOpen}
-        onClose={() => setIsOnboardingSettingsOpen(false)}
-        onLaunchWalkthrough={(pageKey) => {
-          openPageWalkthrough(pageKey);
-        }}
-      />
+      {/* Professional Per-Page Walkthrough Modal (Learners Only) */}
+      {!isAdmin && (
+        <>
+          <ProfessionalWalkthroughModal
+            isOpen={isWalkthroughOpen}
+            onClose={closePageWalkthrough}
+            initialPageKey={activeWalkthroughPage}
+          />
+          <OnboardingSettingsModal
+            isOpen={isOnboardingSettingsOpen}
+            onClose={() => setIsOnboardingSettingsOpen(false)}
+            onLaunchWalkthrough={(pageKey) => {
+              openPageWalkthrough(pageKey);
+            }}
+          />
+        </>
+      )}
 
     </div>
   );

@@ -9,6 +9,8 @@ import {
   ShieldCheck,
   UserCheck,
   BookOpen,
+  Trash2,
+  Crown,
 } from "lucide-react";
 import { useApp } from "../../context/AppContext";
 import {
@@ -24,7 +26,9 @@ export const AdminUsersTab: React.FC = () => {
   const [usersLoading, setUsersLoading] = useState(false);
   const [userSearchQuery, setUserSearchQuery] = useState("");
   const [userRoleFilter, setUserRoleFilter] = useState<string>("ALL");
+  const [userPlanFilter, setUserPlanFilter] = useState<string>("ALL");
   const [updatingUserId, setUpdatingUserId] = useState<string | null>(null);
+  const [confirmDeleteUser, setConfirmDeleteUser] = useState<AdminUserItem | null>(null);
   const [feedbackMsg, setFeedbackMsg] = useState<{
     text: string;
     isError: boolean;
@@ -69,6 +73,49 @@ export const AdminUsersTab: React.FC = () => {
     }
   };
 
+  const handleUpdatePlan = async (targetUserId: string, newPlan: string) => {
+    try {
+      setUpdatingUserId(targetUserId);
+      await adminUserApiService.updateAdminUserPlan(targetUserId, newPlan);
+      setUsers((prev) =>
+        prev.map((u) =>
+          u.id === targetUserId ? { ...u, plan: newPlan as any } : u,
+        ),
+      );
+      setFeedbackMsg({
+        text: `Paket pengguna berhasil diubah menjadi ${newPlan}.`,
+        isError: false,
+      });
+    } catch (err: any) {
+      setFeedbackMsg({
+        text: err?.message || "Gagal memperbarui paket pengguna.",
+        isError: true,
+      });
+    } finally {
+      setUpdatingUserId(null);
+    }
+  };
+
+  const handleDeleteUser = async (targetUser: AdminUserItem) => {
+    try {
+      setUpdatingUserId(targetUser.id);
+      const res = await adminUserApiService.deleteAdminUser(targetUser.id);
+      setUsers((prev) => prev.filter((u) => u.id !== targetUser.id));
+      setConfirmDeleteUser(null);
+      setFeedbackMsg({
+        text: res.message || `Akun pengguna ${targetUser.fullName || targetUser.email} berhasil dihapus.`,
+        isError: false,
+      });
+    } catch (err: any) {
+      setFeedbackMsg({
+        text: err?.message || "Gagal menghapus pengguna.",
+        isError: true,
+      });
+    } finally {
+      setUpdatingUserId(null);
+    }
+  };
+
   const filteredUsers = users.filter((u) => {
     const matchesSearch =
       (u.fullName || "")
@@ -80,8 +127,9 @@ export const AdminUsersTab: React.FC = () => {
         .includes(userSearchQuery.toLowerCase());
 
     if (!matchesSearch) return false;
-    if (userRoleFilter === "ALL") return true;
-    return u.role.toUpperCase() === userRoleFilter.toUpperCase();
+    if (userRoleFilter !== "ALL" && u.role.toUpperCase() !== userRoleFilter.toUpperCase()) return false;
+    if (userPlanFilter !== "ALL" && u.plan.toUpperCase() !== userPlanFilter.toUpperCase()) return false;
+    return true;
   });
 
   const totalUsers = users.length;
@@ -176,13 +224,14 @@ export const AdminUsersTab: React.FC = () => {
           />
         </div>
 
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-2">
-            <Filter className="w-4 h-4 text-slate-400 shrink-0" />
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Role Filter */}
+          <div className="flex items-center gap-1.5">
+            <Filter className="w-3.5 h-3.5 text-slate-400 shrink-0" />
             <select
               value={userRoleFilter}
               onChange={(e) => setUserRoleFilter(e.target.value)}
-              className="px-3.5 py-2.5 clay-pill rounded-2xl text-xs font-bold text-[#18234A] dark:text-[#F8FAFC] focus:outline-none cursor-pointer"
+              className="px-3 py-2 clay-pill rounded-xl text-xs font-bold text-[#18234A] dark:text-[#F8FAFC] focus:outline-none cursor-pointer"
             >
               <option value="ALL">Semua Role</option>
               <option value="USER">User (Pengguna Biasa)</option>
@@ -191,9 +240,21 @@ export const AdminUsersTab: React.FC = () => {
             </select>
           </div>
 
+          {/* Plan Filter */}
+          <select
+            value={userPlanFilter}
+            onChange={(e) => setUserPlanFilter(e.target.value)}
+            className="px-3 py-2 clay-pill rounded-xl text-xs font-bold text-[#18234A] dark:text-[#F8FAFC] focus:outline-none cursor-pointer"
+          >
+            <option value="ALL">Semua Paket</option>
+            <option value="FREE">FREE</option>
+            <option value="PREMIUM">PREMIUM</option>
+            <option value="INSTITUTIONAL">INSTITUTIONAL</option>
+          </select>
+
           <button
             onClick={loadUsers}
-            className="px-3.5 py-2.5 clay-pill rounded-2xl text-xs font-bold text-[#F27A3D] hover:bg-orange-500/10 cursor-pointer flex items-center gap-1.5"
+            className="px-3 py-2 clay-pill rounded-xl text-xs font-bold text-[#F27A3D] hover:bg-orange-500/10 cursor-pointer flex items-center gap-1.5"
             title="Segarkan daftar pengguna"
           >
             <RefreshCw className="w-3.5 h-3.5" />
@@ -257,19 +318,42 @@ export const AdminUsersTab: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Meta stats & Role Selector */}
-                <div className="flex items-center gap-4 self-end md:self-center">
-                  <div className="hidden lg:flex items-center gap-3 text-[11px] text-[#687086] dark:text-[#94A3B8]">
-                    <span title="Kelas yang dibuat/diajar">
-                      👨‍🏫 {user._count?.teachingClasses || 0} Kelas Dibuat
+                {/* Meta stats & Controls */}
+                <div className="flex items-center gap-3 self-end md:self-center flex-wrap">
+                  <div className="hidden lg:flex items-center gap-2.5 text-[11px] text-[#687086] dark:text-[#94A3B8]">
+                    <span title="Buku pribadi dibuat">
+                      📚 {user._count?.books || 0} Buku
                     </span>
-                    <span title="Kelas yang diikuti">
-                      🎒 {user._count?.classMemberships || 0} Kelas Diikuti
+                    <span title="Kelas yang dibuat/diajar">
+                      👨‍🏫 {user._count?.teachingClasses || 0} Kelas
                     </span>
                   </div>
 
-                  {/* Role Dropdown */}
-                  <div className="flex items-center gap-2">
+                  {/* Plan Selector */}
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-bold text-[#687086] dark:text-[#94A3B8]">
+                      Paket:
+                    </span>
+                    <select
+                      disabled={isBusy}
+                      value={user.plan}
+                      onChange={(e) => handleUpdatePlan(user.id, e.target.value)}
+                      className={`px-2.5 py-1.5 rounded-xl text-xs font-bold focus:outline-none cursor-pointer ${
+                        user.plan === "PREMIUM"
+                          ? "bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300"
+                          : user.plan === "INSTITUTIONAL"
+                            ? "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300"
+                            : "bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-slate-300"
+                      }`}
+                    >
+                      <option value="FREE">FREE</option>
+                      <option value="PREMIUM">PREMIUM</option>
+                      <option value="INSTITUTIONAL">INSTITUTIONAL</option>
+                    </select>
+                  </div>
+
+                  {/* Role Selector */}
+                  <div className="flex items-center gap-1.5">
                     <span className="text-xs font-bold text-[#687086] dark:text-[#94A3B8]">
                       Role:
                     </span>
@@ -281,26 +365,91 @@ export const AdminUsersTab: React.FC = () => {
                       onChange={(e) =>
                         handleUpdateRole(user.id, e.target.value)
                       }
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold focus:outline-none cursor-pointer ${
+                      className={`px-2.5 py-1.5 rounded-xl text-xs font-bold focus:outline-none cursor-pointer ${
                         user.role === "ADMIN" || user.role === "SUPERADMIN"
                           ? "bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300"
                           : "bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300"
                       }`}
                     >
-                      <option value="USER">USER (Pengguna Biasa)</option>
+                      <option value="USER">USER</option>
                       <option value="ADMIN">ADMIN</option>
                       <option value="SUPERADMIN">SUPERADMIN</option>
                     </select>
-                    {isBusy && (
-                      <RefreshCw className="w-3.5 h-3.5 animate-spin text-[#F27A3D]" />
-                    )}
                   </div>
+
+                  {/* Delete User Button */}
+                  {!isCurrent && (
+                    <button
+                      onClick={() => setConfirmDeleteUser(user)}
+                      disabled={isBusy}
+                      className="p-1.5 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-500/10 cursor-pointer transition-colors"
+                      title="Hapus akun pengguna ini"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
+
+                  {isBusy && (
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin text-[#F27A3D]" />
+                  )}
                 </div>
               </div>
             );
           })}
         </div>
       )}
+
+      {/* Delete User Confirmation Modal */}
+      {confirmDeleteUser && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
+          onClick={() => setConfirmDeleteUser(null)}
+        >
+          <div
+            className="clay-card rounded-3xl w-full max-w-md p-6 space-y-4 shadow-2xl animate-in zoom-in-95 duration-200 border border-white/20"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="w-12 h-12 rounded-2xl bg-rose-500/15 text-rose-600 dark:text-rose-400 flex items-center justify-center mx-auto">
+              <Trash2 className="w-6 h-6" />
+            </div>
+
+            <div className="text-center space-y-1.5">
+              <h3 className="text-base font-bold text-[#18234A] dark:text-[#F8FAFC]">
+                Hapus Akun Pengguna?
+              </h3>
+              <p className="text-xs text-[#687086] dark:text-[#94A3B8] leading-relaxed">
+                Anda akan menghapus akun{" "}
+                <strong className="text-rose-600 dark:text-rose-400">
+                  {confirmDeleteUser.fullName || confirmDeleteUser.email}
+                </strong>{" "}
+                secara permanen dari Unlupa. Tindakan ini tidak dapat dibatalkan.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2.5 pt-2">
+              <button
+                onClick={() => setConfirmDeleteUser(null)}
+                className="flex-1 py-2.5 px-4 rounded-xl clay-pill text-xs font-bold text-[#18234A] dark:text-[#F8FAFC] cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                onClick={() => handleDeleteUser(confirmDeleteUser)}
+                disabled={updatingUserId === confirmDeleteUser.id}
+                className="flex-1 py-2.5 px-4 rounded-xl bg-gradient-to-r from-rose-500 to-red-600 text-white text-xs font-bold cursor-pointer hover:shadow-lg active:scale-95 transition-all flex items-center justify-center gap-1.5"
+              >
+                {updatingUserId === confirmDeleteUser.id ? (
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Trash2 className="w-3.5 h-3.5" />
+                )}
+                <span>Hapus Pengguna</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
+

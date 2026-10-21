@@ -7,3 +7,5 @@ export * from "./AdminSpace";
 export * from "./SystemLimitsConfigTab";
 export * from "./AdminTransactionsTab";
 export * from "./AdminRoadmapTab";
+export * from "./AdminUsersTab";
+export * from "./AdminBooksTab";

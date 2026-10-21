@@ -16,14 +16,15 @@ import { SystemLimitsConfigTab } from "./SystemLimitsConfigTab";
 import { AdminTransactionsTab } from "./AdminTransactionsTab";
 import { AdminRoadmapTab } from "./AdminRoadmapTab";
 import { AdminUsersTab } from "./AdminUsersTab";
+import { AdminBooksTab } from "./AdminBooksTab";
 import { useSwipeGesture } from "../../hooks/useSwipeGesture";
 import { soundEffects } from "../../lib/soundFeedback";
 
 export const AdminSpace: React.FC = () => {
   const { language, transactions, setActiveSpace } = useApp();
   const [activeTab, setActiveTab] = useState<
-    "overview" | "limits" | "transactions" | "roadmap" | "users"
-  >("overview");
+    "books" | "users" | "overview" | "limits" | "transactions" | "roadmap"
+  >("books");
 
   useSwipeGesture(null, {
     onSwipeRight: () => {
@@ -114,16 +115,22 @@ export const AdminSpace: React.FC = () => {
       <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
         {[
           {
+            id: "books",
+            labelEn: "Public Library Books",
+            labelId: "Buku Publik",
+            icon: <BookOpen className="w-4 h-4" />,
+          },
+          {
+            id: "users",
+            labelEn: "Users & Roles",
+            labelId: "Pengguna & Role",
+            icon: <Users className="w-4 h-4" />,
+          },
+          {
             id: "overview",
             labelEn: "Overview",
             labelId: "Ringkasan",
             icon: <Activity className="w-4 h-4" />,
-          },
-          {
-            id: "limits",
-            labelEn: "Tier & Feature Limits",
-            labelId: "Batas Fitur & Paket",
-            icon: <Sliders className="w-4 h-4" />,
           },
           {
             id: "transactions",
@@ -132,16 +139,16 @@ export const AdminSpace: React.FC = () => {
             icon: <CreditCard className="w-4 h-4" />,
           },
           {
+            id: "limits",
+            labelEn: "Tier & Feature Limits",
+            labelId: "Batas Fitur & Paket",
+            icon: <Sliders className="w-4 h-4" />,
+          },
+          {
             id: "roadmap",
             labelEn: "Development Roadmap",
             labelId: "Roadmap Pengembangan",
             icon: <Compass className="w-4 h-4 text-[#F27A3D]" />,
-          },
-          {
-            id: "users",
-            labelEn: "Users & Roles",
-            labelId: "Pengguna & Role",
-            icon: <Users className="w-4 h-4" />,
           },
         ].map((tab) => (
           <button
@@ -160,6 +167,8 @@ export const AdminSpace: React.FC = () => {
       </div>
 
       {/* Tab Content */}
+      {activeTab === "books" && <AdminBooksTab />}
+
       {activeTab === "limits" && <SystemLimitsConfigTab />}
 
       {activeTab === "transactions" && <AdminTransactionsTab />}

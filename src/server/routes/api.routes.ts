@@ -7,6 +7,7 @@ import { learningRouter } from './learning.routes';
 import { quranRouter } from './quran.routes';
 import { uploadRouter } from './upload.routes';
 import { adminUserRouter } from './adminUser.routes';
+import { adminBookRouter } from './adminBook.routes';
 import { classRouter } from './class.routes';
 import { leaderboardRouter } from './leaderboard.routes';
 
@@ -51,4 +52,5 @@ apiRouter.use(bookRouter);
 apiRouter.use(learningRouter);
 apiRouter.use(quranRouter);
 apiRouter.use(adminUserRouter);
+apiRouter.use(adminBookRouter);
 apiRouter.use(classRouter);

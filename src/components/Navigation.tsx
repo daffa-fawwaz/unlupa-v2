@@ -221,17 +221,21 @@ export const Navigation: React.FC = () => {
 
   return (
     <>
-      {/* Top Application Bar - ONLY on Dashboard (Beranda) as requested */}
-      {activeSpace === "dashboard" && (
+      {/* Top Application Bar - On Dashboard or for Admin */}
+      {(isAdmin || activeSpace === "dashboard") && (
         <header className="print:hidden sticky top-0 z-40 bg-[#EBEEF5]/90 dark:bg-[#0E1626]/90 backdrop-blur-md border-b border-white/70 dark:border-white/5 shadow-[0_6px_20px_rgba(166,175,195,0.3)] dark:shadow-[0_6px_20px_rgba(0,0,0,0.55)] transition-colors">
           <div className="max-w-7xl mx-auto px-3 sm:px-6 h-15 flex items-center justify-between gap-2">
             {/* Left: Professional Neumorphic unlupa.id Brandmark */}
             <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
               <button
-                onClick={() => handleSelectSpace("dashboard")}
+                onClick={() => handleSelectSpace(isAdmin ? "admin" : "dashboard")}
                 className="flex items-center gap-2 sm:gap-2.5 text-left group cursor-pointer"
                 title={
-                  language === "en" ? "Back to Home" : "Kembali ke Beranda"
+                  isAdmin
+                    ? "Admin Dashboard"
+                    : language === "en"
+                      ? "Back to Home"
+                      : "Kembali ke Beranda"
                 }
               >
                 {/* Official Unlupa brandmark */}
@@ -252,10 +256,15 @@ export const Navigation: React.FC = () => {
                     .id
                   </span>
 
-                  {/* Subtle Professional Subtitle Pill */}
-                  <span className="hidden sm:inline-flex items-center ml-2 px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wider text-[#5E6D88] dark:text-[#94A3B8] bg-[#DFE6F0] dark:bg-[#162035] shadow-[inset_1px_1px_2px_rgba(166,175,195,0.4),inset_-1px_-1px_2px_rgba(255,255,255,0.8)] dark:shadow-[inset_1px_1px_2px_rgba(0,0,0,0.6)]">
-                    Mutqin
-                  </span>
+                  {isAdmin ? (
+                    <span className="inline-flex items-center ml-2 sm:ml-2.5 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider text-purple-700 dark:text-purple-300 bg-purple-100 dark:bg-purple-900/40 border border-purple-200 dark:border-purple-800 shadow-2xs">
+                      🛡️ Panel Admin
+                    </span>
+                  ) : (
+                    <span className="hidden sm:inline-flex items-center ml-2 px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wider text-[#5E6D88] dark:text-[#94A3B8] bg-[#DFE6F0] dark:bg-[#162035] shadow-[inset_1px_1px_2px_rgba(166,175,195,0.4),inset_-1px_-1px_2px_rgba(255,255,255,0.8)] dark:shadow-[inset_1px_1px_2px_rgba(0,0,0,0.6)]">
+                      Mutqin
+                    </span>
+                  )}
                 </div>
               </button>
             </div>
@@ -276,12 +285,12 @@ export const Navigation: React.FC = () => {
               {/* Ahlan Greeting placed in right corner snug / mepet with 3-dots button */}
               <div className="flex items-center px-2.5 sm:px-3.5 py-1.5 rounded-2xl neumorph-card text-xs font-bold text-[#18234A] dark:text-[#F8FAFC] select-none shrink-0 border border-white/60 dark:border-white/10">
                 <span className="whitespace-nowrap">
-                  Ahlan,{" "}
+                  {isAdmin ? "Admin: " : "Ahlan, "}
                   <span className="text-[#FF6F3D] font-black">
-                    {userProfile?.fullName || "HSI BS"}
+                    {userProfile?.fullName || (isAdmin ? "Administrator" : "HSI BS")}
                   </span>
                 </span>
-                <span className="ml-1 text-xs shrink-0">👋</span>
+                <span className="ml-1 text-xs shrink-0">{isAdmin ? "⚡" : "👋"}</span>
               </div>
 
               {/* 3-dots Menu Trigger Button */}
@@ -758,59 +767,61 @@ export const Navigation: React.FC = () => {
       )}
 
       {/* Floating Bottom Navigation Bar (Responsive Space Icons - Luxury Soft Neumorphism) */}
-      <nav
-        id="bottom-app-navigation"
-        className="print:hidden fixed bottom-3 left-2.5 right-2.5 sm:left-1/2 sm:-translate-x-1/2 sm:w-[560px] z-[100] floating-bottom-nav p-2 pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))] select-none transition-all duration-200"
-      >
-        <div
-          className="grid gap-1 sm:gap-1.5 w-full"
-          style={{
-            gridTemplateColumns: `repeat(${navItems.length}, minmax(0, 1fr))`,
-          }}
+      {!isAdmin && (
+        <nav
+          id="bottom-app-navigation"
+          className="print:hidden fixed bottom-3 left-2.5 right-2.5 sm:left-1/2 sm:-translate-x-1/2 sm:w-[560px] z-[100] floating-bottom-nav p-2 pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))] select-none transition-all duration-200"
         >
-          {navItems.map((item) => {
-            const isActive = activeSpace === item.space && !isLandingPageOpen;
-            return (
-              <button
-                key={item.space}
-                onClick={() => handleSelectSpace(item.space)}
-                className={`flex flex-col items-center justify-center py-1.5 px-1 rounded-2xl transition-all relative cursor-pointer active:scale-95 group`}
-              >
-                <div
-                  className={`w-9 h-9 rounded-xl flex items-center justify-center relative transition-all duration-200 shrink-0 ${
-                    isActive
-                      ? "clay-icon-pod-orange text-white scale-105 shadow-md"
-                      : "clay-icon-pod-neutral text-[#64748B] dark:text-[#94A3B8] group-hover:scale-105 group-hover:text-[#1E293B] dark:group-hover:text-[#F8FAFC]"
-                  }`}
+          <div
+            className="grid gap-1 sm:gap-1.5 w-full"
+            style={{
+              gridTemplateColumns: `repeat(${navItems.length}, minmax(0, 1fr))`,
+            }}
+          >
+            {navItems.map((item) => {
+              const isActive = activeSpace === item.space && !isLandingPageOpen;
+              return (
+                <button
+                  key={item.space}
+                  onClick={() => handleSelectSpace(item.space)}
+                  className={`flex flex-col items-center justify-center py-1.5 px-1 rounded-2xl transition-all relative cursor-pointer active:scale-95 group`}
                 >
-                  {React.cloneElement(item.icon as React.ReactElement<any>, {
-                    className: "w-4 h-4",
-                    strokeWidth: 2.2,
-                  })}
-                  {item.badge > 0 && (
-                    <span className="absolute -top-1.5 -right-1.5 min-w-[17px] h-4 px-1 rounded-full clay-badge-rose text-white text-[9px] font-bold flex items-center justify-center shadow-xs">
-                      {item.badge}
-                    </span>
-                  )}
-                </div>
-                <span
-                  className={`text-[10px] sm:text-[11px] mt-1 tracking-tight truncate max-w-full font-bold transition-colors ${
-                    isActive
-                      ? "text-[#FF6E65]"
-                      : "text-[#64748B] dark:text-[#94A3B8]"
-                  }`}
-                >
-                  {language === "en"
-                    ? item.labelEn
-                    : language === "id"
-                      ? item.labelId
-                      : item.labelAr}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      </nav>
+                  <div
+                    className={`w-9 h-9 rounded-xl flex items-center justify-center relative transition-all duration-200 shrink-0 ${
+                      isActive
+                        ? "clay-icon-pod-orange text-white scale-105 shadow-md"
+                        : "clay-icon-pod-neutral text-[#64748B] dark:text-[#94A3B8] group-hover:scale-105 group-hover:text-[#1E293B] dark:group-hover:text-[#F8FAFC]"
+                    }`}
+                  >
+                    {React.cloneElement(item.icon as React.ReactElement<any>, {
+                      className: "w-4 h-4",
+                      strokeWidth: 2.2,
+                    })}
+                    {item.badge > 0 && (
+                      <span className="absolute -top-1.5 -right-1.5 min-w-[17px] h-4 px-1 rounded-full clay-badge-rose text-white text-[9px] font-bold flex items-center justify-center shadow-xs">
+                        {item.badge}
+                      </span>
+                    )}
+                  </div>
+                  <span
+                    className={`text-[10px] sm:text-[11px] mt-1 tracking-tight truncate max-w-full font-bold transition-colors ${
+                      isActive
+                        ? "text-[#FF6E65]"
+                        : "text-[#64748B] dark:text-[#94A3B8]"
+                    }`}
+                  >
+                    {language === "en"
+                      ? item.labelEn
+                      : language === "id"
+                        ? item.labelId
+                        : item.labelAr}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </nav>
+      )}
 
       {/* Quran Attendance History Modal */}
       <QuranAttendanceModal

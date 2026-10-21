@@ -34,4 +34,26 @@ export const adminUserApiService = {
     });
     return res.data;
   },
+
+  /**
+   * Admin updates a user's plan directly (FREE, PREMIUM, INSTITUTIONAL)
+   */
+  async updateAdminUserPlan(id: string, plan: string): Promise<{ id: string; plan: string }> {
+    const res = await api.patch<{ id: string; plan: string }>(`/api/v1/admin/users/${id}/plan`, {
+      plan,
+    });
+    return res.data;
+  },
+
+  /**
+   * Admin deletes a user account permanently
+   */
+  async deleteAdminUser(id: string): Promise<{ success: boolean; message: string }> {
+    const res = await api.delete<{ success: boolean; message: string }>(`/api/v1/admin/users/${id}`);
+    return {
+      success: true,
+      message: res.message || 'Pengguna berhasil dihapus.',
+    };
+  },
 };
+

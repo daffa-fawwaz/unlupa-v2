@@ -1353,18 +1353,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const roleLower = backendUser.role.toLowerCase() as 'user' | 'admin' | 'superadmin';
     const planLower = backendUser.plan.toLowerCase() as 'free' | 'premium' | 'institutional';
 
-    setUserProfile(prev => ({
-      ...prev,
+    const updatedProfileCandidate: UserProfile = {
       id: targetId,
       backendId: backendUser.id,
+      email: backendUser.email || '',
+      fullName: backendUser.fullName || 'User',
+      avatarUrl: backendUser.avatarUrl || '',
+      quranSpaceCode: backendUser.quranSpaceCode || 'UNL-QRN',
+      role: roleLower,
+      plan: planLower,
+      onboardingPreferences: (backendUser.onboardingPreferences as UserOnboardingPreferences) || undefined,
+    };
+
+    setUserProfile(prev => ({
+      ...prev,
+      ...updatedProfileCandidate,
       email: backendUser.email || prev.email,
       fullName: backendUser.fullName || prev.fullName,
       avatarUrl: backendUser.avatarUrl || prev.avatarUrl,
       quranSpaceCode: backendUser.quranSpaceCode || prev.quranSpaceCode,
-      role: roleLower,
-      plan: planLower,
       onboardingPreferences: (backendUser.onboardingPreferences as UserOnboardingPreferences) || prev.onboardingPreferences,
     }));
+
+    if (isUserAdmin(updatedProfileCandidate)) {
+      setActiveSpace('admin');
+    }
 
     setBackendAuthStatus('authenticated');
     setBackendAuthError(null);
