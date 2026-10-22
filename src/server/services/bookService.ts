@@ -911,10 +911,10 @@ export const bookService = {
   },
 
   /**
-   * Update a chapter (owner only)
+   * Update a chapter (owner or admin)
    * Prevents self-parenting and cyclic descendant hierarchies (AUDIT-4-08)
    */
-  async updateChapter(chapterId: string, currentUserId: string, input: UpdateChapterInput) {
+  async updateChapter(chapterId: string, currentUserId: string, input: UpdateChapterInput, userRole?: string) {
     const chapter = await prisma.chapter.findUnique({
       where: { id: chapterId },
       include: { book: true },
@@ -924,7 +924,10 @@ export const bookService = {
       throw createError('Bab tidak ditemukan.', 404, 'CHAPTER_NOT_FOUND');
     }
 
-    if (chapter.book.userId !== currentUserId) {
+    const isOwner = chapter.book.userId === currentUserId;
+    const isAdmin = userRole === 'ADMIN' || userRole === 'SUPERADMIN';
+
+    if (!isOwner && !isAdmin) {
       throw createError('Hanya pemilik buku yang dapat mengubah bab.', 403, 'FORBIDDEN');
     }
 
@@ -984,9 +987,9 @@ export const bookService = {
   },
 
   /**
-   * Delete a chapter (owner only)
+   * Delete a chapter (owner or admin)
    */
-  async deleteChapter(chapterId: string, currentUserId: string) {
+  async deleteChapter(chapterId: string, currentUserId: string, userRole?: string) {
     const chapter = await prisma.chapter.findUnique({
       where: { id: chapterId },
       include: { book: true },
@@ -996,7 +999,10 @@ export const bookService = {
       throw createError('Bab tidak ditemukan.', 404, 'CHAPTER_NOT_FOUND');
     }
 
-    if (chapter.book.userId !== currentUserId) {
+    const isOwner = chapter.book.userId === currentUserId;
+    const isAdmin = userRole === 'ADMIN' || userRole === 'SUPERADMIN';
+
+    if (!isOwner && !isAdmin) {
       throw createError('Hanya pemilik buku yang dapat menghapus bab.', 403, 'FORBIDDEN');
     }
 
@@ -1179,9 +1185,9 @@ export const bookService = {
   },
 
   /**
-   * Update an item (owner only)
+   * Update an item (owner or admin)
    */
-  async updateItem(itemId: string, currentUserId: string, input: UpdateBookItemInput) {
+  async updateItem(itemId: string, currentUserId: string, input: UpdateBookItemInput, userRole?: string) {
     const item = await prisma.bookItem.findUnique({
       where: { id: itemId },
       include: { book: true },
@@ -1191,7 +1197,10 @@ export const bookService = {
       throw createError('Kartu materi tidak ditemukan.', 404, 'ITEM_NOT_FOUND');
     }
 
-    if (item.book.userId !== currentUserId) {
+    const isOwner = item.book.userId === currentUserId;
+    const isAdmin = userRole === 'ADMIN' || userRole === 'SUPERADMIN';
+
+    if (!isOwner && !isAdmin) {
       throw createError('Hanya pemilik buku yang dapat mengubah kartu materi.', 403, 'FORBIDDEN');
     }
 
@@ -1221,9 +1230,9 @@ export const bookService = {
   },
 
   /**
-   * Delete an item (owner only)
+   * Delete an item (owner or admin)
    */
-  async deleteItem(itemId: string, currentUserId: string) {
+  async deleteItem(itemId: string, currentUserId: string, userRole?: string) {
     const item = await prisma.bookItem.findUnique({
       where: { id: itemId },
       include: { book: true },
@@ -1233,11 +1242,31 @@ export const bookService = {
       throw createError('Kartu materi tidak ditemukan.', 404, 'ITEM_NOT_FOUND');
     }
 
-    if (item.book.userId !== currentUserId) {
+    const isOwner = item.book.userId === currentUserId;
+    const isAdmin = userRole === 'ADMIN' || userRole === 'SUPERADMIN';
+
+    if (!isOwner && !isAdmin) {
       throw createError('Hanya pemilik buku yang dapat menghapus kartu materi.', 403, 'FORBIDDEN');
     }
 
-    await prisma.bookItem.delete({ where: { id: itemId } });
+    // Safely delete any associated user progress and review logs first, then delete item
+    await prisma.$transaction(async (tx) => {
+      const userProgresses = await tx.userBookItemProgress.findMany({
+        where: { bookItemId: itemId },
+        select: { id: true },
+      });
+      if (userProgresses.length > 0) {
+        const progressIds = userProgresses.map((p) => p.id);
+        await tx.bookItemReviewLog.deleteMany({
+          where: { userBookItemProgressId: { in: progressIds } },
+        });
+        await tx.userBookItemProgress.deleteMany({
+          where: { bookItemId: itemId },
+        });
+      }
+      await tx.bookItem.delete({ where: { id: itemId } });
+    });
+
     return { success: true, message: 'Kartu materi berhasil dihapus.' };
   },
 

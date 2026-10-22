@@ -7,8 +7,9 @@ import { prisma } from '../db';
 
 export const learningRouter = Router();
 
-// Protect all learning endpoints with Authentication
+// Protect all learning and item endpoints with Authentication
 learningRouter.use('/learning', authenticate);
+learningRouter.use('/items', authenticate);
 
 function getParam(val: string | string[] | undefined): string {
   if (Array.isArray(val)) return val[0] || '';

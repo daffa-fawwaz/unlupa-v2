@@ -33,8 +33,10 @@ bookRouter.get('/books/public/library', async (req: Request, res: Response, next
   }
 });
 
-// Protect all remaining book endpoints with Authentication
+// Protect all remaining book, chapter, and item endpoints with Authentication
 bookRouter.use('/books', authenticate);
+bookRouter.use('/chapters', authenticate);
+bookRouter.use('/items', authenticate);
 
 function getParam(val: string | string[] | undefined): string {
   if (Array.isArray(val)) return val[0] || '';
@@ -421,10 +423,11 @@ bookRouter.post('/books/:bookId/chapters', async (req: Request, res: Response, n
 bookRouter.put('/chapters/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const currentUserId = req.user!.id;
+    const userRole = req.user?.role;
     const chapterId = getParam(req.params.id);
     const validatedData = updateChapterSchema.parse(req.body) as UpdateChapterInput;
 
-    const updatedChapter = await bookService.updateChapter(chapterId, currentUserId, validatedData);
+    const updatedChapter = await bookService.updateChapter(chapterId, currentUserId, validatedData, userRole);
     res.status(200).json({
       success: true,
       data: updatedChapter,
@@ -436,13 +439,14 @@ bookRouter.put('/chapters/:id', async (req: Request, res: Response, next: NextFu
 
 /**
  * DELETE /api/v1/chapters/:id
- * Delete a chapter (owner only)
+ * Delete a chapter (owner or admin)
  */
 bookRouter.delete('/chapters/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const currentUserId = req.user!.id;
+    const userRole = req.user?.role;
     const chapterId = getParam(req.params.id);
-    const result = await bookService.deleteChapter(chapterId, currentUserId);
+    const result = await bookService.deleteChapter(chapterId, currentUserId, userRole);
     res.status(200).json({
       success: true,
       message: result.message,
@@ -523,10 +527,11 @@ bookRouter.post('/books/:bookId/items', async (req: Request, res: Response, next
 bookRouter.put('/items/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const currentUserId = req.user!.id;
+    const userRole = req.user?.role;
     const itemId = getParam(req.params.id);
     const validatedData = updateItemSchema.parse(req.body) as UpdateBookItemInput;
 
-    const updatedItem = await bookService.updateItem(itemId, currentUserId, validatedData);
+    const updatedItem = await bookService.updateItem(itemId, currentUserId, validatedData, userRole);
     res.status(200).json({
       success: true,
       data: updatedItem,
@@ -538,13 +543,14 @@ bookRouter.put('/items/:id', async (req: Request, res: Response, next: NextFunct
 
 /**
  * DELETE /api/v1/items/:id
- * Delete an item (owner only)
+ * Delete an item (owner or admin)
  */
 bookRouter.delete('/items/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const currentUserId = req.user!.id;
+    const userRole = req.user?.role;
     const itemId = getParam(req.params.id);
-    const result = await bookService.deleteItem(itemId, currentUserId);
+    const result = await bookService.deleteItem(itemId, currentUserId, userRole);
     res.status(200).json({
       success: true,
       message: result.message,
