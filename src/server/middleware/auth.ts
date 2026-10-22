@@ -14,9 +14,27 @@ declare global {
   }
 }
 
+function parseCookies(cookieHeader?: string): Record<string, string> {
+  const cookies: Record<string, string> = {};
+  if (!cookieHeader) return cookies;
+  const pairs = cookieHeader.split(';');
+  for (const pair of pairs) {
+    const idx = pair.indexOf('=');
+    if (idx === -1) continue;
+    const key = pair.slice(0, idx).trim();
+    const rawVal = pair.slice(idx + 1).trim();
+    try {
+      cookies[key] = decodeURIComponent(rawVal);
+    } catch {
+      cookies[key] = rawVal;
+    }
+  }
+  return cookies;
+}
+
 /**
  * JWT Authentication Middleware:
- * 1. Reads the `Authorization: Bearer <JWT token>` header.
+ * 1. Reads the `Authorization: Bearer <JWT token>` header or `unlupa_token` cookie.
  * 2. Cryptographically verifies signature, algorithm (HS256), and expiry.
  * 3. Extracts user ID from verified `sub` claim.
  * 4. Ensures the user account exists in PostgreSQL.
@@ -35,6 +53,11 @@ export async function authenticate(req: Request, res: Response, next: NextFuncti
     token = authHeader.split('Bearer ')[1]?.trim();
   } else if (typeof req.query.token === 'string' && req.query.token) {
     token = req.query.token.trim();
+  } else if (req.headers.cookie) {
+    const cookies = parseCookies(req.headers.cookie);
+    if (cookies.unlupa_token) {
+      token = cookies.unlupa_token.trim();
+    }
   }
 
   if (!token) {
@@ -42,7 +65,7 @@ export async function authenticate(req: Request, res: Response, next: NextFuncti
       success: false,
       error: {
         code: 'UNAUTHORIZED',
-        message: 'Token autentikasi diperlukan (header Bearer <token> atau query ?token=...).',
+        message: 'Token autentikasi diperlukan (header Bearer, cookie unlupa_token, atau query ?token=...).',
       },
     });
     return;

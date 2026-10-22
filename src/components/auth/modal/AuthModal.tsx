@@ -97,6 +97,7 @@ export const AuthModal: React.FC = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -185,8 +186,8 @@ export const AuthModal: React.FC = () => {
     setIsLoading(true);
     try {
       const result = mode === 'register'
-        ? await api.register({ name: cleanName, email: cleanEmail, password: cleanPassword })
-        : await api.login({ email: cleanEmail, password: cleanPassword });
+        ? await api.register({ name: cleanName, email: cleanEmail, password: cleanPassword, rememberMe })
+        : await api.login({ email: cleanEmail, password: cleanPassword, rememberMe });
 
       await initiateUserSession(result.user, mode === 'register' ? { isNewRegistration: true } : undefined);
       setSuccess(mode === 'register' ? 'Akun berhasil dibuat.' : 'Berhasil masuk.');
@@ -303,6 +304,18 @@ export const AuthModal: React.FC = () => {
                   </span>
                 </label>
               )}
+
+              <div className="auth-remember-me">
+                <label className="auth-remember-me__label">
+                  <input
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={(event) => setRememberMe(event.target.checked)}
+                    className="auth-remember-me__checkbox"
+                  />
+                  <span>Remember Me</span>
+                </label>
+              </div>
 
               {error && <div className="auth-feedback auth-feedback--error"><AlertCircle aria-hidden="true" /><span>{error}</span></div>}
               {success && <div className="auth-feedback auth-feedback--success"><CheckCircle2 aria-hidden="true" /><span>{success}</span></div>}

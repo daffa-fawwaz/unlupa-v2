@@ -10,12 +10,24 @@ export const authRouter = Router();
  */
 async function handleRegister(req: Request, res: Response, next: NextFunction) {
   try {
-    const { name, email, password } = req.body || {};
+    const { name, email, password, rememberMe = true } = req.body || {};
 
     const result = await authService.register({
       name,
       email,
       password,
+      rememberMe: Boolean(rememberMe),
+    });
+
+    const isProd = process.env.NODE_ENV === 'production';
+    const ONE_MONTH_MS = 30 * 24 * 60 * 60 * 1000;
+
+    res.cookie('unlupa_token', result.token, {
+      httpOnly: false,
+      secure: isProd,
+      sameSite: 'lax',
+      path: '/',
+      ...(rememberMe ? { maxAge: ONE_MONTH_MS } : {}),
     });
 
     res.status(201).json({
@@ -34,13 +46,25 @@ async function handleRegister(req: Request, res: Response, next: NextFunction) {
  */
 async function handleLogin(req: Request, res: Response, next: NextFunction) {
   try {
-    const { email, password } = req.body || {};
+    const { email, password, rememberMe = true } = req.body || {};
     const clientIp = req.ip || req.socket.remoteAddress || 'unknown';
 
     const result = await authService.login({
       email,
       password,
+      rememberMe: Boolean(rememberMe),
       clientIp,
+    });
+
+    const isProd = process.env.NODE_ENV === 'production';
+    const ONE_MONTH_MS = 30 * 24 * 60 * 60 * 1000;
+
+    res.cookie('unlupa_token', result.token, {
+      httpOnly: false,
+      secure: isProd,
+      sameSite: 'lax',
+      path: '/',
+      ...(rememberMe ? { maxAge: ONE_MONTH_MS } : {}),
     });
 
     res.status(200).json({
@@ -72,12 +96,20 @@ async function handleGetMe(req: Request, res: Response, next: NextFunction) {
 /**
  * POST /api/v1/auth/logout (or /api/v1/logout)
  * Client-directed session termination.
- * Note on invalidation mechanism:
- * Unlupa v2 uses stateless Bearer JWT access tokens with client-side token discard.
- * Server returns 200 OK confirming logout. The frontend wipes the stored token from
- * memory and localStorage, clearing the session immediately.
+ * Server clears the unlupa_token cookie and client drops in-memory/localStorage tokens.
  */
 async function handleLogout(req: Request, res: Response) {
+  const isProd = process.env.NODE_ENV === 'production';
+  res.clearCookie('unlupa_token', {
+    path: '/',
+    secure: isProd,
+    sameSite: 'lax',
+  });
+  res.clearCookie('unlupa_remember_me', {
+    path: '/',
+    secure: isProd,
+    sameSite: 'lax',
+  });
   res.status(200).json({
     success: true,
     message: 'Berhasil keluar (logout). Sesi klien telah ditutup.',

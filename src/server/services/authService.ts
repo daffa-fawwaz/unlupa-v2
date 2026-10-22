@@ -10,11 +10,13 @@ export interface RegisterInput {
   name: string;
   email: string;
   password: string;
+  rememberMe?: boolean;
 }
 
 export interface LoginInput {
   email: string;
   password: string;
+  rememberMe?: boolean;
   clientIp?: string;
 }
 
@@ -134,7 +136,10 @@ export async function comparePassword(plainText: string, hashed: string): Promis
   return bcrypt.compare(plainText, hashed);
 }
 
-export function generateJwtToken(user: Pick<User, 'id' | 'email' | 'role'>): string {
+export function generateJwtToken(
+  user: Pick<User, 'id' | 'email' | 'role'>,
+  rememberMe: boolean = true
+): string {
   const payload: JwtTokenPayload = {
     sub: user.id,
     email: user.email,
@@ -142,9 +147,11 @@ export function generateJwtToken(user: Pick<User, 'id' | 'email' | 'role'>): str
   };
 
   const secret = env.JWT_SECRET;
+  const expiresIn = rememberMe ? '30d' : (env.JWT_EXPIRES_IN || '7d');
+
   return jwt.sign(payload, secret, {
     algorithm: 'HS256',
-    expiresIn: (env.JWT_EXPIRES_IN || '7d') as any,
+    expiresIn: expiresIn as any,
   });
 }
 
@@ -285,7 +292,8 @@ export const authService = {
         },
       });
 
-      const token = generateJwtToken(newUser);
+      const rememberMe = input.rememberMe !== false;
+      const token = generateJwtToken(newUser, rememberMe);
       return {
         user: sanitizeUser(newUser),
         token,
@@ -313,7 +321,8 @@ export const authService = {
               avatarUrl: `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(normalizedEmail)}`,
             },
           });
-          const token = generateJwtToken(retryUser);
+          const rememberMe = input.rememberMe !== false;
+          const token = generateJwtToken(retryUser, rememberMe);
           return {
             user: sanitizeUser(retryUser),
             token,
@@ -363,8 +372,9 @@ export const authService = {
     // Reset failed attempts on successful login
     resetFailedLoginAttempts(normalizedEmail, input.clientIp);
 
-    // Issue signed JWT
-    const token = generateJwtToken(user);
+    // Issue signed JWT with 30-day expiration if rememberMe
+    const rememberMe = input.rememberMe !== false;
+    const token = generateJwtToken(user, rememberMe);
 
     return {
       user: sanitizeUser(user),

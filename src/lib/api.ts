@@ -1,31 +1,91 @@
 /**
- * JWT Token Storage & Management
+ * JWT Token & Cookie Storage Management
+ * Supports "Remember Me" with 1-month (30-day) cookie persistence.
  */
 const TOKEN_STORAGE_KEY = "unlupa_jwt_token";
+const TOKEN_COOKIE_NAME = "unlupa_token";
+const REMEMBER_COOKIE_NAME = "unlupa_remember_me";
+export const ONE_MONTH_SECONDS = 30 * 24 * 60 * 60; // 30 days = 2,592,000s
+
 let inMemoryJwtToken: string | null = null;
 
-export function setAuthToken(token: string | null) {
+export function getCookie(name: string): string | null {
+  if (typeof document === "undefined") return null;
+  const match = document.cookie.match(
+    new RegExp("(?:^|; )" + name.replace(/([.$?*|{}()[\]\\/+^])/g, "\\$1") + "=([^;]*)"),
+  );
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
+export function setCookie(name: string, value: string, maxAgeSeconds?: number) {
+  if (typeof document === "undefined") return;
+  const isSecure = typeof window !== "undefined" && window.location.protocol === "https:";
+  const secureFlag = isSecure ? "; Secure" : "";
+  const maxAgeFlag = typeof maxAgeSeconds === "number" ? `; max-age=${maxAgeSeconds}` : "";
+  document.cookie = `${name}=${encodeURIComponent(value)}; path=/; SameSite=Lax${maxAgeFlag}${secureFlag}`;
+}
+
+export function deleteCookie(name: string) {
+  if (typeof document === "undefined") return;
+  const isSecure = typeof window !== "undefined" && window.location.protocol === "https:";
+  const secureFlag = isSecure ? "; Secure" : "";
+  document.cookie = `${name}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; max-age=0; SameSite=Lax${secureFlag}`;
+}
+
+export function setAuthToken(token: string | null, rememberMe: boolean = true) {
   inMemoryJwtToken = token;
   if (token) {
     try {
       localStorage.setItem(TOKEN_STORAGE_KEY, token);
+      if (rememberMe) {
+        localStorage.setItem(REMEMBER_COOKIE_NAME, "true");
+        setCookie(TOKEN_COOKIE_NAME, token, ONE_MONTH_SECONDS);
+        setCookie(REMEMBER_COOKIE_NAME, "true", ONE_MONTH_SECONDS);
+      } else {
+        localStorage.removeItem(REMEMBER_COOKIE_NAME);
+        setCookie(TOKEN_COOKIE_NAME, token); // Session cookie (cleared when browser session ends)
+        deleteCookie(REMEMBER_COOKIE_NAME);
+      }
     } catch {}
   } else {
     try {
       localStorage.removeItem(TOKEN_STORAGE_KEY);
+      localStorage.removeItem(REMEMBER_COOKIE_NAME);
     } catch {}
+    deleteCookie(TOKEN_COOKIE_NAME);
+    deleteCookie(REMEMBER_COOKIE_NAME);
   }
 }
 
 export function getAuthToken(): string | null {
   if (inMemoryJwtToken) return inMemoryJwtToken;
+
+  // 1. Check cookie first (ensures cross-tab / 30-day persistence)
+  const cookieToken = getCookie(TOKEN_COOKIE_NAME);
+  if (cookieToken) {
+    inMemoryJwtToken = cookieToken;
+    try {
+      localStorage.setItem(TOKEN_STORAGE_KEY, cookieToken);
+    } catch {}
+    return cookieToken;
+  }
+
+  // 2. Fallback to localStorage
   try {
     const stored = localStorage.getItem(TOKEN_STORAGE_KEY);
     if (stored) {
       inMemoryJwtToken = stored;
+      // Resynchronize cookie with 30-day expiration if remember-me was active
+      const rememberMe = localStorage.getItem(REMEMBER_COOKIE_NAME) !== "false";
+      if (rememberMe) {
+        setCookie(TOKEN_COOKIE_NAME, stored, ONE_MONTH_SECONDS);
+      } else {
+        setCookie(TOKEN_COOKIE_NAME, stored);
+      }
       return stored;
     }
   } catch {}
+
   return null;
 }
 
@@ -208,6 +268,7 @@ export class ApiClient {
     try {
       const response = await fetch(targetUrl, {
         cache: "no-store",
+        credentials: "same-origin",
         ...fetchInit,
         headers,
         body: serializedBody,
@@ -334,6 +395,7 @@ export class ApiClient {
     name: string;
     email: string;
     password: string;
+    rememberMe?: boolean;
   }): Promise<{ user: BackendUserResponse; token: string }> {
     const res = await this.post<{ user: BackendUserResponse; token: string }>(
       "/api/v1/auth/register",
@@ -341,7 +403,7 @@ export class ApiClient {
       { skipAuth: true },
     );
     if (res.data?.token) {
-      setAuthToken(res.data.token);
+      setAuthToken(res.data.token, payload.rememberMe ?? true);
     }
     return res.data;
   }
@@ -352,6 +414,7 @@ export class ApiClient {
   async login(payload: {
     email: string;
     password: string;
+    rememberMe?: boolean;
   }): Promise<{ user: BackendUserResponse; token: string }> {
     const res = await this.post<{ user: BackendUserResponse; token: string }>(
       "/api/v1/auth/login",
@@ -359,7 +422,7 @@ export class ApiClient {
       { skipAuth: true },
     );
     if (res.data?.token) {
-      setAuthToken(res.data.token);
+      setAuthToken(res.data.token, payload.rememberMe ?? true);
     }
     return res.data;
   }

@@ -27,10 +27,15 @@ class WebSocketManager {
       if (pathname === '/ws') {
         let token = (query.token as string) || '';
 
-        // Also check Authorization header
+        // Also check Authorization header or unlupa_token cookie
         const authHeader = request.headers['authorization'];
         if (!token && typeof authHeader === 'string' && authHeader.startsWith('Bearer ')) {
           token = authHeader.substring(7).trim();
+        } else if (!token && request.headers.cookie) {
+          const match = request.headers.cookie.match(/(?:^|;\s*)unlupa_token=([^;]+)/);
+          if (match) {
+            token = decodeURIComponent(match[1]).trim();
+          }
         }
 
         let userPayload: any = null;
