@@ -71,6 +71,10 @@ export interface BookHeroCardProps {
   onBack?: () => void;
   onNavigateTeaching?: () => void;
   onSelectClass?: (classId: string) => void;
+  /** Shown when a teacher inspects a specific student's copy of this book. */
+  studentName?: string;
+  /** Label of the badge next to the class name. */
+  joinedClassBadge?: string;
 }
 
 function formatLocalDate(d: Date): string {
@@ -209,6 +213,8 @@ export const BookHeroCard: React.FC<BookHeroCardProps> = ({
   onBack,
   onNavigateTeaching,
   onSelectClass,
+  studentName,
+  joinedClassBadge,
 }) => {
   const [isClassModalOpen, setIsClassModalOpen] = useState(false);
   const [internalExpanded, setInternalExpanded] = useState(false);
@@ -216,6 +222,12 @@ export const BookHeroCard: React.FC<BookHeroCardProps> = ({
     isExpandedProp !== undefined ? isExpandedProp : internalExpanded;
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  // Hide the overflow menu when there is nothing actionable (e.g. a teacher
+  // viewing a student's read-only copy of a book).
+  const hasMenuActions =
+    (!isReadonly && (onEditBook || onSyncToClasses || onAddChapter || onPublishBook)) ||
+    onDuplicateBook ||
+    onDeleteBook;
   const [searchQuery, setSearchQuery] = useState("");
   const [filterMode, setFilterMode] = useState<
     "all" | "due" | "high_freq" | "mastered"
@@ -1158,7 +1170,8 @@ export const BookHeroCard: React.FC<BookHeroCardProps> = ({
               {joinedClass.code}
             </span>
             <span className="px-2 py-0.2 rounded-full clay-badge-emerald text-white text-[9px] font-bold">
-              Terhubung Pengajar
+              {joinedClassBadge ??
+                (language === "en" ? "Connected Teacher" : "Terhubung Pengajar")}
             </span>
           </div>
           {onLeaveClass && (
@@ -1198,6 +1211,14 @@ export const BookHeroCard: React.FC<BookHeroCardProps> = ({
             >
               {book.title}
             </h1>
+            {studentName && (
+              <span className="mt-1 inline-flex max-w-full items-center gap-1.5 rounded-full border border-[#FF6F3D]/25 bg-[#FF6F3D]/10 px-2 py-0.5 text-[10px] font-bold text-[#FF6F3D]">
+                <Users className="h-3 w-3 shrink-0" />
+                <span className="truncate">
+                  {language === "en" ? "Student" : "Santri"}: {studentName}
+                </span>
+              </span>
+            )}
           </div>
         </div>
 
@@ -1243,6 +1264,7 @@ export const BookHeroCard: React.FC<BookHeroCardProps> = ({
           </button>
 
           {/* Menu Titik Tiga */}
+          {hasMenuActions && (
           <div className="relative shrink-0" ref={menuRef}>
             <button
               type="button"
@@ -1345,6 +1367,7 @@ export const BookHeroCard: React.FC<BookHeroCardProps> = ({
               </div>
             )}
           </div>
+          )}
         </div>
       </div>
 

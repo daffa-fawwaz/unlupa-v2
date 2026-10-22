@@ -4,20 +4,30 @@ import { useApp } from '../../context/AppContext';
 import { isDue, getIntervalDays, updateNonQuranFSRS, calculateRetrievability, predictNonQuranIntervals } from '../../lib/fsrs';
 import { 
   ArrowLeft, 
+  ArrowRight,
   BookOpen, 
-  Clock, 
-  Award, 
+  FileText, 
   CheckCircle2, 
+  ChevronLeft,
+  CircleDashed,
+  Clock,
+  Flame,
+  Folder,
+  Layers,
+  MoreVertical,
+  Play,
+  Search,
   UserMinus, 
   Printer, 
   Share2, 
-  Layers, 
+  ListOrdered,
   Brain, 
   TrendingUp, 
   Check, 
   RotateCcw, 
   ChevronDown,
   ChevronRight,
+  CornerDownRight,
   HelpCircle,
   Sparkles,
   BookMarked,
@@ -25,6 +35,9 @@ import {
 } from "lucide-react";
 import { soundEffects } from '../../lib/soundFeedback';
 import { BilingualCardText } from "../common/BilingualCardText";
+import { BookHeroCard } from "../personal/BookHeroCard";
+import { ItemCardRow } from "../personal/ItemCardRow";
+import { ItemPreviewModal } from "../personal/ItemPreviewModal";
 import { TeacherReportPrintView } from "./TeacherReportPrintView";
 import './teacher-clay.css';
 
@@ -54,6 +67,7 @@ export const StudentBookView: React.FC<StudentBookViewProps> = ({
     chapters,
     items,
     userProfile,
+    language,
     getLiveStudentBookItems,
     reviewStudentBookItem,
     activateStudentBookItem,
@@ -74,9 +88,6 @@ export const StudentBookView: React.FC<StudentBookViewProps> = ({
   >("chapters");
   const [searchFilter, setSearchFilter] = useState("");
   const [filterDueOnly, setFilterDueOnly] = useState(false);
-  const [expandedChapterId, setExpandedChapterId] = useState<string | null>(
-    null,
-  );
   const [testingCardIndex, setTestingCardIndex] = useState(0);
   const [isAnswerRevealed, setIsAnswerRevealed] = useState(false);
   const [actionNotice, setActionNotice] = useState<string | null>(null);
@@ -86,6 +97,16 @@ export const StudentBookView: React.FC<StudentBookViewProps> = ({
   const [revealedItemIds, setRevealedItemIds] = useState<Record<string, boolean>>({});
   // Cards the teacher explicitly unlocked to re-grade after a first assessment.
   const [regradingItemIds, setRegradingItemIds] = useState<Record<string, boolean>>({});
+  // Kebab menu + pop-up preview state for the shared card row component.
+  const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
+  const [previewItem, setPreviewItem] = useState<BookItem | null>(null);
+  // Book → chapter → sub-chapter navigation, mirroring the book detail page.
+  const [bookLevel, setBookLevel] = useState<"book" | "chapter" | "subchapter">("book");
+  const [activeChapterId, setActiveChapterId] = useState<string | null>(null);
+  const [activeSubChapterId, setActiveSubChapterId] = useState<string | null>(null);
+  const [cardFilter, setCardFilter] = useState<"all" | "due" | "active" | "inactive">("all");
+  const [cardSearch, setCardSearch] = useState("");
+  const [chapterMenuId, setChapterMenuId] = useState<string | null>(null);
 
   // Chapters of the assigned book
   const bookChapters = useMemo(() => {
@@ -199,14 +220,6 @@ export const StudentBookView: React.FC<StudentBookViewProps> = ({
       ),
     [activeItems],
   );
-  const masteredItems = useMemo(
-    () =>
-      activeItems.filter(
-        (i) => (i.fsrsData?.stability || 0) >= 300 || i.status === "mastered",
-      ),
-    [activeItems],
-  );
-
   const computedAverageStability = useMemo(() => {
     if (activeItems.length === 0) return student.averageStability || 0;
     const total = activeItems.reduce(
@@ -396,14 +409,78 @@ export const StudentBookView: React.FC<StudentBookViewProps> = ({
     }
   };
 
+  const navigableChapters = bookChapters.filter((c) => !c.parentId);
+
+  const openChapter = (chapterId: string) => {
+    setActiveChapterId(chapterId);
+    setActiveSubChapterId(null);
+    setCardFilter("all");
+    setCardSearch("");
+    setBookLevel("chapter");
+  };
+
+  const openSubChapter = (subChapterId: string) => {
+    setActiveSubChapterId(subChapterId);
+    setCardFilter("all");
+    setCardSearch("");
+    setBookLevel("subchapter");
+  };
+
+  const goToBook = () => {
+    setActiveChapterId(null);
+    setActiveSubChapterId(null);
+    setCardFilter("all");
+    setCardSearch("");
+    setBookLevel("book");
+  };
+
+  const stepChapter = (offset: number) => {
+    if (!activeChapterId) return;
+    const index = navigableChapters.findIndex((c) => c.id === activeChapterId);
+    if (index < 0) return;
+    const next = navigableChapters[index + offset];
+    if (next) openChapter(next.id);
+  };
+
+  /** Card buckets + the filtered list for a chapter or sub-chapter. */
+  const chapterCardData = (chapterId: string | null) => {
+    const all = chapterId
+      ? studentItems.filter((i) => i.chapterId === chapterId)
+      : [];
+    const due = all.filter(
+      (i) =>
+        i.isActive &&
+        isDue(i.fsrsData?.nextReview, i.isActive, i.fsrsData?.lastReview),
+    );
+    const active = all.filter((i) => i.isActive);
+    const inactive = all.filter((i) => !i.isActive);
+
+    let filtered = all;
+    if (cardFilter === "due") filtered = due;
+    else if (cardFilter === "active") filtered = active;
+    else if (cardFilter === "inactive") filtered = inactive;
+
+    const query = cardSearch.trim().toLowerCase();
+    if (query) {
+      filtered = filtered.filter(
+        (i) =>
+          (i.question || "").toLowerCase().includes(query) ||
+          (i.answer || "").toLowerCase().includes(query) ||
+          (i.tags || []).some((t) => (t || "").toLowerCase().includes(query)),
+      );
+    }
+
+    return { all, due, active, inactive, filtered };
+  };
+
   return (
-    <div className="fixed inset-0 z-[110] clay-teacher-scope clay-teacher-canvas overflow-y-auto">
+    <div className="fixed inset-0 z-[110] clay-teacher-canvas overflow-y-auto">
       {/* Sticky Teacher Navigation Bar */}
-      <div className="print:hidden sticky top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 px-3 sm:px-6 py-2.5 shadow-xs flex items-center justify-between gap-3">
+      <div className="print:hidden sticky top-0 z-40 bg-[#EBEEF5]/90 dark:bg-[#0E1626]/90 backdrop-blur-md border-b border-white/70 dark:border-white/5 px-3 sm:px-6 py-2.5 shadow-xs flex items-center justify-between gap-3">
         <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
           <button
             onClick={onClose}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-2xs cursor-pointer shrink-0"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl clay-pill text-xs font-semibold text-[#18234A] dark:text-[#F8FAFC] transition-colors shadow-2xs cursor-pointer shrink-0"
             title="Kembali ke Kelas"
           >
             <ArrowLeft className="w-4 h-4" />
@@ -435,12 +512,12 @@ export const StudentBookView: React.FC<StudentBookViewProps> = ({
 
         {/* View Switcher & Action Buttons */}
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-          <div className="hidden sm:flex items-center bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
+          <div className="hidden sm:flex items-center clay-inset p-1">
             <button
               onClick={() => setViewMode("chapters")}
               className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                 viewMode === "chapters"
-                  ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-2xs"
+                  ? "clay-pill text-[#18234A] dark:text-[#F8FAFC] shadow-xs"
                   : "text-slate-600 dark:text-slate-400 hover:text-slate-900"
               }`}
             >
@@ -454,7 +531,7 @@ export const StudentBookView: React.FC<StudentBookViewProps> = ({
               }}
               className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
                 viewMode === "testing"
-                  ? "bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-2xs"
+                  ? "clay-pill text-[#18234A] dark:text-[#F8FAFC] shadow-xs"
                   : "text-slate-600 dark:text-slate-400 hover:text-slate-900"
               }`}
             >
@@ -465,7 +542,7 @@ export const StudentBookView: React.FC<StudentBookViewProps> = ({
               onClick={() => setViewMode("retention")}
               className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
                 viewMode === "retention"
-                  ? "bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-2xs"
+                  ? "clay-pill text-[#18234A] dark:text-[#F8FAFC] shadow-xs"
                   : "text-slate-600 dark:text-slate-400 hover:text-slate-900"
               }`}
             >
@@ -476,7 +553,7 @@ export const StudentBookView: React.FC<StudentBookViewProps> = ({
 
           <button
             onClick={handleShareWhatsApp}
-            className="p-2 rounded-xl text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:text-emerald-400 dark:hover:bg-emerald-950/50 transition-colors cursor-pointer border border-slate-200 dark:border-slate-800"
+            className="p-2 rounded-xl clay-pill text-slate-500 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors cursor-pointer"
             title="Bagikan Link Rapor ke WhatsApp"
           >
             <Share2 className="w-4 h-4" />
@@ -484,7 +561,7 @@ export const StudentBookView: React.FC<StudentBookViewProps> = ({
 
           <button
             onClick={() => window.print()}
-            className="p-2 rounded-xl text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:text-indigo-400 dark:hover:bg-indigo-950/50 transition-colors cursor-pointer border border-slate-200 dark:border-slate-800"
+            className="p-2 rounded-xl clay-pill text-slate-500 hover:text-[#FF6F3D] dark:hover:text-[#FF8A65] transition-colors cursor-pointer"
             title="Cetak Laporan Rapor (PDF)"
           >
             <Printer className="w-4 h-4" />
@@ -501,7 +578,7 @@ export const StudentBookView: React.FC<StudentBookViewProps> = ({
                 onClose();
               }
             }}
-            className="p-2 rounded-xl text-slate-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:text-rose-400 dark:hover:bg-rose-950/50 transition-colors cursor-pointer border border-slate-200 dark:border-slate-800"
+            className="p-2 rounded-xl clay-pill text-slate-500 hover:text-rose-600 dark:hover:text-rose-400 transition-colors cursor-pointer"
             title="Keluarkan santri dari kelas ini"
           >
             <UserMinus className="w-4 h-4" />
@@ -515,15 +592,63 @@ export const StudentBookView: React.FC<StudentBookViewProps> = ({
         teacher={userProfile}
       />
 
+      {/* Flashcard pop-up preview — same component as the book detail page */}
+      <ItemPreviewModal
+        item={previewItem}
+        isOpen={Boolean(previewItem)}
+        onClose={() => setPreviewItem(null)}
+        language={language}
+      />
+
       {/* Main Content Focused Strictly on this Student's Assigned Book */}
       <div className="print:hidden p-3 sm:p-6 pb-24 max-w-5xl mx-auto space-y-5 animate-in fade-in duration-200">
+        {/* Action Notice */}
+        {actionNotice && (
+          <div className="p-3 rounded-2xl bg-emerald-50 dark:bg-emerald-950/80 border border-emerald-200 dark:border-emerald-800 text-emerald-900 dark:text-emerald-200 text-xs font-semibold flex items-center gap-2 animate-in fade-in">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span>{actionNotice}</span>
+          </div>
+        )}
+
+        {/* Book Hero — identical to the student's own book detail page, plus the student's name */}
+        <BookHeroCard
+          book={assignedBook}
+          items={studentItems}
+          chapters={bookChapters}
+          language={language}
+          studentName={student.name}
+          joinedClassBadge="Progres Santri"
+          joinedClass={{
+            id: classGroup.id,
+            name: classGroup.name,
+            code: classGroup.code,
+            teacherName: classGroup.teacherName,
+          }}
+          linkedClasses={[
+            {
+              id: classGroup.id,
+              name: classGroup.name,
+              code: classGroup.code,
+              teacherName: classGroup.teacherName,
+              students: [student],
+            },
+          ]}
+          isReadonly
+          onBack={onClose}
+          onStartReview={() => {
+            setViewMode("testing");
+            setTestingCardIndex(0);
+            setIsAnswerRevealed(false);
+          }}
+        />
+
         {/* Mobile View Mode Switcher */}
-        <div className="flex sm:hidden items-center justify-around bg-slate-100 dark:bg-slate-800 p-1 rounded-2xl">
+        <div className="flex sm:hidden items-center justify-around clay-inset p-1">
           <button
             onClick={() => setViewMode("chapters")}
             className={`flex-1 py-1.5 rounded-xl text-xs font-bold transition-all text-center ${
               viewMode === "chapters"
-                ? "bg-white dark:bg-slate-900 shadow-2xs text-slate-900 dark:text-white"
+                ? "clay-pill text-[#18234A] dark:text-[#F8FAFC] shadow-xs"
                 : "text-slate-600 dark:text-slate-400"
             }`}
           >
@@ -537,7 +662,7 @@ export const StudentBookView: React.FC<StudentBookViewProps> = ({
             }}
             className={`flex-1 py-1.5 rounded-xl text-xs font-bold transition-all text-center ${
               viewMode === "testing"
-                ? "bg-white dark:bg-slate-900 shadow-2xs text-indigo-600 dark:text-indigo-400"
+                ? "clay-pill text-[#18234A] dark:text-[#F8FAFC] shadow-xs"
                 : "text-slate-600 dark:text-slate-400"
             }`}
           >
@@ -547,7 +672,7 @@ export const StudentBookView: React.FC<StudentBookViewProps> = ({
             onClick={() => setViewMode("retention")}
             className={`flex-1 py-1.5 rounded-xl text-xs font-bold transition-all text-center ${
               viewMode === "retention"
-                ? "bg-white dark:bg-slate-900 shadow-2xs text-indigo-600 dark:text-indigo-400"
+                ? "clay-pill text-[#18234A] dark:text-[#F8FAFC] shadow-xs"
                 : "text-slate-600 dark:text-slate-400"
             }`}
           >
@@ -555,456 +680,448 @@ export const StudentBookView: React.FC<StudentBookViewProps> = ({
           </button>
         </div>
 
-        {/* Action Notice */}
-        {actionNotice && (
-          <div className="p-3 rounded-2xl bg-emerald-50 dark:bg-emerald-950/80 border border-emerald-200 dark:border-emerald-800 text-emerald-900 dark:text-emerald-200 text-xs font-semibold flex items-center gap-2 animate-in fade-in">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-            <span>{actionNotice}</span>
-          </div>
-        )}
-
-        {/* 4 Hero Metric Cards for this Book */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
-            <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-1">
-              <span className="text-[11px] font-semibold uppercase tracking-wider">
-                Materi Aktif
-              </span>
-              <BookOpen className="w-4 h-4 text-blue-500" />
-            </div>
-            <div className="text-2xl font-black text-slate-900 dark:text-white">
-              {activeItems.length}{" "}
-              <span className="text-xs font-normal text-slate-400">
-                / {studentItems.length}
-              </span>
-            </div>
-          </div>
-
-          <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
-            <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-1">
-              <span className="text-[11px] font-semibold uppercase tracking-wider">
-                Tugas Review
-              </span>
-              <Clock className="w-4 h-4 text-amber-500" />
-            </div>
-            <div
-              className={`text-2xl font-black ${dueItems.length > 0 ? "text-amber-600 dark:text-amber-400" : "text-slate-900 dark:text-white"}`}
-            >
-              {dueItems.length}{" "}
-              <span className="text-xs font-normal text-slate-400">
-                hari ini
-              </span>
-            </div>
-          </div>
-
-          <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
-            <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-1">
-              <span className="text-[11px] font-semibold uppercase tracking-wider">
-                Mapan / Mutqin
-              </span>
-              <Award className="w-4 h-4 text-emerald-500" />
-            </div>
-            <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400">
-              {masteredItems.length}{" "}
-              <span className="text-xs font-normal text-slate-400">kartu</span>
-            </div>
-          </div>
-
-          <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
-            <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-1">
-              <span className="text-[11px] font-semibold uppercase tracking-wider">
-                Tingkat Retensi
-              </span>
-              <Brain className="w-4 h-4 text-indigo-500" />
-            </div>
-            <div className="text-2xl font-black text-indigo-600 dark:text-indigo-400">
-              {retentionRate}%{" "}
-              <span className="text-xs font-normal text-slate-400">est.</span>
-            </div>
-          </div>
-        </div>
-
-        {/* VIEW MODE 1: CHAPTERS & FLASHCARDS EXPLORER */}
+        {/* VIEW MODE 1: BOOK -> CHAPTER -> SUB-CHAPTER (same flow as the book detail page) */}
         {viewMode === "chapters" && (
-          <div className="space-y-4">
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <Layers className="w-4 h-4 text-slate-400" />
-                <h3 className="font-bold text-sm text-slate-900 dark:text-white">
-                  Daftar Bab & Materi Kartu Santri
-                </h3>
-              </div>
+          <div className="space-y-3">
+            {bookLevel === "book" && (
+              <>
+                {/* Table of Contents header */}
+                <div className="flex items-center justify-between gap-2 px-1 w-full flex-nowrap">
+                  <div className="flex items-center gap-2 shrink min-w-0">
+                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl clay-icon-pod-gold flex items-center justify-center shrink-0 shadow-xs">
+                      <ListOrdered className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white" />
+                    </div>
+                    <h2 className="text-xs sm:text-base font-black text-[#451E08] dark:text-[#FDE68A] clay-title truncate">
+                      Daftar Isi Kitab Santri
+                    </h2>
+                  </div>
 
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setFilterDueOnly(!filterDueOnly)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
-                    filterDueOnly
-                      ? "bg-amber-500 border-amber-600 text-white shadow-2xs"
-                      : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300"
-                  }`}
-                >
-                  {filterDueOnly
-                    ? "Tampilkan Semua"
-                    : `Hanya Perlu Review (${dueItems.length})`}
-                </button>
-              </div>
-            </div>
-
-            {bookChapters.length === 0 ? (
-              <div className="p-8 text-center bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800">
-                <BookOpen className="w-10 h-10 text-slate-300 mx-auto mb-2" />
-                <h4 className="font-bold text-sm text-slate-800 dark:text-slate-200">
-                  Belum Ada Bab Materi
-                </h4>
-                <p className="text-xs text-slate-500 mt-1">
-                  Kitab ini belum memiliki bab yang dibuat.
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {bookChapters.map((chap, idx) => {
-                  let chapItems = studentItems.filter(
-                    (i) => i.chapterId === chap.id,
-                  );
-                  if (filterDueOnly) {
-                    chapItems = chapItems.filter(
-                      (i) =>
-                        i.isActive &&
-                        isDue(
-                          i.fsrsData?.nextReview,
-                          i.isActive,
-                          i.fsrsData?.lastReview,
-                        ),
-                    );
-                  }
-                  const activeCount = chapItems.filter(
-                    (i) => i.isActive,
-                  ).length;
-                  const isExpanded =
-                    expandedChapterId === chap.id ||
-                    (expandedChapterId === null && idx === 0);
-
-                  return (
-                    <div
-                      key={chap.id}
-                      className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-xs"
+                  <div className="flex items-center gap-1.5 shrink-0 flex-nowrap">
+                    <button
+                      type="button"
+                      onClick={() => setFilterDueOnly(!filterDueOnly)}
+                      className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer shadow-xs whitespace-nowrap ${
+                        filterDueOnly
+                          ? "clay-btn-primary text-white"
+                          : "clay-pill text-[#5E6D88] dark:text-[#94A3B8] hover:text-[#18234A] dark:hover:text-[#F8FAFC]"
+                      }`}
                     >
-                      <button
-                        onClick={() =>
-                          setExpandedChapterId(isExpanded ? null : chap.id)
-                        }
-                        className="w-full flex items-center justify-between p-4 text-left hover:bg-slate-50/70 dark:hover:bg-slate-800/50 transition-colors cursor-pointer"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-xl bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 font-bold text-xs flex items-center justify-center">
-                            {idx + 1}
-                          </div>
-                          <div>
-                            <h4 className="font-bold text-sm text-slate-900 dark:text-white">
-                              {chap.title}
-                            </h4>
-                            <p className="text-xs text-slate-400 mt-0.5">
-                              {chapItems.length} kartu materi • {activeCount}{" "}
-                              aktif dipelajari
-                            </p>
-                          </div>
-                        </div>
+                      {filterDueOnly
+                        ? "Tampilkan Semua"
+                        : `Hanya Perlu Review (${dueItems.length})`}
+                    </button>
+                  </div>
+                </div>
 
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-semibold px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
-                            {activeCount} Aktif
-                          </span>
-                          {isExpanded ? (
-                            <ChevronDown className="w-4 h-4 text-slate-400" />
-                          ) : (
-                            <ChevronRight className="w-4 h-4 text-slate-400" />
-                          )}
-                        </div>
-                      </button>
+                {navigableChapters.length === 0 ? (
+                  <div className="p-8 text-center clay-card">
+                    <BookOpen className="w-10 h-10 text-slate-300 mx-auto mb-2" />
+                    <h4 className="font-bold text-sm text-slate-800 dark:text-slate-200">
+                      Belum Ada Bab Materi
+                    </h4>
+                    <p className="text-xs text-slate-500 mt-1">
+                      Kitab ini belum memiliki bab yang dibuat.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {navigableChapters.map((chap) => {
+                      const childChapters = bookChapters.filter(
+                        (c) => c.parentId === chap.id,
+                      );
+                      const items = studentItems.filter(
+                        (i) => i.chapterId === chap.id,
+                      );
 
-                      {isExpanded && (
-                        <div className="p-4 pt-0 space-y-3 border-t border-slate-100 dark:border-slate-800 bg-slate-50/40 dark:bg-slate-950/30">
-                          {chapItems.length === 0 ? (
-                            <p className="text-xs text-slate-400 italic py-3 text-center">
-                              {filterDueOnly
-                                ? "Tidak ada kartu yang jatuh tempo di bab ini."
-                                : "Belum ada kartu materi dalam bab ini."}
-                            </p>
-                          ) : (
-                            chapItems.map((item, itemIdx) => {
-                              const itemDue = isDue(
-                                item.fsrsData?.nextReview,
-                                item.isActive,
-                                item.fsrsData?.lastReview,
-                              );
-                              const ratingIntervals = getRatingIntervals(item);
-                              const gradedRating = getLocalReview(item)?.rating;
-                              return (
+                      return (
+                        <div
+                          key={chap.id}
+                          className="group flex items-center justify-between gap-2.5 rounded-2xl py-2.5 px-3 sm:px-3.5 clay-card-subtle hover:scale-[1.01] active:scale-[0.99] transition-all cursor-pointer shadow-xs"
+                        >
+                          <div
+                            className="flex items-center gap-2 min-w-0 flex-1"
+                            onClick={() => openChapter(chap.id)}
+                          >
+                            <div className="w-3.5 h-3.5 flex items-center justify-center shrink-0">
+                              <div className="w-2 h-2 rounded-full bg-[#F27A3D] shadow-xs" />
+                            </div>
+                            <div className="min-w-0 flex-1 flex items-center gap-2">
+                              <h3 className="font-bold text-[#18234A] dark:text-[#F8FAFC] truncate group-hover:text-[#F27A3D] transition-colors text-xs sm:text-sm">
+                                {chap.title}
+                              </h3>
+                              {chap.description && (
+                                <span className="text-[11px] text-[#687086] dark:text-[#94A3B8] truncate hidden md:inline font-medium">
+                                  — {chap.description}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+                            <span className="text-[10px] font-extrabold text-[#451E08] dark:text-[#FDE68A] clay-pill px-2 py-0.5 shadow-2xs whitespace-nowrap">
+                              {items.length} item
+                            </span>
+
+                            {childChapters.length > 0 && (
+                              <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 clay-pill px-2 py-0.5 shadow-2xs whitespace-nowrap">
+                                {childChapters.length} subbab
+                              </span>
+                            )}
+
+                            <div className="relative shrink-0">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setChapterMenuId(
+                                    chapterMenuId === chap.id ? null : chap.id,
+                                  );
+                                }}
+                                className="w-8 h-8 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 flex items-center justify-center transition-colors cursor-pointer"
+                                title="Pilihan"
+                              >
+                                <MoreVertical className="w-4 h-4" />
+                              </button>
+
+                              {chapterMenuId === chap.id && (
                                 <div
-                                  key={item.id}
-                                  className="p-3.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 space-y-2.5 text-xs shadow-2xs"
+                                  className="absolute right-0 top-full mt-1 w-44 clay-card p-1 z-50 flex flex-col gap-0.5"
+                                  onClick={(e) => e.stopPropagation()}
                                 >
-                                  {/* Top Bar of Card */}
-                                  <div className="flex items-center justify-between text-[11px]">
-                                    <div className="flex items-center gap-2">
-                                      <span className="font-mono text-slate-400">
-                                        #{itemIdx + 1}
-                                      </span>
-                                      {item.isActive ? (
-                                        itemDue ? (
-                                          <span className="px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 font-bold text-[10px]">
-                                            Perlu Review (Due)
-                                          </span>
-                                        ) : (
-                                          <span className="px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 font-semibold text-[10px]">
-                                            Aman Terjadwal
-                                          </span>
-                                        )
-                                      ) : (
-                                        <span className="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 text-[10px]">
-                                          Belum Diaktivasi
-                                        </span>
-                                      )}
-                                    </div>
-
-                                    <div className="flex items-center gap-2">
-                                      <span className="text-slate-400">
-                                        Stabilitas:{" "}
-                                        <strong className="text-indigo-600 dark:text-indigo-400">
-                                          {getIntervalDays(item.fsrsData)} hari
-                                        </strong>{" "}
-                                        • {item.fsrsData?.reps || 0}x
-                                      </span>
-                                      <button
-                                        onClick={() => {
-                                          if (item.isActive) {
-                                            deactivateStudentBookItem(
-                                              classGroup.id,
-                                              student.id,
-                                              item.id,
-                                            );
-                                            setActionNotice(
-                                              "Kartu dinonaktifkan.",
-                                            );
-                                          } else {
-                                            activateStudentBookItem(
-                                              classGroup.id,
-                                              student.id,
-                                              item.id,
-                                            );
-                                            setActionNotice(
-                                              "Kartu diaktifkan untuk santri.",
-                                            );
-                                          }
-                                          setTimeout(
-                                            () => setActionNotice(null),
-                                            2500,
-                                          );
-                                        }}
-                                        className={`px-2 py-0.5 rounded-lg text-[10px] font-bold cursor-pointer transition-colors ${
-                                          item.isActive
-                                            ? "bg-rose-50 text-rose-700 hover:bg-rose-100"
-                                            : "bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
-                                        }`}
-                                      >
-                                        {item.isActive
-                                          ? "Nonaktifkan"
-                                          : "Aktifkan"}
-                                      </button>
-                                    </div>
-                                  </div>
-
-                                  {/* Card Question & Answer — clay flip card, same as the bab/sub-bab review page */}
-                                  <div className="space-y-1.5">
-                                    {!isItemRevealed(item.id) ? (
-                                      /* FRONT CARD (QUESTION) */
-                                      <div
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          flipItem(item.id, true);
-                                        }}
-                                        className="w-full p-3 sm:p-4 rounded-2xl clay-card-subtle bg-[#EEF3FA] dark:bg-[#121B2B] border border-slate-200/80 dark:border-slate-800 hover:border-amber-400/50 dark:hover:border-amber-600/50 transition-all cursor-pointer group/card flex flex-col gap-2.5 relative animate-card-flip-reverse"
-                                      >
-                                        <div className="flex items-center justify-between gap-2 w-full">
-                                          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-                                            Pertanyaan / Matan
-                                          </span>
-
-                                          <div
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              flipItem(item.id, true);
-                                            }}
-                                            className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl clay-pill text-amber-600 dark:text-amber-400 hover:scale-105 active:scale-95 transition-all shrink-0 cursor-pointer shadow-2xs group-hover/card:scale-105"
-                                            title="Klik untuk balik kartu"
-                                          >
-                                            <RefreshCw className="w-3.5 h-3.5" />
-                                            <span className="text-[10px] font-bold">
-                                              Balik
-                                            </span>
-                                          </div>
-                                        </div>
-
-                                        <div className="w-full select-text p-2.5 sm:p-3 rounded-xl bg-[rgba(255,255,255,0.62)] dark:bg-slate-900/40 border border-slate-200/50 dark:border-slate-800/60 shadow-2xs">
-                                          <BilingualCardText
-                                            text={item.question}
-                                            type="question"
-                                            variant="card-list"
-                                            clampLines={false}
-                                          />
-                                        </div>
-                                      </div>
-                                    ) : (
-                                      /* BACK CARD (ANSWER) */
-                                      <div
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          flipItem(item.id, false);
-                                        }}
-                                        className="w-full p-3 sm:p-4 rounded-2xl clay-card-subtle bg-[#FEFCE8] dark:bg-[#1F1B16] border border-amber-200/80 dark:border-amber-900/40 shadow-sm cursor-pointer group/card flex flex-col gap-2.5 relative animate-card-flip"
-                                      >
-                                        <div className="flex items-center justify-between gap-2 w-full">
-                                          <span className="text-[10px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400">
-                                            Jawaban
-                                          </span>
-
-                                          <div
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              flipItem(item.id, false);
-                                            }}
-                                            className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl clay-pill text-amber-700 dark:text-amber-300 hover:scale-105 active:scale-95 transition-all shrink-0 cursor-pointer shadow-2xs group-hover/card:scale-105"
-                                            title="Klik untuk balik ke pertanyaan"
-                                          >
-                                            <RefreshCw className="w-3.5 h-3.5" />
-                                            <span className="text-[10px] font-bold">
-                                              Tanya
-                                            </span>
-                                          </div>
-                                        </div>
-
-                                        <div className="w-full select-text p-2.5 sm:p-3 rounded-xl bg-[rgba(255,255,255,0.72)] dark:bg-amber-950/30 border border-amber-200/60 dark:border-amber-800/60 shadow-2xs">
-                                          <BilingualCardText
-                                            text={item.answer}
-                                            type="answer"
-                                            variant="card-list"
-                                            clampLines={false}
-                                          />
-                                        </div>
-                                      </div>
-                                    )}
-                                  </div>
-
-                                  {/* Teacher Review Grading Buttons — same clay rating component as the review page */}
-                                  <div className="pt-2 border-t border-black/[0.03] dark:border-white/[0.04] flex items-center justify-between gap-2 flex-wrap">
-                                    {isItemLocked(item) ? (
-                                      /* Already assessed — locked so the card cannot be graded twice by accident */
-                                      <>
-                                        <span
-                                          className={`clay-rating-btn ${gradedRating ? RATING_META[gradedRating].variant : "clay-rating-emerald"} clay-badge-static`}
-                                          title={gradedRating ? RATING_META[gradedRating].title : "Sudah dinilai hari ini"}
-                                        >
-                                          <Check />
-                                          <span>
-                                            {gradedRating
-                                              ? `Sudah Dinilai: ${RATING_META[gradedRating].label}`
-                                              : "Sudah Dinilai Hari Ini"}
-                                          </span>
-                                        </span>
-                                        <button
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            unlockRegrade(item.id);
-                                          }}
-                                          className="clay-inset clay-chip text-[#5E6D88] dark:text-slate-300 cursor-pointer hover:text-[#FF6F3D] transition-colors"
-                                          title="Ubah nilai setoran kartu ini"
-                                        >
-                                          <RotateCcw className="w-3 h-3" />
-                                          <span>Ubah Nilai</span>
-                                        </button>
-                                      </>
-                                    ) : (
-                                      <>
-                                        <span className="text-[10px] font-semibold text-slate-400">
-                                          Nilai Setoran Santri:
-                                        </span>
-                                        <div className="grid grid-cols-4 gap-1.5 flex-1 min-w-[210px] max-w-[300px]">
-                                          <button
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              handleGradeCard(item.id, 1);
-                                            }}
-                                            className="py-1.5 px-1 rounded-xl clay-rating-btn clay-rating-rose text-center transition-all flex flex-col items-center justify-center cursor-pointer active:scale-95"
-                                            title="Perlu Belajar Ulang"
-                                          >
-                                            <span className="text-[11px] font-bold leading-tight">
-                                              Lagi
-                                            </span>
-                                            <span className="text-[9px] font-bold opacity-85 mt-0.5">
-                                              {ratingIntervals.again}
-                                            </span>
-                                          </button>
-                                          <button
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              handleGradeCard(item.id, 2);
-                                            }}
-                                            className="py-1.5 px-1 rounded-xl clay-rating-btn clay-rating-gold text-center transition-all flex flex-col items-center justify-center cursor-pointer active:scale-95"
-                                            title="Masih Sulit"
-                                          >
-                                            <span className="text-[11px] font-bold leading-tight">
-                                              Sulit
-                                            </span>
-                                            <span className="text-[9px] font-bold opacity-85 mt-0.5">
-                                              {ratingIntervals.hard}
-                                            </span>
-                                          </button>
-                                          <button
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              handleGradeCard(item.id, 3);
-                                            }}
-                                            className="py-1.5 px-1 rounded-xl clay-rating-btn clay-rating-emerald text-center transition-all flex flex-col items-center justify-center cursor-pointer active:scale-95"
-                                            title="Sudah Paham (Bagus)"
-                                          >
-                                            <span className="text-[11px] font-bold leading-tight">
-                                              Bagus
-                                            </span>
-                                            <span className="text-[9px] font-bold opacity-85 mt-0.5">
-                                              {ratingIntervals.good}
-                                            </span>
-                                          </button>
-                                          <button
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              handleGradeCard(item.id, 4);
-                                            }}
-                                            className="py-1.5 px-1 rounded-xl clay-rating-btn clay-rating-orange text-center transition-all flex flex-col items-center justify-center cursor-pointer active:scale-95"
-                                            title="Sangat Menguasai (Mudah)"
-                                          >
-                                            <span className="text-[11px] font-bold leading-tight">
-                                              Mudah
-                                            </span>
-                                            <span className="text-[9px] font-bold opacity-85 mt-0.5">
-                                              {ratingIntervals.easy}
-                                            </span>
-                                          </button>
-                                        </div>
-                                      </>
-                                    )}
-                                  </div>
+                                  <button
+                                    onClick={() => {
+                                      setChapterMenuId(null);
+                                      setFilterDueOnly(true);
+                                      openChapter(chap.id);
+                                    }}
+                                    className="w-full text-left px-3 py-1.5 rounded-xl text-xs font-bold text-[#18234A] dark:text-[#F8FAFC] hover:bg-[#FF6F3D]/10 hover:text-[#FF6F3D] flex items-center gap-2 transition-colors cursor-pointer"
+                                  >
+                                    <Clock className="w-3.5 h-3.5 text-[#FF6F3D]" />
+                                    <span>Hanya Perlu Review</span>
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      setChapterMenuId(null);
+                                      openChapter(chap.id);
+                                    }}
+                                    className="w-full text-left px-3 py-1.5 rounded-xl text-xs font-bold text-[#18234A] dark:text-[#F8FAFC] hover:bg-[#FF6F3D]/10 hover:text-[#FF6F3D] flex items-center gap-2 transition-colors cursor-pointer"
+                                  >
+                                    <ArrowRight className="w-3.5 h-3.5 text-[#FF6F3D]" />
+                                    <span>Buka Detail Bab</span>
+                                  </button>
                                 </div>
-                              );
-                            })
-                          )}
+                              )}
+                            </div>
+
+                            <ChevronRight className="w-4 h-4 text-[#687086] dark:text-[#94A3B8] shrink-0" />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </>
+            )}
+
+            {(bookLevel === "chapter" || bookLevel === "subchapter") &&
+              activeChapterId && (() => {
+                const isSubLevel =
+                  bookLevel === "subchapter" && Boolean(activeSubChapterId);
+                const activeChapter =
+                  bookChapters.find((c) => c.id === activeChapterId) || null;
+                if (!activeChapter) return null;
+
+                const currentChapter = isSubLevel
+                  ? bookChapters.find((c) => c.id === activeSubChapterId) ||
+                    activeChapter
+                  : activeChapter;
+                const subChapters = bookChapters.filter(
+                  (c) => c.parentId === activeChapter.id,
+                );
+                const data = chapterCardData(currentChapter.id);
+                const siblings = isSubLevel ? subChapters : navigableChapters;
+                const stepperIndex = siblings.findIndex(
+                  (c) => c.id === currentChapter.id,
+                );
+
+                return (
+                  <div className="space-y-3">
+                    {/* Top bar: back + breadcrumb + chapter stepper */}
+                    <div className="flex items-center justify-between gap-3 px-1">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <button
+                          onClick={() => {
+                            if (isSubLevel) {
+                              setActiveSubChapterId(null);
+                              setBookLevel("chapter");
+                            } else {
+                              goToBook();
+                            }
+                          }}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl clay-pill text-xs font-semibold text-[#18234A] dark:text-[#F8FAFC] cursor-pointer shrink-0"
+                          title="Kembali"
+                        >
+                          <ArrowLeft className="w-3.5 h-3.5" />
+                          <span className="hidden sm:inline">Buku</span>
+                        </button>
+
+                        <div className="flex items-center gap-1 text-xs text-slate-500 overflow-x-auto no-scrollbar py-0.5 min-w-0">
+                          <span
+                            onClick={goToBook}
+                            className="hover:text-[#FF6F3D] cursor-pointer font-medium truncate max-w-[120px] sm:max-w-[180px]"
+                          >
+                            {assignedBook?.title}
+                          </span>
+                          <span className="text-slate-300 dark:text-slate-600 shrink-0">
+                            /
+                          </span>
+                          <span className="font-bold text-slate-900 dark:text-white truncate max-w-[140px] sm:max-w-[220px]">
+                            {currentChapter.title}
+                          </span>
+                        </div>
+                      </div>
+
+                      {siblings.length > 1 && (
+                        <div className="hidden md:flex items-center gap-0.5 clay-inset p-0.5 rounded-lg">
+                          <button
+                            disabled={stepperIndex <= 0}
+                            onClick={() => {
+                              const previous = siblings[stepperIndex - 1];
+                              if (!previous) return;
+                              if (isSubLevel) openSubChapter(previous.id);
+                              else openChapter(previous.id);
+                            }}
+                            className="p-1 rounded-md text-slate-600 dark:text-slate-300 disabled:opacity-25 hover:bg-white dark:hover:bg-slate-700 transition-all cursor-pointer disabled:cursor-not-allowed"
+                          >
+                            <ChevronLeft className="w-3.5 h-3.5" />
+                          </button>
+                          <span className="text-[11px] font-bold text-slate-600 dark:text-slate-300 px-1.5 select-none whitespace-nowrap">
+                            {stepperIndex + 1} / {siblings.length}
+                          </span>
+                          <button
+                            disabled={stepperIndex >= siblings.length - 1}
+                            onClick={() => {
+                              const next = siblings[stepperIndex + 1];
+                              if (!next) return;
+                              if (isSubLevel) openSubChapter(next.id);
+                              else openChapter(next.id);
+                            }}
+                            className="p-1 rounded-md text-slate-600 dark:text-slate-300 disabled:opacity-25 hover:bg-white dark:hover:bg-slate-700 transition-all cursor-pointer disabled:cursor-not-allowed"
+                          >
+                            <ChevronRight className="w-3.5 h-3.5" />
+                          </button>
                         </div>
                       )}
                     </div>
-                  );
-                })}
-              </div>
-            )}
+
+                    {/* Chapter banner */}
+                    <div className="clay-card py-2.5 px-3.5 sm:px-4 flex flex-col md:flex-row md:items-center justify-between gap-2.5 min-w-0">
+                      <div className="flex items-center gap-2.5 min-w-0 flex-wrap sm:flex-nowrap">
+                        <h1 className="text-base sm:text-lg font-black text-[#18234A] dark:text-[#F8FAFC] truncate font-serif shrink-0 max-w-[200px] sm:max-w-[320px]">
+                          {currentChapter.title}
+                        </h1>
+
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold clay-pill text-slate-600 dark:text-slate-300">
+                            {data.all.length} Kartu
+                          </span>
+
+                          {data.due.length > 0 ? (
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold clay-badge-orange flex items-center gap-1">
+                              <Flame className="w-3 h-3 text-white" />
+                              <span>{data.due.length} Perlu Diulang</span>
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold clay-badge-emerald flex items-center gap-1">
+                              <CheckCircle2 className="w-3 h-3 text-white" />
+                              <span>Selesai</span>
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 shrink-0">
+                        <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-300 clay-pill px-2 py-0.5 shadow-2xs whitespace-nowrap">
+                          {data.active.length} Aktif
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Subchapters panel */}
+                    {!isSubLevel && subChapters.length > 0 && (
+                      <div className="clay-card p-3 sm:p-4 space-y-3">
+                        <div className="flex items-center gap-2">
+                          <Folder className="w-4 h-4 text-[#687086] shrink-0" />
+                          <span className="text-sm font-bold text-[#18234A] dark:text-[#F8FAFC] font-serif">
+                            Subchapters ({subChapters.length})
+                          </span>
+                        </div>
+
+                        <div className="space-y-2">
+                          {subChapters.map((sub) => {
+                            const subItems = studentItems.filter(
+                              (i) => i.chapterId === sub.id,
+                            );
+                            return (
+                              <div
+                                key={sub.id}
+                                onClick={() => openSubChapter(sub.id)}
+                                className="group flex items-center justify-between gap-2.5 rounded-2xl py-2.5 px-3 clay-pill hover:scale-[1.01] active:scale-[0.99] transition-all cursor-pointer shadow-xs"
+                              >
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <CornerDownRight className="w-3.5 h-3.5 text-[#687086] shrink-0" />
+                                  <div className="min-w-0">
+                                    <h4 className="font-bold text-[#18234A] dark:text-[#F8FAFC] truncate group-hover:text-[#F27A3D] transition-colors text-xs sm:text-sm">
+                                      {sub.title}
+                                    </h4>
+                                    <p className="text-[11px] text-[#687086] dark:text-[#94A3B8] font-medium truncate mt-0.5">
+                                      {subItems.length} cards
+                                    </p>
+                                  </div>
+                                </div>
+                                <ChevronRight className="w-4 h-4 text-[#687086] dark:text-[#94A3B8] shrink-0" />
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Filter tabs & search bar */}
+                    <div className="space-y-3 pt-1">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                        <div className="grid grid-cols-4 gap-1 p-1 clay-inset rounded-2xl w-full sm:w-auto">
+                          {(
+                            [
+                              {
+                                key: "all",
+                                label: "Semua",
+                                count: data.all.length,
+                                icon: <Layers className="w-3.5 h-3.5 shrink-0 hidden xs:inline" />,
+                                active: "clay-pill text-[#FF6E65] shadow-2xs",
+                                chip: "bg-[#FF6E65] text-white",
+                                idle: "text-[#687086] dark:text-[#94A3B8] hover:text-[#18234A]",
+                              },
+                              {
+                                key: "due",
+                                label: "Review",
+                                count: data.due.length,
+                                icon: <Clock className="w-3.5 h-3.5 shrink-0 hidden xs:inline" />,
+                                active: "clay-pill text-[#FF6E65] shadow-2xs",
+                                chip: "bg-[#FF6E65] text-white",
+                                idle: "text-[#687086] dark:text-[#94A3B8] hover:text-[#18234A]",
+                              },
+                              {
+                                key: "active",
+                                label: "Aktif",
+                                count: data.active.length,
+                                icon: <Play className="w-3 h-3 fill-current shrink-0 hidden xs:inline" />,
+                                active: "clay-pill text-sky-600 shadow-2xs",
+                                chip: "bg-sky-600 text-white",
+                                idle: "text-[#687086] dark:text-[#94A3B8] hover:text-[#18234A]",
+                              },
+                              {
+                                key: "inactive",
+                                label: "Nonaktif",
+                                count: data.inactive.length,
+                                icon: <CircleDashed className="w-3.5 h-3.5 shrink-0 hidden xs:inline" />,
+                                active: "clay-pill text-[#687086] shadow-2xs",
+                                chip: "bg-slate-500 text-white",
+                                idle: "text-[#687086] dark:text-[#94A3B8] hover:text-[#18234A]",
+                              },
+                            ] as const
+                          ).map((filter) => (
+                            <button
+                              key={filter.key}
+                              type="button"
+                              onClick={() =>
+                                setCardFilter(filter.key as "all" | "due" | "active" | "inactive")
+                              }
+                              className={`py-1 px-1 rounded-xl text-[11px] sm:text-xs font-bold transition-all flex items-center justify-center gap-1 cursor-pointer select-none text-center ${
+                                cardFilter === filter.key
+                                  ? filter.active
+                                  : filter.idle
+                              }`}
+                            >
+                              {filter.icon}
+                              <span className="truncate">{filter.label}</span>
+                              <span
+                                className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold shrink-0 ${
+                                  cardFilter === filter.key ? filter.chip : "clay-pill"
+                                }`}
+                              >
+                                {filter.count}
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <div className="relative flex-1 sm:flex-initial">
+                            <Search className="w-3.5 h-3.5 text-[#687086] absolute left-3 top-1/2 -translate-y-1/2" />
+                            <input
+                              type="text"
+                              placeholder="Cari kartu..."
+                              value={cardSearch}
+                              onChange={(e) => setCardSearch(e.target.value)}
+                              className="w-full sm:w-48 pl-8 pr-3 py-1.5 rounded-xl clay-inset text-xs text-[#18234A] dark:text-[#F8FAFC] placeholder:text-[#687086] focus:outline-none"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Cards list */}
+                    {data.filtered.length === 0 ? (
+                      <div className="clay-card p-6 text-center space-y-2">
+                        <FileText className="w-10 h-10 mx-auto text-[#687086] opacity-60" />
+                        <h4 className="font-bold text-sm text-[#18234A] dark:text-[#F8FAFC]">
+                          Belum ada kartu di bagian ini
+                        </h4>
+                        <p className="text-xs text-[#687086] dark:text-[#94A3B8] max-w-sm mx-auto">
+                          Santri belum memiliki kartu hafalan pada bagian ini.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                        {data.filtered.map((item) => (
+                          <ItemCardRow
+                            key={item.id}
+                            activeMenuId={activeMenuId}
+                            setActiveMenuId={setActiveMenuId}
+                            isReadonly
+                            item={item}
+                            isBulkMode={false}
+                            isSelected={false}
+                            onPreview={() => setPreviewItem(item)}
+                            onActivate={() => {
+                              activateStudentBookItem(
+                                classGroup.id,
+                                student.id,
+                                item.id,
+                              );
+                              setActionNotice("Kartu diaktifkan untuk santri.");
+                              setTimeout(() => setActionNotice(null), 2500);
+                            }}
+                            onDeactivate={() => {
+                              deactivateStudentBookItem(
+                                classGroup.id,
+                                student.id,
+                                item.id,
+                              );
+                              setActionNotice("Kartu dinonaktifkan.");
+                              setTimeout(() => setActionNotice(null), 2500);
+                            }}
+                            onReview={(rating) => handleGradeCard(item.id, rating)}
+                            skipXpReward
+                            language={language}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
           </div>
         )}
 
@@ -1012,7 +1129,7 @@ export const StudentBookView: React.FC<StudentBookViewProps> = ({
         {viewMode === "testing" && (
           <div className="space-y-4 max-w-2xl mx-auto">
             {activeItems.length === 0 ? (
-              <div className="p-8 text-center bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 space-y-3">
+              <div className="p-8 text-center clay-card space-y-3">
                 <BookOpen className="w-12 h-12 text-slate-300 mx-auto" />
                 <h4 className="font-bold text-base text-slate-800 dark:text-slate-200">
                   Belum Ada Kartu yang Diaktivasi
@@ -1269,7 +1386,7 @@ export const StudentBookView: React.FC<StudentBookViewProps> = ({
                         prev > 0 ? prev - 1 : activeItems.length - 1,
                       );
                     }}
-                    className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 cursor-pointer"
+                    className="px-4 py-2 rounded-xl clay-pill text-xs font-semibold text-[#18234A] dark:text-[#F8FAFC] cursor-pointer"
                   >
                     ← Sebelumnya
                   </button>
@@ -1280,7 +1397,7 @@ export const StudentBookView: React.FC<StudentBookViewProps> = ({
                         (prev) => (prev + 1) % activeItems.length,
                       );
                     }}
-                    className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 cursor-pointer"
+                    className="px-4 py-2 rounded-xl clay-pill text-xs font-semibold text-[#18234A] dark:text-[#F8FAFC] cursor-pointer"
                   >
                     Lewati / Berikutnya →
                   </button>
