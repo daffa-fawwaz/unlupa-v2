@@ -17,44 +17,24 @@ import './auth-modal.css';
 
 type AuthMode = 'login' | 'register';
 
-interface AuthErrorFeedback {
-  title: string;
-  message: string;
-}
-
-/**
- * Maps an auth failure to a condition-specific title plus a short detail.
- * The server returns one code for both "email unknown" and "wrong password"
- * on purpose (account enumeration), so those two stay bundled into one title.
- */
-const friendlyError = (error: any): AuthErrorFeedback => {
+const friendlyError = (error: any): string => {
   switch (error?.code) {
     case 'EMAIL_ALREADY_EXISTS':
-      return { title: 'Email sudah terdaftar', message: 'Silakan masuk ke akun Anda.' };
+      return 'Email ini sudah terdaftar. Silakan masuk ke akun Anda.';
     case 'INVALID_CREDENTIALS':
-      return { title: 'Email atau password salah', message: 'Periksa kembali email dan password yang Anda masukkan.' };
+      return 'Email atau password belum sesuai.';
     case 'TOO_MANY_REQUESTS':
-      return { title: 'Terlalu banyak percobaan', message: 'Silakan tunggu beberapa saat lalu coba lagi.' };
+      return 'Terlalu banyak percobaan. Silakan tunggu beberapa saat.';
     case 'WEAK_PASSWORD':
-      return { title: 'Password terlalu lemah', message: 'Gunakan minimal 6 karakter.' };
-    case 'PASSWORD_TOO_LONG':
-      return { title: 'Password terlalu panjang', message: 'Gunakan maksimal 128 karakter.' };
-    case 'INVALID_NAME':
-      return { title: 'Nama belum lengkap', message: 'Nama lengkap minimal terdiri dari 2 karakter.' };
-    case 'NAME_TOO_LONG':
-      return { title: 'Nama terlalu panjang', message: 'Gunakan maksimal 100 karakter.' };
+      return 'Password terlalu lemah. Gunakan minimal 6 karakter.';
     case 'INVALID_EMAIL':
-      return { title: 'Email belum valid', message: 'Periksa kembali format alamat email Anda.' };
-    case 'INVALID_INPUT':
-      return { title: 'Email dan password wajib diisi', message: 'Lengkapi kedua kolom sebelum melanjutkan.' };
-    case 'USER_NOT_FOUND':
-      return { title: 'Akun tidak ditemukan', message: 'Pengguna tidak ditemukan atau telah dinonaktifkan.' };
+      return 'Format email belum valid.';
     case 'NETWORK_ERROR':
-      return { title: 'Tidak dapat terhubung ke server', message: 'Periksa koneksi internet Anda.' };
+      return 'Tidak dapat terhubung ke server. Periksa koneksi internet Anda.';
     case 'TIMEOUT':
-      return { title: 'Server terlalu lama merespons', message: 'Silakan coba kembali sebentar lagi.' };
+      return 'Server membutuhkan waktu terlalu lama. Silakan coba kembali.';
     default:
-      return { title: 'Gagal memproses', message: error?.message || 'Terjadi kendala saat memproses autentikasi.' };
+      return error?.message || 'Terjadi kendala saat memproses autentikasi.';
   }
 };
 
@@ -76,6 +56,10 @@ export const AuthModal: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
   const emailRef = useRef<HTMLInputElement>(null);
+  const passwordRef = useRef<HTMLInputElement>(null);
+
+  const isLoadingRef = useRef(isLoading);
+  isLoadingRef.current = isLoading;
 
   const closeModal = () => {
     if (!isLoading) setIsAuthModalOpen(false);
@@ -87,24 +71,30 @@ export const AuthModal: React.FC = () => {
     setSuccess(null);
   };
 
+  // Reset form status only when modal is opened or authModalMode changes
   useEffect(() => {
     if (!isAuthModalOpen) return;
     setMode(authModalMode);
     setSuccess(null);
     const focusTimer = window.setTimeout(() => emailRef.current?.focus(), 120);
+    return () => window.clearTimeout(focusTimer);
+  }, [authModalMode, isAuthModalOpen]);
+
+  // Window body scroll lock and escape key handler
+  useEffect(() => {
+    if (!isAuthModalOpen) return;
 
     const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && !isLoading) setIsAuthModalOpen(false);
+      if (event.key === 'Escape' && !isLoadingRef.current) setIsAuthModalOpen(false);
     };
 
     document.body.style.overflow = 'hidden';
     window.addEventListener('keydown', handleEscape);
     return () => {
-      window.clearTimeout(focusTimer);
       document.body.style.overflow = '';
       window.removeEventListener('keydown', handleEscape);
     };
-  }, [authModalMode, isAuthModalOpen, isLoading, setIsAuthModalOpen]);
+  }, [isAuthModalOpen, setIsAuthModalOpen]);
 
   if (!isAuthModalOpen) return null;
 
@@ -121,15 +111,19 @@ export const AuthModal: React.FC = () => {
     };
 
     if (!cleanEmail || !/^\S+@\S+\.\S+$/.test(cleanEmail)) {
-      reportError({ title: 'Email belum valid', message: 'Masukkan alamat email yang valid.' });
+      setError('Masukkan alamat email yang valid.');
       return;
     }
     if (cleanPassword.length < 6) {
-      reportError({ title: 'Password terlalu pendek', message: 'Gunakan minimal 6 karakter.' });
+      setError('Password minimal terdiri dari 6 karakter.');
       return;
     }
     if (mode === 'register' && !cleanName) {
       reportError({ title: 'Nama belum diisi', message: 'Masukkan nama lengkap Anda.' });
+      return;
+    }
+    if (mode === 'register' && cleanPassword.length < 6) {
+      setError('Password minimal terdiri dari 6 karakter.');
       return;
     }
     if (mode === 'register' && cleanPassword !== confirmPassword.trim()) {
@@ -155,7 +149,7 @@ export const AuthModal: React.FC = () => {
         setIsAuthModalOpen(false);
       }, 450);
     } catch (authError) {
-      reportError(friendlyError(authError));
+      setError(friendlyError(authError));
     } finally {
       setIsLoading(false);
     }
@@ -213,17 +207,31 @@ export const AuthModal: React.FC = () => {
 
               <label className="auth-field">
                 <span>Email</span>
-                <span className="auth-field__control">
+                <span className={`auth-field__control ${error && (error.toLowerCase().includes('email') || error.toLowerCase().includes('salah')) ? 'auth-field__control--error' : ''}`}>
                   <Mail aria-hidden="true" />
-                  <input ref={emailRef} type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" placeholder="nama@email.com" />
+                  <input
+                    ref={emailRef}
+                    type="email"
+                    value={email}
+                    onChange={(event) => setEmail(event.target.value)}
+                    autoComplete="email"
+                    placeholder="nama@email.com"
+                  />
                 </span>
               </label>
 
               <label className="auth-field">
                 <span>Password</span>
-                <span className="auth-field__control">
+                <span className={`auth-field__control ${error && (error.toLowerCase().includes('password') || error.toLowerCase().includes('salah')) ? 'auth-field__control--error' : ''}`}>
                   <LockKeyhole aria-hidden="true" />
-                  <input type={showPassword ? 'text' : 'password'} value={password} onChange={(event) => setPassword(event.target.value)} autoComplete={mode === 'register' ? 'new-password' : 'current-password'} placeholder="Minimal 6 karakter" />
+                  <input
+                    ref={passwordRef}
+                    type={showPassword ? 'text' : 'password'}
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                    autoComplete={mode === 'register' ? 'new-password' : 'current-password'}
+                    placeholder="Minimal 6 karakter"
+                  />
                   <button type="button" onClick={() => setShowPassword((visible) => !visible)} aria-label={showPassword ? 'Sembunyikan password' : 'Tampilkan password'}>
                     {showPassword ? <EyeOff aria-hidden="true" /> : <Eye aria-hidden="true" />}
                   </button>
