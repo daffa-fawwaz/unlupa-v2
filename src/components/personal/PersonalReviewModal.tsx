@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useApp } from "../../context/AppContext";
-import { BookItem } from "../../types";
+import { BookItem, Chapter } from "../../types";
 import { predictNonQuranIntervals } from "../../lib/fsrs";
 import {
   X,
@@ -31,6 +31,7 @@ interface Props {
   onClose: () => void;
   specificBookId?: string;
   specificChapterId?: string;
+  customChapters?: Chapter[];
 }
 
 export const PersonalReviewModal: React.FC<Props> = ({
@@ -38,8 +39,10 @@ export const PersonalReviewModal: React.FC<Props> = ({
   onClose,
   specificBookId,
   specificChapterId,
+  customChapters,
 }) => {
   const { personalStats, reviewItem, books, chapters, language } = useApp();
+  const allChapters = customChapters && customChapters.length > 0 ? customChapters : chapters;
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showAnswer, setShowAnswer] = useState(false);
   const [showExplanation, setShowExplanation] = useState(false);
@@ -64,7 +67,7 @@ export const PersonalReviewModal: React.FC<Props> = ({
         ? specificChapterId === "__unassigned__"
           ? personalStats.dueList.filter(
               (i) =>
-                (!i.chapterId || !chapters.some((c) => c.id === i.chapterId)) &&
+                (!i.chapterId || !allChapters.some((c) => c.id === i.chapterId)) &&
                 (specificBookId ? i.bookId === specificBookId : true),
             )
           : personalStats.dueList.filter(
@@ -86,7 +89,7 @@ export const PersonalReviewModal: React.FC<Props> = ({
     } else {
       setSessionQueue([]);
     }
-  }, [isOpen, specificBookId, specificChapterId]);
+  }, [isOpen, specificBookId, specificChapterId, allChapters]);
 
   useEffect(() => {
     setShowExplanation(false);
@@ -98,7 +101,7 @@ export const PersonalReviewModal: React.FC<Props> = ({
     ? books.find((b) => b.id === currentItem.bookId)
     : null;
   const currentChapter = currentItem
-    ? chapters.find((c) => c.id === currentItem.chapterId)
+    ? (allChapters.find((c) => c.id === currentItem.chapterId) || chapters.find((c) => c.id === currentItem.chapterId))
     : null;
   const isFinished = queue.length > 0 && currentIndex >= queue.length;
 

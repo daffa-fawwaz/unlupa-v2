@@ -634,7 +634,6 @@ export const PersonalSpace: React.FC<PersonalSpaceProps> = ({
   const [selectedChapterId, setSelectedChapterId] = useState<string | null>(null);
   const [virtualSelectedChapter, setVirtualSelectedChapter] = useState<Chapter | null>(null);
 
-  const selectedChapter = virtualSelectedChapter ? virtualSelectedChapter : (chapters.find(c => c.id === selectedChapterId) || null);
   const setSelectedChapter = (c: Chapter | null) => {
     setSelectedChunkIndex(0);
     setCardPage(1);
@@ -925,7 +924,12 @@ export const PersonalSpace: React.FC<PersonalSpaceProps> = ({
 
     return directItems;
   }, [selectedBook, items, assignedPkgForSelectedBook, joinedClassForSelectedBook]);
-  const currentChapter = virtualSelectedChapter ? virtualSelectedChapter : (selectedChapterId ? chapters.find(c => c.id === selectedChapterId) : null);
+  const currentChapter = virtualSelectedChapter 
+    ? virtualSelectedChapter 
+    : (selectedChapterId 
+        ? (bookChapters.find(c => c.id === selectedChapterId) || chapters.find(c => c.id === selectedChapterId) || null) 
+        : null);
+  const selectedChapter = currentChapter;
 
   // Compute all navigable chapters in order (including unassigned general cards if any)
   const unassignedCount = selectedBook ? bookItems.filter(i => !i.chapterId || !bookChapters.some(c => c.id === i.chapterId)).length : 0;
@@ -961,7 +965,7 @@ export const PersonalSpace: React.FC<PersonalSpaceProps> = ({
       visited.add(curr.id);
       crumbs.unshift(curr);
       if (!curr.parentId) break;
-      curr = chapters.find(c => c.id === curr!.parentId);
+      curr = bookChapters.find(c => c.id === curr!.parentId) || chapters.find(c => c.id === curr!.parentId);
     }
     return crumbs;
   };
@@ -973,7 +977,7 @@ export const PersonalSpace: React.FC<PersonalSpaceProps> = ({
     while (curr && curr.parentId && !visited.has(curr.id)) {
       visited.add(curr.id);
       depth++;
-      curr = chapters.find(c => c.id === curr!.parentId);
+      curr = bookChapters.find(c => c.id === curr!.parentId) || chapters.find(c => c.id === curr!.parentId);
     }
     return depth;
   };
@@ -1063,7 +1067,7 @@ export const PersonalSpace: React.FC<PersonalSpaceProps> = ({
       if (currentChapter) {
         // Jika memiliki bab induk (subbab / sub-subbab) -> kembali ke bab induk
         if (currentChapter.parentId) {
-          const parentChap = chapters.find(c => c.id === currentChapter.parentId);
+          const parentChap = bookChapters.find(c => c.id === currentChapter.parentId) || chapters.find(c => c.id === currentChapter.parentId);
           if (parentChap) {
             soundEffects.playCardFlip('backward');
             setSelectedChapter(parentChap);
@@ -3245,7 +3249,7 @@ export const PersonalSpace: React.FC<PersonalSpaceProps> = ({
       {isAIImportOpen && (
         <AIImportModal
           language={language}
-          sourceMaterial={chapters.find(c => c.id === selectedChapterIdForItem)?.material}
+          sourceMaterial={(bookChapters.find(c => c.id === selectedChapterIdForItem) || chapters.find(c => c.id === selectedChapterIdForItem))?.material}
           onClose={() => setIsAIImportOpen(false)}
           onImport={(cards) => {
             cards.forEach((card, cIndex) => {
@@ -3407,6 +3411,7 @@ export const PersonalSpace: React.FC<PersonalSpaceProps> = ({
         }}
         specificBookId={reviewBookId}
         specificChapterId={selectedBook ? (currentChapter ? currentChapter.id : undefined) : undefined}
+        customChapters={bookChapters}
       />
 
       {/* Per-Book Review Schedule Calendar Modal */}
@@ -3420,8 +3425,8 @@ export const PersonalSpace: React.FC<PersonalSpaceProps> = ({
             setCalendarBook(newBook);
             setCalendarChapterFilter(null);
           }}
-          items={items}
-          chapters={chapters.filter(c => c.bookId === calendarBook.id)}
+          items={calendarBook.id === selectedBook?.id ? bookItems : items.filter(i => i.bookId === calendarBook.id)}
+          chapters={calendarBook.id === selectedBook?.id ? bookChapters : chapters.filter(c => c.bookId === calendarBook.id)}
           language={language}
           initialChapterFilter={calendarChapterFilter}
           onStartReview={(chapterId) => {
@@ -3429,7 +3434,7 @@ export const PersonalSpace: React.FC<PersonalSpaceProps> = ({
             setReviewBookId(calendarBook.id);
             setSelectedBook(calendarBook);
             if (chapterId) {
-              const ch = chapters.find(c => c.id === chapterId);
+              const ch = (calendarBook.id === selectedBook?.id ? bookChapters.find(c => c.id === chapterId) : null) || chapters.find(c => c.id === chapterId);
               if (ch) setSelectedChapter(ch);
             }
             setIsReviewOpen(true);
