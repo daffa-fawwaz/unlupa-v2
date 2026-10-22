@@ -15,6 +15,7 @@ import {
   HelpCircle,
 } from "lucide-react";
 import { BilingualCardText } from "../common/BilingualCardText";
+import "./teacher-clay.css";
 
 interface StudentBookProgressViewProps {
   student: ClassStudent;
@@ -117,7 +118,7 @@ export const StudentBookProgressView: React.FC<
   }
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-200">
+    <div className="space-y-6 animate-in fade-in duration-200 clay-teacher-scope">
       {/* Top Bar / Navigation matching Screenshot 1 */}
       <div className="flex items-center justify-between gap-4 pb-4 border-b border-slate-200 dark:border-slate-800">
         <div className="flex items-center gap-3 min-w-0">

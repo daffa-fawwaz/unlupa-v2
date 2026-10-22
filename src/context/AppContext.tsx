@@ -246,6 +246,7 @@ interface AppContextType {
   closeCheckoutModal: () => void;
 
   joinClassByCode: (code: string) => Promise<{ success: boolean; message: string }>;
+  lookupClassByCode: (code: string) => Promise<{ success: boolean; classGroup?: ClassGroup; message: string }>;
   leaveClass: (classId: string) => void;
   createTeachingClass: (data: { 
     name: string; 
@@ -4319,8 +4320,43 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   };
 
-  const createTeachingClass = async (data: { 
-    name: string; 
+  /**
+   * Look up a class by its invitation code WITHOUT joining it, so class search
+   * can surface a class from another account before the student commits to it.
+   */
+  const lookupClassByCode = async (
+    code: string,
+  ): Promise<{ success: boolean; classGroup?: ClassGroup; message: string }> => {
+    const cleanCode = code.trim().toUpperCase();
+    if (!cleanCode) {
+      return { success: false, message: language === 'en' ? 'Class code cannot be empty.' : 'Kode kelas tidak boleh kosong.' };
+    }
+
+    if (userProfile.id === 'guest' || !userProfile.backendId) {
+      return { success: false, message: language === 'en' ? 'Sign in first to search for classes.' : 'Masuk terlebih dahulu untuk mencari kelas.' };
+    }
+
+    try {
+      const classGroup = await classApiService.getClassByCode(cleanCode);
+      return { success: true, classGroup, message: '' };
+    } catch (lookupError: any) {
+      if (lookupError?.status === 404) {
+        return {
+          success: false,
+          message: language === 'en'
+            ? `No class found for code "${cleanCode}".`
+            : `Tidak ada kelas dengan kode "${cleanCode}".`,
+        };
+      }
+      return {
+        success: false,
+        message: lookupError?.message || (language === 'en' ? 'Failed to search for the class.' : 'Gagal mencari kelas.'),
+      };
+    }
+  };
+
+  const createTeachingClass = async (data: {
+    name: string;
     type: 'quran' | 'non-quran'; 
     description?: string; 
     coverUrl?: string;
@@ -5347,7 +5383,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       transactions, purchasedBookIds, isBookPurchased, purchaseBook, subscribeToPro,
       isCheckoutModalOpen, selectedCheckoutEntry, openCheckoutModal, closeCheckoutModal,
 
-      myClasses, teachingClasses, joinClassByCode, leaveClass, createTeachingClass, deleteTeachingClass, closeTeachingClass, reopenTeachingClass, updateTeachingClass, syncBookToClasses, removeStudentFromClass,
+      myClasses, teachingClasses, joinClassByCode, lookupClassByCode, leaveClass, createTeachingClass, deleteTeachingClass, closeTeachingClass, reopenTeachingClass, updateTeachingClass, syncBookToClasses, removeStudentFromClass,
       reviewStudentQuranPage, addStudentDailyFeedback, 
       activateStudentQuranPage, deactivateStudentQuranPage, 
       bypassStudentQuranPageMapan, resetStudentQuranPageMapan,

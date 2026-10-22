@@ -1,0 +1,272 @@
+/* ==========================================================================
+   Claymorphism theme scope — teacher-side student surfaces
+   --------------------------------------------------------------------------
+   The student card in Ruang Guru, its detail modal, its report modal and the
+   two full-page student workspaces all used to be flat white/slate panels,
+   which clashed with the clay language used everywhere else in Unlupa.
+
+   This scope re-themes those surfaces in one place: porcelain surfaces,
+   molded radii, soft dual shadows, the app's navy type scale and the
+   tangerine accent. Semantic colours (emerald = done, amber = due,
+   rose = danger) are intentionally left untouched so they keep their meaning.
+   ========================================================================== */
+
+/* The scope only re-themes descendants — it never paints the canvas, so it
+   can safely sit on a modal backdrop without hiding the dim overlay. */
+.clay-teacher-scope {
+  color: var(--color-text-primary);
+}
+
+/* Page roots that need the app's porcelain canvas. */
+.clay-teacher-canvas {
+  background: var(--color-background);
+  color: var(--color-text-primary);
+}
+
+/* --- Canvas ----------------------------------------------------------- */
+.clay-teacher-scope .bg-\[\#faf8f5\] { background: var(--color-background); }
+
+/* --- Surfaces: flat white -> clay porcelain ---------------------------- */
+.clay-teacher-scope .bg-white { background: var(--color-surface); }
+.clay-teacher-scope .bg-white\/95 { background: rgba(235, 238, 245, 0.95); }
+.clay-teacher-scope .bg-white\/80 { background: rgba(235, 238, 245, 0.82); }
+.clay-teacher-scope .bg-white\/70 { background: rgba(235, 238, 245, 0.72); }
+.clay-teacher-scope .bg-white\/60 { background: rgba(235, 238, 245, 0.62); }
+.clay-teacher-scope .bg-white\/50 { background: rgba(235, 238, 245, 0.52); }
+.clay-teacher-scope .bg-slate-50 { background: var(--color-background-soft); }
+.clay-teacher-scope .bg-slate-50\/50 { background: rgba(223, 230, 240, 0.55); }
+.clay-teacher-scope .bg-slate-100 { background: var(--color-background-soft); }
+.clay-teacher-scope .bg-slate-100\/70 { background: rgba(223, 230, 240, 0.72); }
+.clay-teacher-scope .bg-slate-200 { background: var(--color-surface-pressed); }
+.clay-teacher-scope .bg-slate-900\/50 { background: rgba(11, 17, 29, 0.5); }
+
+/* --- Borders: hard slate edges -> soft clay edges ---------------------- */
+.clay-teacher-scope .border-slate-100 { border-color: rgba(255, 255, 255, 0.6); }
+.clay-teacher-scope .border-slate-200 { border-color: rgba(255, 255, 255, 0.78); }
+.clay-teacher-scope .border-slate-200\/90 { border-color: rgba(255, 255, 255, 0.78); }
+.clay-teacher-scope .border-slate-300 { border-color: rgba(255, 255, 255, 0.88); }
+.clay-teacher-scope .border-slate-400 { border-color: rgba(255, 255, 255, 0.9); }
+.clay-teacher-scope .border-slate-700 { border-color: rgba(255, 255, 255, 0.08); }
+.clay-teacher-scope .border-slate-800 { border-color: rgba(255, 255, 255, 0.06); }
+.clay-teacher-scope .divide-slate-200 > * + * { border-color: rgba(255, 255, 255, 0.6); }
+
+/* --- Typography: slate -> Unlupa navy scale ---------------------------- */
+.clay-teacher-scope .text-slate-900,
+.clay-teacher-scope .text-slate-800,
+.clay-teacher-scope .text-slate-700 { color: var(--color-text-primary); }
+.clay-teacher-scope .text-slate-600,
+.clay-teacher-scope .text-slate-500 { color: var(--color-text-secondary); }
+.clay-teacher-scope .text-slate-400 { color: var(--color-text-muted); }
+.clay-teacher-scope .text-slate-300 { color: var(--color-text-disabled); }
+
+/* --- Shadows: flat drop shadows -> clay dual shadows ------------------- */
+.clay-teacher-scope .shadow-2xs {
+  box-shadow: 0 2px 6px rgba(166, 175, 195, 0.26), -2px -2px 6px rgba(255, 255, 255, 0.8);
+}
+.clay-teacher-scope .shadow-xs,
+.clay-teacher-scope .shadow-sm { box-shadow: var(--clay-card-subtle-shadow); }
+.clay-teacher-scope .shadow { box-shadow: var(--clay-card-shadow); }
+.clay-teacher-scope .shadow-lg,
+.clay-teacher-scope .shadow-xl,
+.clay-teacher-scope .shadow-2xl { box-shadow: var(--clay-card-shadow); }
+
+/* --- Molded radii ------------------------------------------------------ */
+.clay-teacher-scope .rounded-2xl { border-radius: var(--radius-lg); }
+.clay-teacher-scope .rounded-3xl { border-radius: var(--radius-xl); }
+
+/* --- Recessed input wells --------------------------------------------- */
+.clay-teacher-scope input.bg-white,
+.clay-teacher-scope input.bg-slate-50,
+.clay-teacher-scope select.bg-white,
+.clay-teacher-scope select.bg-slate-50,
+.clay-teacher-scope textarea.bg-white,
+.clay-teacher-scope textarea.bg-slate-50 {
+  background: var(--color-background-soft);
+  border-color: rgba(166, 175, 195, 0.18);
+  box-shadow: var(--clay-inset-shadow);
+}
+
+/* --- Brand accent: indigo -> tangerine --------------------------------- */
+.clay-teacher-scope .bg-indigo-600 {
+  background: linear-gradient(145deg, #FF7E4A, #E65320);
+  box-shadow: var(--clay-btn-primary-shadow);
+}
+.clay-teacher-scope .bg-indigo-700 { background: linear-gradient(145deg, #F2613A, #C8481B); }
+.clay-teacher-scope .bg-indigo-50 { background: var(--color-accent-soft); }
+.clay-teacher-scope .bg-indigo-100 { background: var(--color-accent-soft); }
+.clay-teacher-scope .from-indigo-50 { --tw-gradient-from: var(--color-accent-soft); }
+.clay-teacher-scope .text-indigo-300 { color: #FFC7B2; }
+.clay-teacher-scope .text-indigo-400 { color: var(--color-accent-highlight); }
+.clay-teacher-scope .text-indigo-500 { color: var(--color-accent); }
+.clay-teacher-scope .text-indigo-600 { color: var(--color-accent); }
+.clay-teacher-scope .text-indigo-700 { color: var(--color-accent-dark); }
+.clay-teacher-scope .text-indigo-800 { color: var(--color-accent-dark); }
+.clay-teacher-scope .border-indigo-100 { border-color: rgba(255, 111, 61, 0.22); }
+.clay-teacher-scope .border-indigo-200 { border-color: rgba(255, 111, 61, 0.28); }
+.clay-teacher-scope .border-indigo-300 { border-color: rgba(255, 111, 61, 0.4); }
+.clay-teacher-scope .border-indigo-500 { border-color: var(--color-accent); }
+.clay-teacher-scope .border-indigo-600 { border-color: var(--color-accent); }
+.clay-teacher-scope .border-indigo-800 { border-color: rgba(255, 111, 61, 0.4); }
+.clay-teacher-scope .border-indigo-900 { border-color: rgba(255, 111, 61, 0.45); }
+.clay-teacher-scope .ring-indigo-500 { --tw-ring-color: var(--color-accent); }
+.clay-teacher-scope .accent-indigo-600 { accent-color: var(--color-accent); }
+.clay-teacher-scope .hover\:bg-indigo-50:hover { background: var(--color-accent-soft); }
+.clay-teacher-scope .hover\:bg-indigo-100:hover { background: var(--color-accent-soft); }
+.clay-teacher-scope .hover\:text-indigo-600:hover { color: var(--color-accent); }
+.clay-teacher-scope .hover\:text-indigo-700:hover { color: var(--color-accent-dark); }
+.clay-teacher-scope .hover\:border-indigo-400:hover { border-color: var(--color-accent); }
+.clay-teacher-scope .group:hover .group-hover\:text-indigo-600 { color: var(--color-accent); }
+.clay-teacher-scope .group:hover .group-hover\:text-indigo-400 { color: var(--color-accent); }
+.clay-teacher-scope .focus\:ring-indigo-500:focus { --tw-ring-color: var(--color-accent); }
+.clay-teacher-scope .focus\:border-indigo-500:focus { border-color: var(--color-accent); }
+
+/* --- Recessed clay chip ------------------------------------------------
+   Detail read-outs on the student row. Recessed (inset) so they sit below
+   the raised candy badges on the right, keeping the visual hierarchy clear. */
+.clay-inset.clay-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  border-radius: var(--radius-xs);
+  padding: 4px 9px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.clay-inset.clay-chip strong { font-weight: 800; }
+
+/* --- Static status badge -------------------------------------------------
+   Same "candy" clay finish as the Again/Hard/Good/Easy rating buttons, but
+   laid out inline and without the press/lift interaction (they are labels,
+   not controls). Double-class selectors keep them winning over
+   .clay-rating-btn regardless of stylesheet order. */
+.clay-rating-btn.clay-badge-static {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  font-size: 11px;
+  font-weight: 750;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: default;
+}
+
+.clay-rating-btn.clay-badge-static:hover {
+  transform: none;
+}
+
+.clay-rating-btn.clay-badge-static svg {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+}
+
+/* --- Student list row: tighter, more precise than the clay panels ----- */
+/* Two classes so this always wins over .clay-card-subtle regardless of the
+   order the stylesheets end up in the bundle. */
+.clay-card-subtle.clay-student-row {
+  border-radius: var(--radius-md);
+  box-shadow: var(--clay-card-subtle-shadow);
+}
+.clay-card-subtle.clay-student-row:hover {
+  box-shadow: var(--clay-card-shadow);
+}
+
+/* --- Tactile action pod on the student row ---------------------------- */
+.clay-student-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border-radius: 10px;
+  color: var(--color-text-muted);
+  background: linear-gradient(145deg, #FFFFFF, #F1F5F9);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  box-shadow:
+    0 3px 8px rgba(166, 175, 195, 0.3),
+    inset 0 1.5px 2px rgba(255, 255, 255, 0.95),
+    inset 0 -1.5px 2px rgba(166, 175, 195, 0.14);
+  cursor: pointer;
+  transition: transform 0.18s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.18s ease, color 0.18s ease;
+}
+
+.clay-student-action:hover {
+  transform: translateY(-1px);
+  color: var(--color-accent);
+  box-shadow:
+    0 5px 12px rgba(166, 175, 195, 0.38),
+    inset 0 1.5px 2px rgba(255, 255, 255, 1);
+}
+
+.clay-student-action:active {
+  transform: scale(0.94);
+  box-shadow: var(--clay-pressed-shadow);
+}
+
+.clay-student-action--danger:hover { color: var(--color-danger); }
+
+.dark .clay-student-action {
+  background: linear-gradient(145deg, #1E293B, #0F172A);
+  color: #94A3B8;
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5), inset 0 1px 1.5px rgba(255, 255, 255, 0.12);
+}
+.dark .clay-student-action:hover { color: var(--color-accent-highlight); }
+.dark .clay-student-action--danger:hover { color: var(--color-danger); }
+
+/* --- Dark mode --------------------------------------------------------- */
+.dark .clay-teacher-scope { color: #F8FAFC; }
+.dark .clay-teacher-canvas { background: #0E1626; }
+.dark .clay-teacher-scope .bg-white { background: #101726; }
+.dark .clay-teacher-scope .bg-white\/95 { background: rgba(16, 23, 38, 0.95); }
+.dark .clay-teacher-scope .bg-white\/80 { background: rgba(16, 23, 38, 0.82); }
+.dark .clay-teacher-scope .bg-white\/70 { background: rgba(16, 23, 38, 0.72); }
+.dark .clay-teacher-scope .bg-white\/60 { background: rgba(16, 23, 38, 0.62); }
+.dark .clay-teacher-scope .bg-white\/50 { background: rgba(16, 23, 38, 0.52); }
+.dark .clay-teacher-scope .bg-slate-50 { background: #0B111D; }
+.dark .clay-teacher-scope .bg-slate-50\/50 { background: rgba(11, 17, 29, 0.55); }
+.dark .clay-teacher-scope .bg-slate-100 { background: #0B111D; }
+.dark .clay-teacher-scope .bg-slate-100\/70 { background: rgba(11, 17, 29, 0.72); }
+.dark .clay-teacher-scope .bg-slate-200 { background: #162035; }
+.dark .clay-teacher-scope .border-slate-100 { border-color: rgba(255, 255, 255, 0.06); }
+.dark .clay-teacher-scope .border-slate-200 { border-color: rgba(255, 255, 255, 0.08); }
+.dark .clay-teacher-scope .border-slate-200\/90 { border-color: rgba(255, 255, 255, 0.08); }
+.dark .clay-teacher-scope .border-slate-300 { border-color: rgba(255, 255, 255, 0.1); }
+.dark .clay-teacher-scope .text-slate-900,
+.dark .clay-teacher-scope .text-slate-800,
+.dark .clay-teacher-scope .text-slate-700 { color: #F8FAFC; }
+.dark .clay-teacher-scope .text-slate-600,
+.dark .clay-teacher-scope .text-slate-500 { color: #94A3B8; }
+.dark .clay-teacher-scope .text-slate-400 { color: #64748B; }
+.dark .clay-teacher-scope .text-slate-300 { color: #475569; }
+.dark .clay-teacher-scope .shadow-2xs { box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5); }
+.dark .clay-teacher-scope .shadow-xs,
+.dark .clay-teacher-scope .shadow-sm { box-shadow: 6px 8px 18px rgba(0, 0, 0, 0.55), -4px -4px 12px rgba(255, 255, 255, 0.02); }
+.dark .clay-teacher-scope .shadow { box-shadow: var(--clay-card-shadow); }
+.dark .clay-teacher-scope .shadow-lg,
+.dark .clay-teacher-scope .shadow-xl,
+.dark .clay-teacher-scope .shadow-2xl { box-shadow: 8px 12px 26px rgba(0, 0, 0, 0.65), -6px -6px 16px rgba(255, 255, 255, 0.03); }
+.dark .clay-teacher-scope .bg-indigo-50 { background: rgba(255, 111, 61, 0.12); }
+.dark .clay-teacher-scope .bg-indigo-100 { background: rgba(255, 111, 61, 0.14); }
+.dark .clay-teacher-scope .bg-indigo-950 { background: rgba(255, 111, 61, 0.16); }
+.dark .clay-teacher-scope .from-indigo-50 { --tw-gradient-from: rgba(255, 111, 61, 0.14); }
+.dark .clay-teacher-scope .text-indigo-300 { color: #FFBFA8; }
+.dark .clay-teacher-scope .text-indigo-400 { color: var(--color-accent-highlight); }
+.dark .clay-teacher-scope .text-indigo-500 { color: var(--color-accent-highlight); }
+.dark .clay-teacher-scope .text-indigo-600 { color: var(--color-accent-highlight); }
+.dark .clay-teacher-scope .text-indigo-700 { color: var(--color-accent); }
+.dark .clay-teacher-scope .border-indigo-200 { border-color: rgba(255, 111, 61, 0.32); }
+.dark .clay-teacher-scope .border-indigo-800 { border-color: rgba(255, 111, 61, 0.38); }
+.dark .clay-teacher-scope .border-indigo-900 { border-color: rgba(255, 111, 61, 0.42); }
+.dark .clay-teacher-scope .hover\:bg-indigo-50:hover { background: rgba(255, 111, 61, 0.12); }
+.dark .clay-teacher-scope .hover\:text-indigo-600:hover { color: var(--color-accent-highlight); }
+.dark .clay-teacher-scope .group:hover .group-hover\:text-indigo-600,
+.dark .clay-teacher-scope .group:hover .group-hover\:text-indigo-400 { color: var(--color-accent-highlight); }
+.dark .clay-card-subtle.clay-student-row { box-shadow: 6px 8px 18px rgba(0, 0, 0, 0.55), -4px -4px 12px rgba(255, 255, 255, 0.02); }
+.dark .clay-card-subtle.clay-student-row:hover { box-shadow: 8px 12px 26px rgba(0, 0, 0, 0.65), -6px -6px 16px rgba(255, 255, 255, 0.03); }

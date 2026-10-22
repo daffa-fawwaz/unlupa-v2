@@ -193,6 +193,10 @@ export const PersonalSpace: React.FC<PersonalSpaceProps> = ({
     c.assignedBookIds?.forEach(id => joinedBookIds.add(id));
   });
 
+  // A halaqah (Al-Qur'an) class carries no book entry — its material is Mushaf
+  // pages — so it is surfaced as a class card in the "Kelas" tab instead.
+  const joinedQuranClasses = activeJoinedClasses.filter(c => c.type === 'quran');
+
   // Helper to determine if current user is the original creator/owner of a book
   const isOwnerOfBook = (b: Book): boolean => {
     // Clones, imported books, or class books are not original creations
@@ -1351,7 +1355,7 @@ export const PersonalSpace: React.FC<PersonalSpaceProps> = ({
                       ? 'bg-[#FF6E65] text-white shadow-2xs'
                       : 'bg-black/5 dark:bg-white/10 text-[#64748B] dark:text-[#94A3B8]'
                   }`}>
-                    {books.filter(b => isJoinedClassBook(b) && isBookInActiveClass(b)).length}
+                    {books.filter(b => isJoinedClassBook(b) && isBookInActiveClass(b)).length + joinedQuranClasses.length}
                   </span>
                 </button>
               </div>
@@ -1540,6 +1544,95 @@ export const PersonalSpace: React.FC<PersonalSpaceProps> = ({
                   </div>
                 );
               })}
+
+              {/* Halaqah (Al-Qur'an) classes have no book — show them as class cards */}
+              {activeBookTab === 'class' && joinedQuranClasses.map(cls => (
+                <div
+                  key={`halaqah-${cls.id}`}
+                  onClick={() => setActiveSpace('quran')}
+                  title={`${cls.name} · ${cls.teacherName}`}
+                  className="clay-card-subtle p-1.5 sm:p-2.5 pb-2 rounded-2xl flex flex-col items-center justify-between hover:-translate-y-1 active:scale-[0.98] transition-all cursor-pointer group relative select-none"
+                >
+                  {/* Top Action Bar: Type Tag + Juz Count */}
+                  <div className="w-full flex items-center justify-between gap-1 mb-1 z-20">
+                    <span className="bg-emerald-600/85 backdrop-blur-xs text-white text-[7px] sm:text-[8px] font-bold px-1.5 py-0.2 rounded flex items-center gap-0.5 shadow-2xs shrink-0">
+                      <BookOpen className="w-1.5 h-1.5 shrink-0" />
+                      Al-Qur'an
+                    </span>
+                    {cls.requiredJuzList && cls.requiredJuzList.length > 0 && (
+                      <span className="text-[8px] sm:text-[9px] font-black text-emerald-700 dark:text-emerald-300 tracking-tight truncate">
+                        {cls.requiredJuzList.length} Juz
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Mushaf-style cover */}
+                  <div className="w-full flex justify-center py-0.5">
+                    <div className="w-full max-w-[96px] sm:max-w-[115px] md:max-w-[130px] aspect-[1/1.38] rounded-r-[3px] rounded-l-[1px] overflow-hidden shadow-[3px_6px_16px_rgba(0,0,0,0.18)] dark:shadow-[3px_6px_20px_rgba(0,0,0,0.55)] border-l-[3.5px] sm:border-l-[5px] border-l-slate-900/60 relative flex flex-col justify-between transition-transform duration-200 group-hover:scale-[1.03] group-hover:-translate-y-0.5">
+                      <div className="absolute inset-y-0 left-0 w-2.5 bg-gradient-to-r from-black/40 via-white/25 to-transparent pointer-events-none z-20" />
+                      <div className="absolute inset-0 bg-gradient-to-tr from-black/10 via-transparent to-white/10 pointer-events-none z-20" />
+
+                      {cls.coverUrl ? (
+                        <img
+                          src={cls.coverUrl}
+                          alt={cls.name}
+                          onError={(e) => {
+                            (e.target as HTMLElement).style.display = 'none';
+                            const fallback = (e.target as HTMLElement).nextElementSibling;
+                            if (fallback) (fallback as HTMLElement).style.display = 'flex';
+                          }}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : null}
+                      <div
+                        className={`w-full h-full bg-gradient-to-br from-[#0c2f24] via-[#08221b] to-[#04120e] p-1.5 sm:p-2 flex flex-col justify-between text-amber-100 border border-amber-400/50 relative overflow-hidden select-none ${cls.coverUrl ? 'hidden' : 'flex'}`}
+                      >
+                        <div className="absolute inset-1 border border-amber-300/30 rounded-none pointer-events-none" />
+
+                        <div className="relative z-10 pt-0.2 text-center">
+                          <div className="inline-flex items-center gap-0.5 px-1 py-0.2 bg-black/40 border border-amber-400/30 text-[6px] font-extrabold uppercase tracking-widest text-amber-300">
+                            <School className="w-1.5 h-1.5 text-amber-400" />
+                            <span className="truncate max-w-[45px]">Halaqah</span>
+                          </div>
+                        </div>
+
+                        <div className="relative z-10 my-auto text-center px-0.5">
+                          <h3
+                            title={cls.name}
+                            className="font-serif font-bold text-[9px] sm:text-[10px] text-amber-50 leading-tight drop-shadow-md line-clamp-2 text-ellipsis tracking-tight"
+                          >
+                            {cls.name}
+                          </h3>
+                          <div className="w-4 h-0.5 bg-gradient-to-r from-transparent via-amber-400/60 to-transparent mx-auto mt-0.5" />
+                        </div>
+
+                        <div className="relative z-10 pb-0.2 text-center">
+                          <span className="text-[5px] sm:text-[6px] font-semibold text-amber-300/80 tracking-widest uppercase block truncate">
+                            {cls.teacherName}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Class Information Area */}
+                  <div className="w-full pt-1.5 flex flex-col items-center justify-center min-w-0">
+                    <h4
+                      title={cls.name}
+                      className="font-extrabold text-[11px] sm:text-xs text-[#18234A] dark:text-[#F8FAFC] line-clamp-2 leading-snug break-words text-center w-full group-hover:text-[#FF6F3D] transition-colors"
+                    >
+                      {cls.name}
+                    </h4>
+                    <div
+                      title={`${language === 'en' ? 'Teacher' : 'Pengajar'}: ${cls.teacherName}`}
+                      className="mt-1 w-full max-w-[95%] px-1.5 py-0.5 rounded-lg bg-emerald-500/10 dark:bg-emerald-400/15 border border-emerald-300/60 dark:border-emerald-600/40 flex items-center justify-center gap-1 text-[9px] sm:text-[10px] font-bold text-emerald-800 dark:text-emerald-200 shadow-2xs group-hover:bg-emerald-500/20 transition-all select-none"
+                    >
+                      <School className="w-2.5 h-2.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                      <span className="truncate">{cls.teacherName}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
             
             {books.filter(b => {
@@ -1547,7 +1640,7 @@ export const PersonalSpace: React.FC<PersonalSpaceProps> = ({
               if (activeBookTab === 'imported') return isImportedBook(b);
               if (activeBookTab === 'class') return isJoinedClassBook(b) && isBookInActiveClass(b);
               return false;
-            }).length === 0 && (
+            }).length === 0 && (activeBookTab !== 'class' || joinedQuranClasses.length === 0) && (
               <div className="text-center py-12 px-4 rounded-3xl border-2 border-dashed border-slate-200 dark:border-slate-800 mt-4">
                 <Library className="w-12 h-12 text-slate-300 mx-auto mb-3" />
                 <h3 className="text-base font-bold text-slate-900 dark:text-white mb-1">

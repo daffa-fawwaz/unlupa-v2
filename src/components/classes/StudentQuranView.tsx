@@ -14,6 +14,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { TeacherReportPrintView } from "./TeacherReportPrintView";
+import './teacher-clay.css';
 
 interface StudentQuranViewProps {
   student: ClassStudent;
@@ -355,7 +356,7 @@ export const StudentQuranView: React.FC<StudentQuranViewProps> = ({
   ]);
 
   return (
-    <div className="fixed inset-0 z-[110] bg-[#faf8f5] dark:bg-slate-950 overflow-y-auto">
+    <div className="fixed inset-0 z-[110] clay-teacher-scope clay-teacher-canvas overflow-y-auto">
       {/* Sticky Teacher Navigation Bar */}
       <div className="print:hidden sticky top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 px-3 sm:px-6 py-2.5 shadow-xs flex items-center justify-between gap-3">
         <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">

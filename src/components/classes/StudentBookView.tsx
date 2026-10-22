@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { ClassStudent, ClassGroup, BookItem, Chapter } from '../../types';
 import { useApp } from '../../context/AppContext';
-import { isDue, getIntervalDays, updateNonQuranFSRS, calculateRetrievability } from '../../lib/fsrs';
+import { isDue, getIntervalDays, updateNonQuranFSRS, calculateRetrievability, predictNonQuranIntervals } from '../../lib/fsrs';
 import { 
   ArrowLeft, 
   BookOpen, 
@@ -16,21 +16,33 @@ import {
   TrendingUp, 
   Check, 
   RotateCcw, 
-  ChevronDown, 
+  ChevronDown,
   ChevronRight,
-  Eye,
   HelpCircle,
   Sparkles,
   BookMarked,
+  RefreshCw,
 } from "lucide-react";
+import { soundEffects } from '../../lib/soundFeedback';
 import { BilingualCardText } from "../common/BilingualCardText";
 import { TeacherReportPrintView } from "./TeacherReportPrintView";
+import './teacher-clay.css';
 
 interface StudentBookViewProps {
   student: ClassStudent;
   classGroup: ClassGroup;
   onClose: () => void;
 }
+
+type Rating = 1 | 2 | 3 | 4;
+
+/** Rating meta shared by the grading buttons and the "already graded" state. */
+const RATING_META: Record<Rating, { label: string; variant: string; title: string }> = {
+  1: { label: "Lagi", variant: "clay-rating-rose", title: "Perlu Belajar Ulang" },
+  2: { label: "Sulit", variant: "clay-rating-gold", title: "Masih Sulit" },
+  3: { label: "Bagus", variant: "clay-rating-emerald", title: "Sudah Paham" },
+  4: { label: "Mudah", variant: "clay-rating-orange", title: "Sangat Menguasai" },
+};
 
 export const StudentBookView: React.FC<StudentBookViewProps> = ({
   student,
@@ -69,6 +81,11 @@ export const StudentBookView: React.FC<StudentBookViewProps> = ({
   const [isAnswerRevealed, setIsAnswerRevealed] = useState(false);
   const [actionNotice, setActionNotice] = useState<string | null>(null);
   const [localReviewedItems, setLocalReviewedItems] = useState<Record<string, { rating: 1 | 2 | 3 | 4; reviewedAt: string }>>({});
+  // Which cards are currently flipped to the answer side — same flip mechanic
+  // as the bab/sub-bab review page in the student's own book view.
+  const [revealedItemIds, setRevealedItemIds] = useState<Record<string, boolean>>({});
+  // Cards the teacher explicitly unlocked to re-grade after a first assessment.
+  const [regradingItemIds, setRegradingItemIds] = useState<Record<string, boolean>>({});
 
   // Chapters of the assigned book
   const bookChapters = useMemo(() => {
@@ -259,6 +276,14 @@ export const StudentBookView: React.FC<StudentBookViewProps> = ({
       ...prev,
       [itemId]: { rating, reviewedAt: new Date().toISOString() }
     }));
+    // Lock the card again after a corrected assessment, so it can only be
+    // graded once more (and only deliberately).
+    setRegradingItemIds(prev => {
+      if (!(itemId in prev)) return prev;
+      const next = { ...prev };
+      delete next[itemId];
+      return next;
+    });
     reviewStudentBookItem(classGroup.id, student.id, itemId, rating);
     const labels: Record<number, string> = {
       1: "Perlu Belajar Ulang (Again)",
@@ -271,6 +296,71 @@ export const StudentBookView: React.FC<StudentBookViewProps> = ({
     );
     setTimeout(() => setActionNotice(null), 3000);
   };
+
+  const isItemRevealed = (itemId: string) => Boolean(revealedItemIds[itemId]);
+
+  const flipItem = (itemId: string, reveal: boolean) => {
+    soundEffects.playCardFlip(reveal ? "forward" : "backward");
+    setRevealedItemIds((prev) => ({ ...prev, [itemId]: reveal }));
+  };
+
+  /** Next-review interval each rating would produce, like the review page. */
+  const getRatingIntervals = (item: BookItem) => {
+    try {
+      const prediction = predictNonQuranIntervals(item.fsrsData);
+      return {
+        again: prediction.again,
+        hard: prediction.hard,
+        good: prediction.good,
+        easy: prediction.easy,
+      };
+    } catch {
+      return { again: "1d", hard: "2d", good: "3d", easy: "4d" };
+    }
+  };
+
+  const testingIntervals = activeItems[testingCardIndex]
+    ? getRatingIntervals(activeItems[testingCardIndex])
+    : { again: "1d", hard: "2d", good: "3d", easy: "4d" };
+
+  /** The rating this teacher already gave the card in this session, if any. */
+  const getLocalReview = (item?: BookItem) => {
+    if (!item) return undefined;
+    return (
+      localReviewedItems[item.id] ||
+      (item.masterItemId ? localReviewedItems[item.masterItemId] : undefined) ||
+      (item.id?.startsWith("class-item-")
+        ? localReviewedItems[item.id.split("-").slice(-5).join("-")]
+        : undefined)
+    );
+  };
+
+  const currentTestingItem = activeItems[testingCardIndex];
+  const testingGradedRating = getLocalReview(currentTestingItem)?.rating;
+
+  /**
+   * A card that already has an assessment for today is locked so it cannot be
+   * graded twice by accident — same guard as the student's own review page.
+   * This also survives a page reload because the server-side review date is
+   * checked too, not just this session's local state.
+   */
+  const isItemLocked = (item?: BookItem) => {
+    if (!item) return false;
+    if (getLocalReview(item)) return !regradingItemIds[item.id];
+
+    const lastReview = item.fsrsData?.lastReview;
+    if (!lastReview) return false;
+    const last = new Date(lastReview);
+    const now = new Date();
+    const reviewedToday =
+      last.getFullYear() === now.getFullYear() &&
+      last.getMonth() === now.getMonth() &&
+      last.getDate() === now.getDate();
+    return reviewedToday && !regradingItemIds[item.id];
+  };
+
+  const unlockRegrade = (itemId: string) =>
+    setRegradingItemIds((prev) => ({ ...prev, [itemId]: true }));
 
   const handleShareWhatsApp = () => {
     const reportData = {
@@ -307,7 +397,7 @@ export const StudentBookView: React.FC<StudentBookViewProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-[110] bg-[#faf8f5] dark:bg-slate-950 overflow-y-auto">
+    <div className="fixed inset-0 z-[110] clay-teacher-scope clay-teacher-canvas overflow-y-auto">
       {/* Sticky Teacher Navigation Bar */}
       <div className="print:hidden sticky top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 px-3 sm:px-6 py-2.5 shadow-xs flex items-center justify-between gap-3">
         <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
@@ -648,6 +738,8 @@ export const StudentBookView: React.FC<StudentBookViewProps> = ({
                                 item.isActive,
                                 item.fsrsData?.lastReview,
                               );
+                              const ratingIntervals = getRatingIntervals(item);
+                              const gradedRating = getLocalReview(item)?.rating;
                               return (
                                 <div
                                   key={item.id}
@@ -723,77 +815,184 @@ export const StudentBookView: React.FC<StudentBookViewProps> = ({
                                     </div>
                                   </div>
 
-                                  {/* Card Question & Answer */}
+                                  {/* Card Question & Answer — clay flip card, same as the bab/sub-bab review page */}
                                   <div className="space-y-1.5">
-                                    <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800">
-                                      <span className="text-[10px] font-bold text-slate-400 block mb-0.5">
-                                        PERTANYAAN / MATAN:
-                                      </span>
-                                      <div className="font-semibold text-slate-900 dark:text-white">
-                                        <BilingualCardText
-                                          text={item.question}
-                                          type="question"
-                                          variant="compact"
-                                        />
+                                    {!isItemRevealed(item.id) ? (
+                                      /* FRONT CARD (QUESTION) */
+                                      <div
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          flipItem(item.id, true);
+                                        }}
+                                        className="w-full p-3 sm:p-4 rounded-2xl clay-card-subtle bg-[#EEF3FA] dark:bg-[#121B2B] border border-slate-200/80 dark:border-slate-800 hover:border-amber-400/50 dark:hover:border-amber-600/50 transition-all cursor-pointer group/card flex flex-col gap-2.5 relative animate-card-flip-reverse"
+                                      >
+                                        <div className="flex items-center justify-between gap-2 w-full">
+                                          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                                            Pertanyaan / Matan
+                                          </span>
+
+                                          <div
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              flipItem(item.id, true);
+                                            }}
+                                            className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl clay-pill text-amber-600 dark:text-amber-400 hover:scale-105 active:scale-95 transition-all shrink-0 cursor-pointer shadow-2xs group-hover/card:scale-105"
+                                            title="Klik untuk balik kartu"
+                                          >
+                                            <RefreshCw className="w-3.5 h-3.5" />
+                                            <span className="text-[10px] font-bold">
+                                              Balik
+                                            </span>
+                                          </div>
+                                        </div>
+
+                                        <div className="w-full select-text p-2.5 sm:p-3 rounded-xl bg-[rgba(255,255,255,0.62)] dark:bg-slate-900/40 border border-slate-200/50 dark:border-slate-800/60 shadow-2xs">
+                                          <BilingualCardText
+                                            text={item.question}
+                                            type="question"
+                                            variant="card-list"
+                                            clampLines={false}
+                                          />
+                                        </div>
                                       </div>
-                                    </div>
-                                    <div className="p-2.5 rounded-lg bg-emerald-50/40 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/40">
-                                      <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 block mb-0.5">
-                                        JAWABAN:
-                                      </span>
-                                      <div className="text-slate-700 dark:text-slate-300">
-                                        <BilingualCardText
-                                          text={item.answer}
-                                          type="answer"
-                                          variant="compact"
-                                        />
+                                    ) : (
+                                      /* BACK CARD (ANSWER) */
+                                      <div
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          flipItem(item.id, false);
+                                        }}
+                                        className="w-full p-3 sm:p-4 rounded-2xl clay-card-subtle bg-[#FEFCE8] dark:bg-[#1F1B16] border border-amber-200/80 dark:border-amber-900/40 shadow-sm cursor-pointer group/card flex flex-col gap-2.5 relative animate-card-flip"
+                                      >
+                                        <div className="flex items-center justify-between gap-2 w-full">
+                                          <span className="text-[10px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400">
+                                            Jawaban
+                                          </span>
+
+                                          <div
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              flipItem(item.id, false);
+                                            }}
+                                            className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl clay-pill text-amber-700 dark:text-amber-300 hover:scale-105 active:scale-95 transition-all shrink-0 cursor-pointer shadow-2xs group-hover/card:scale-105"
+                                            title="Klik untuk balik ke pertanyaan"
+                                          >
+                                            <RefreshCw className="w-3.5 h-3.5" />
+                                            <span className="text-[10px] font-bold">
+                                              Tanya
+                                            </span>
+                                          </div>
+                                        </div>
+
+                                        <div className="w-full select-text p-2.5 sm:p-3 rounded-xl bg-[rgba(255,255,255,0.72)] dark:bg-amber-950/30 border border-amber-200/60 dark:border-amber-800/60 shadow-2xs">
+                                          <BilingualCardText
+                                            text={item.answer}
+                                            type="answer"
+                                            variant="card-list"
+                                            clampLines={false}
+                                          />
+                                        </div>
                                       </div>
-                                    </div>
+                                    )}
                                   </div>
 
-                                  {/* Teacher Review Grading Buttons */}
-                                  <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2 flex-wrap">
-                                    <span className="text-[10px] font-semibold text-slate-400">
-                                      Nilai Setoran Santri:
-                                    </span>
-                                    <div className="flex items-center gap-1.5 flex-wrap">
-                                      <button
-                                        onClick={() =>
-                                          handleGradeCard(item.id, 1)
-                                        }
-                                        className="px-2.5 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 dark:bg-rose-950/80 dark:text-rose-300 text-[10px] font-bold border border-rose-200 dark:border-rose-800 cursor-pointer active:scale-95"
-                                        title="Perlu Belajar Ulang"
-                                      >
-                                        1. Lagi
-                                      </button>
-                                      <button
-                                        onClick={() =>
-                                          handleGradeCard(item.id, 2)
-                                        }
-                                        className="px-2.5 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-700 dark:bg-amber-950/80 dark:text-amber-300 text-[10px] font-bold border border-amber-200 dark:border-amber-800 cursor-pointer active:scale-95"
-                                        title="Masih Sulit"
-                                      >
-                                        2. Sulit
-                                      </button>
-                                      <button
-                                        onClick={() =>
-                                          handleGradeCard(item.id, 3)
-                                        }
-                                        className="px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 dark:bg-blue-950/80 dark:text-blue-300 text-[10px] font-bold border border-blue-200 dark:border-blue-800 cursor-pointer active:scale-95"
-                                        title="Sudah Paham (Bagus)"
-                                      >
-                                        3. Bagus
-                                      </button>
-                                      <button
-                                        onClick={() =>
-                                          handleGradeCard(item.id, 4)
-                                        }
-                                        className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold cursor-pointer active:scale-95 shadow-2xs"
-                                        title="Sangat Menguasai (Mudah)"
-                                      >
-                                        4. Mudah
-                                      </button>
-                                    </div>
+                                  {/* Teacher Review Grading Buttons — same clay rating component as the review page */}
+                                  <div className="pt-2 border-t border-black/[0.03] dark:border-white/[0.04] flex items-center justify-between gap-2 flex-wrap">
+                                    {isItemLocked(item) ? (
+                                      /* Already assessed — locked so the card cannot be graded twice by accident */
+                                      <>
+                                        <span
+                                          className={`clay-rating-btn ${gradedRating ? RATING_META[gradedRating].variant : "clay-rating-emerald"} clay-badge-static`}
+                                          title={gradedRating ? RATING_META[gradedRating].title : "Sudah dinilai hari ini"}
+                                        >
+                                          <Check />
+                                          <span>
+                                            {gradedRating
+                                              ? `Sudah Dinilai: ${RATING_META[gradedRating].label}`
+                                              : "Sudah Dinilai Hari Ini"}
+                                          </span>
+                                        </span>
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            unlockRegrade(item.id);
+                                          }}
+                                          className="clay-inset clay-chip text-[#5E6D88] dark:text-slate-300 cursor-pointer hover:text-[#FF6F3D] transition-colors"
+                                          title="Ubah nilai setoran kartu ini"
+                                        >
+                                          <RotateCcw className="w-3 h-3" />
+                                          <span>Ubah Nilai</span>
+                                        </button>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <span className="text-[10px] font-semibold text-slate-400">
+                                          Nilai Setoran Santri:
+                                        </span>
+                                        <div className="grid grid-cols-4 gap-1.5 flex-1 min-w-[210px] max-w-[300px]">
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleGradeCard(item.id, 1);
+                                            }}
+                                            className="py-1.5 px-1 rounded-xl clay-rating-btn clay-rating-rose text-center transition-all flex flex-col items-center justify-center cursor-pointer active:scale-95"
+                                            title="Perlu Belajar Ulang"
+                                          >
+                                            <span className="text-[11px] font-bold leading-tight">
+                                              Lagi
+                                            </span>
+                                            <span className="text-[9px] font-bold opacity-85 mt-0.5">
+                                              {ratingIntervals.again}
+                                            </span>
+                                          </button>
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleGradeCard(item.id, 2);
+                                            }}
+                                            className="py-1.5 px-1 rounded-xl clay-rating-btn clay-rating-gold text-center transition-all flex flex-col items-center justify-center cursor-pointer active:scale-95"
+                                            title="Masih Sulit"
+                                          >
+                                            <span className="text-[11px] font-bold leading-tight">
+                                              Sulit
+                                            </span>
+                                            <span className="text-[9px] font-bold opacity-85 mt-0.5">
+                                              {ratingIntervals.hard}
+                                            </span>
+                                          </button>
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleGradeCard(item.id, 3);
+                                            }}
+                                            className="py-1.5 px-1 rounded-xl clay-rating-btn clay-rating-emerald text-center transition-all flex flex-col items-center justify-center cursor-pointer active:scale-95"
+                                            title="Sudah Paham (Bagus)"
+                                          >
+                                            <span className="text-[11px] font-bold leading-tight">
+                                              Bagus
+                                            </span>
+                                            <span className="text-[9px] font-bold opacity-85 mt-0.5">
+                                              {ratingIntervals.good}
+                                            </span>
+                                          </button>
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleGradeCard(item.id, 4);
+                                            }}
+                                            className="py-1.5 px-1 rounded-xl clay-rating-btn clay-rating-orange text-center transition-all flex flex-col items-center justify-center cursor-pointer active:scale-95"
+                                            title="Sangat Menguasai (Mudah)"
+                                          >
+                                            <span className="text-[11px] font-bold leading-tight">
+                                              Mudah
+                                            </span>
+                                            <span className="text-[9px] font-bold opacity-85 mt-0.5">
+                                              {ratingIntervals.easy}
+                                            </span>
+                                          </button>
+                                        </div>
+                                      </>
+                                    )}
                                   </div>
                                 </div>
                               );
@@ -840,64 +1039,135 @@ export const StudentBookView: React.FC<StudentBookViewProps> = ({
                   </span>
                 </div>
 
-                {/* The Flashcard */}
-                <div className="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-lg space-y-4">
-                  <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
-                    <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">
-                      {bookChapters.find(
-                        (c) =>
-                          c.id === activeItems[testingCardIndex]?.chapterId,
-                      )?.title || "Pertanyaan"}
-                    </span>
-                    <span className="text-[11px] text-slate-400">
-                      Stabilitas:{" "}
-                      {getIntervalDays(activeItems[testingCardIndex]?.fsrsData)}{" "}
-                      hari
-                    </span>
-                  </div>
-
-                  {/* Question */}
-                  <div className="py-4">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase block mb-1">
-                      SOAL / MATAN:
-                    </span>
-                    <div className="text-base sm:text-lg font-bold text-slate-900 dark:text-white leading-relaxed">
-                      <BilingualCardText
-                        text={activeItems[testingCardIndex]?.question}
-                        type="question"
-                      />
+                  {/* The Flashcard — same clay flip card as the bab/sub-bab review page */}
+                  <div className="p-3 sm:p-4 rounded-2xl clay-card-subtle bg-[#EEF3FA] dark:bg-[#121B2B] border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-3">
+                    <div className="flex items-center justify-between gap-2 w-full">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 truncate">
+                        {bookChapters.find(
+                          (c) =>
+                            c.id === activeItems[testingCardIndex]?.chapterId,
+                        )?.title || "Pertanyaan"}
+                      </span>
+                      <span className="text-[11px] text-slate-400 shrink-0">
+                        Stabilitas:{" "}
+                        {getIntervalDays(activeItems[testingCardIndex]?.fsrsData)}{" "}
+                        hari
+                      </span>
                     </div>
-                  </div>
 
-                  {/* Reveal Answer Button */}
-                  {!isAnswerRevealed ? (
-                    <button
-                      onClick={() => setIsAnswerRevealed(true)}
-                      className="w-full py-3 rounded-2xl bg-indigo-50 dark:bg-indigo-950 hover:bg-indigo-100 text-indigo-700 dark:text-indigo-300 font-bold text-xs sm:text-sm border border-indigo-200 dark:border-indigo-800 transition-all flex items-center justify-center gap-2 cursor-pointer shadow-2xs"
-                    >
-                      <Eye className="w-4 h-4" />
-                      <span>Periksa Kunci Jawaban</span>
-                    </button>
-                  ) : (
-                    <div className="space-y-4 pt-3 border-t border-slate-100 dark:border-slate-800 animate-in fade-in">
-                      <div className="p-4 rounded-2xl bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900/50">
-                        <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase block mb-1">
-                          KUNCI JAWABAN:
-                        </span>
-                        <div className="text-sm font-semibold text-slate-800 dark:text-slate-200 leading-relaxed">
+                    {!isAnswerRevealed ? (
+                      /* FRONT CARD (QUESTION) */
+                      <div
+                        onClick={() => {
+                          soundEffects.playCardFlip("forward");
+                          setIsAnswerRevealed(true);
+                        }}
+                        className="w-full p-3 sm:p-4 rounded-2xl clay-card-subtle bg-[#EEF3FA] dark:bg-[#121B2B] border border-slate-200/80 dark:border-slate-800 hover:border-amber-400/50 dark:hover:border-amber-600/50 transition-all cursor-pointer group/card flex flex-col gap-2.5 relative animate-card-flip-reverse"
+                      >
+                        <div className="flex items-center justify-between gap-2 w-full">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                            Soal / Matan
+                          </span>
+
+                          <div
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              soundEffects.playCardFlip("forward");
+                              setIsAnswerRevealed(true);
+                            }}
+                            className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl clay-pill text-amber-600 dark:text-amber-400 hover:scale-105 active:scale-95 transition-all shrink-0 cursor-pointer shadow-2xs group-hover/card:scale-105"
+                            title="Klik untuk balik kartu"
+                          >
+                            <RefreshCw className="w-3.5 h-3.5" />
+                            <span className="text-[10px] font-bold">
+                              Balik
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="w-full select-text p-2.5 sm:p-3 rounded-xl bg-[rgba(255,255,255,0.62)] dark:bg-slate-900/40 border border-slate-200/50 dark:border-slate-800/60 shadow-2xs">
+                          <BilingualCardText
+                            text={activeItems[testingCardIndex]?.question}
+                            type="question"
+                            variant="card-list"
+                            clampLines={false}
+                          />
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                      /* BACK CARD (ANSWER) */
+                      <div
+                        onClick={() => {
+                          soundEffects.playCardFlip("backward");
+                          setIsAnswerRevealed(false);
+                        }}
+                        className="w-full p-3 sm:p-4 rounded-2xl clay-card-subtle bg-[#FEFCE8] dark:bg-[#1F1B16] border border-amber-200/80 dark:border-amber-900/40 shadow-sm cursor-pointer group/card flex flex-col gap-2.5 relative animate-card-flip"
+                      >
+                        <div className="flex items-center justify-between gap-2 w-full">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400">
+                            Kunci Jawaban
+                          </span>
+
+                          <div
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              soundEffects.playCardFlip("backward");
+                              setIsAnswerRevealed(false);
+                            }}
+                            className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl clay-pill text-amber-700 dark:text-amber-300 hover:scale-105 active:scale-95 transition-all shrink-0 cursor-pointer shadow-2xs group-hover/card:scale-105"
+                            title="Klik untuk balik ke pertanyaan"
+                          >
+                            <RefreshCw className="w-3.5 h-3.5" />
+                            <span className="text-[10px] font-bold">
+                              Tanya
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="w-full select-text p-2.5 sm:p-3 rounded-xl bg-[rgba(255,255,255,0.72)] dark:bg-amber-950/30 border border-amber-200/60 dark:border-amber-800/60 shadow-2xs">
                           <BilingualCardText
                             text={activeItems[testingCardIndex]?.answer}
                             type="answer"
+                            variant="card-list"
+                            clampLines={false}
                           />
                         </div>
                       </div>
 
-                      {/* Grading Action */}
+                      {/* Grading Action — same clay rating component as the review page */}
                       <div className="space-y-2">
-                        <span className="text-xs font-semibold text-slate-600 dark:text-slate-400 block text-center">
-                          Bagaimana pelafalan / hafalan santri?
-                        </span>
-                        <div className="grid grid-cols-4 gap-2">
+                        {isItemLocked(currentTestingItem) ? (
+                          /* Already assessed — locked so the card cannot be graded twice by accident */
+                          <div className="flex flex-col items-center gap-2">
+                            <span
+                              className={`clay-rating-btn ${testingGradedRating ? RATING_META[testingGradedRating].variant : "clay-rating-emerald"} clay-badge-static`}
+                              title={testingGradedRating ? RATING_META[testingGradedRating].title : "Sudah dinilai hari ini"}
+                            >
+                              <Check />
+                              <span>
+                                {testingGradedRating
+                                  ? `Sudah Dinilai: ${RATING_META[testingGradedRating].label}`
+                                  : "Sudah Dinilai Hari Ini"}
+                              </span>
+                            </span>
+                            <button
+                              onClick={() =>
+                                currentTestingItem && unlockRegrade(currentTestingItem.id)
+                              }
+                              className="clay-inset clay-chip text-[#5E6D88] dark:text-slate-300 cursor-pointer hover:text-[#FF6F3D] transition-colors"
+                              title="Ubah nilai setoran kartu ini"
+                            >
+                              <RotateCcw className="w-3 h-3" />
+                              <span>Ubah Nilai</span>
+                            </button>
+                          </div>
+                        ) : (
+                          <>
+                            <span className="text-[10px] font-semibold text-slate-400 block text-center">
+                              Nilai Setoran Santri:
+                            </span>
+                            <div className="grid grid-cols-4 gap-1.5">
                           <button
                             onClick={() => {
                               handleGradeCard(
@@ -909,9 +1179,15 @@ export const StudentBookView: React.FC<StudentBookViewProps> = ({
                                 (prev) => (prev + 1) % activeItems.length,
                               );
                             }}
-                            className="py-2.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300 text-xs font-bold border border-rose-200 dark:border-rose-800 cursor-pointer active:scale-95"
+                            className="py-1.5 px-1 rounded-xl clay-rating-btn clay-rating-rose text-center transition-all flex flex-col items-center justify-center cursor-pointer active:scale-95"
+                            title="Perlu Belajar Ulang"
                           >
-                            1. Lagi
+                            <span className="text-[11px] font-bold leading-tight">
+                              Lagi
+                            </span>
+                            <span className="text-[9px] font-bold opacity-85 mt-0.5">
+                              {testingIntervals.again}
+                            </span>
                           </button>
                           <button
                             onClick={() => {
@@ -924,9 +1200,15 @@ export const StudentBookView: React.FC<StudentBookViewProps> = ({
                                 (prev) => (prev + 1) % activeItems.length,
                               );
                             }}
-                            className="py-2.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300 text-xs font-bold border border-amber-200 dark:border-amber-800 cursor-pointer active:scale-95"
+                            className="py-1.5 px-1 rounded-xl clay-rating-btn clay-rating-gold text-center transition-all flex flex-col items-center justify-center cursor-pointer active:scale-95"
+                            title="Masih Sulit"
                           >
-                            2. Sulit
+                            <span className="text-[11px] font-bold leading-tight">
+                              Sulit
+                            </span>
+                            <span className="text-[9px] font-bold opacity-85 mt-0.5">
+                              {testingIntervals.hard}
+                            </span>
                           </button>
                           <button
                             onClick={() => {
@@ -939,9 +1221,15 @@ export const StudentBookView: React.FC<StudentBookViewProps> = ({
                                 (prev) => (prev + 1) % activeItems.length,
                               );
                             }}
-                            className="py-2.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300 text-xs font-bold border border-blue-200 dark:border-blue-800 cursor-pointer active:scale-95"
+                            className="py-1.5 px-1 rounded-xl clay-rating-btn clay-rating-emerald text-center transition-all flex flex-col items-center justify-center cursor-pointer active:scale-95"
+                            title="Sudah Paham (Bagus)"
                           >
-                            3. Bagus
+                            <span className="text-[11px] font-bold leading-tight">
+                              Bagus
+                            </span>
+                            <span className="text-[9px] font-bold opacity-85 mt-0.5">
+                              {testingIntervals.good}
+                            </span>
                           </button>
                           <button
                             onClick={() => {
@@ -954,15 +1242,23 @@ export const StudentBookView: React.FC<StudentBookViewProps> = ({
                                 (prev) => (prev + 1) % activeItems.length,
                               );
                             }}
-                            className="py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold cursor-pointer active:scale-95 shadow-2xs"
+                            className="py-1.5 px-1 rounded-xl clay-rating-btn clay-rating-orange text-center transition-all flex flex-col items-center justify-center cursor-pointer active:scale-95"
+                            title="Sangat Menguasai (Mudah)"
                           >
-                            4. Mudah
+                            <span className="text-[11px] font-bold leading-tight">
+                              Mudah
+                            </span>
+                            <span className="text-[9px] font-bold opacity-85 mt-0.5">
+                              {testingIntervals.easy}
+                            </span>
                           </button>
-                        </div>
+                            </div>
+                          </>
+                        )}
                       </div>
-                    </div>
-                  )}
-                </div>
+                      </>
+                    )}
+                  </div>
 
                 {/* Navigation Between Cards */}
                 <div className="flex items-center justify-between">
