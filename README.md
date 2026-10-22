@@ -17,13 +17,13 @@
 
 ## 📌 Tentang Unlupa.id
 
-**Unlupa.id** (*"Dulu tidak tahu, sekarang lupa. Capek menghafal tapi hilang begitu saja"*) adalah aplikasi manajemen hafalan dan murajaah berbasis web modern. Aplikasi ini memadukan algoritma memori ilmiah **FSRS (Free Spaced Repetition Scheduler v5)** dengan antarmuka Mushaf Madinah 604 Halaman, sistem Flashcard Kitab interaktif, dan Ruang Kelas/Mengajar (*Halaqah*) antara Guru dan Santri.
+**Unlupa.id** (_"Dulu tidak tahu, sekarang lupa. Capek menghafal tapi hilang begitu saja"_) adalah aplikasi manajemen hafalan dan murajaah berbasis web modern. Aplikasi ini memadukan algoritma memori ilmiah **FSRS (Free Spaced Repetition Scheduler v5)** dengan antarmuka Mushaf Madinah 604 Halaman, sistem Flashcard Kitab interaktif, dan Ruang Kelas/Mengajar (_Halaqah_) antara Guru dan Santri.
 
 ### ✨ Fitur Unggulan
 
 1. **🕌 Ruang Al-Qur'an (604 Halaman Mushaf Standar Madinah):**
    - Aktivasi lembar mushaf per Juz atau per halaman.
-   - Penjadwalan murajaah otomatis berbasis retensi daya ingat (*FSRS*).
+   - Penjadwalan murajaah otomatis berbasis retensi daya ingat (_FSRS_).
    - Penilaian hafalan santri (Lancar Mutqin, Lancar, Perlu Ulang).
    - Mode Mapan (>300 hari) dan evaluasi kesalahan tajwid/makhraj.
 
@@ -34,30 +34,30 @@
 
 3. **👥 Ruang Mengajar (Halaqah Guru & Santri):**
    - Pembuatan kelas Al-Qur'an dan Non-Qur'an dengan kode unik kelas.
-   - Guru dapat membuka langsung mushaf riil santri (*Buka Mushaf Santri*).
-   - Guru dapat menyimak (*tasmi'*), mengaktifkan halaman baru, dan mencetak rapor berkala santri.
+   - Guru dapat membuka langsung mushaf riil santri (_Buka Mushaf Santri_).
+   - Guru dapat menyimak (_tasmi'_), mengaktifkan halaman baru, dan mencetak rapor berkala santri.
 
 4. **📊 Dasbor & Analitik Memori:**
-   - Antrean murajaah harian adaptif (*Due Today*).
+   - Antrean murajaah harian adaptif (_Due Today_).
    - Piramida stabilitas memori (Mapan, Kokoh, Konsolidasi, Kritis).
-   - Papan peringkat (*Leaderboard*) dan streak harian.
+   - Papan peringkat (_Leaderboard_) dan streak harian.
 
 5. **🔐 Sistem Autentikasi & Database Mandiri:**
-   - Login & Registrasi aman menggunakan JWT (*JSON Web Token*) dan bcrypt.
+   - Login & Registrasi aman menggunakan JWT (_JSON Web Token_) dan bcrypt.
    - Database relasional PostgreSQL dengan Prisma ORM.
 
 ---
 
 ## 🛠️ Teknologi yang Digunakan
 
-| Sektor | Teknologi |
-| :--- | :--- |
-| **Frontend** | React 19, TypeScript, Tailwind CSS v4, Motion, Lucide Icons, Vite |
-| **Backend** | Node.js, Express.js 5, TypeScript (`tsx`) |
-| **Database & ORM** | PostgreSQL, Prisma ORM |
-| **Spaced Repetition** | `ts-fsrs` (Free Spaced Repetition Scheduler) |
-| **AI Integration** | Google Gemini API (`@google/genai`) |
-| **Export & Reporting** | jsPDF, html2canvas, Canvas Confetti |
+| Sektor                 | Teknologi                                                         |
+| :--------------------- | :---------------------------------------------------------------- |
+| **Frontend**           | React 19, TypeScript, Tailwind CSS v4, Motion, Lucide Icons, Vite |
+| **Backend**            | Node.js, Express.js 5, TypeScript (`tsx`)                         |
+| **Database & ORM**     | PostgreSQL, Prisma ORM                                            |
+| **Spaced Repetition**  | `ts-fsrs` (Free Spaced Repetition Scheduler)                      |
+| **AI Integration**     | Google Gemini API (`@google/genai`)                               |
+| **Export & Reporting** | jsPDF, html2canvas, Canvas Confetti                               |
 
 ---
 
@@ -79,7 +79,9 @@ Sebelum menjalankan aplikasi di komputer lokal Anda, pastikan telah menginstal:
 Ikuti langkah-langkah mudah berikut untuk menjalankan project dari awal:
 
 ### 1. Kloning atau Buka Direktori Project
+
 Buka terminal dan masuk ke folder project:
+
 ```bash
 cd /path/to/unlupa-v2
 ```
@@ -87,7 +89,9 @@ cd /path/to/unlupa-v2
 ---
 
 ### 2. Install Dependensi (Packages)
+
 Jalankan perintah berikut untuk mengunduh seluruh library yang dibutuhkan:
+
 ```bash
 npm install
 ```
@@ -95,7 +99,9 @@ npm install
 ---
 
 ### 3. Buat File Konfigurasi Lingkungan (`.env`)
+
 Salin file template `.env.example` menjadi `.env`:
+
 ```bash
 cp .env.example .env
 ```
@@ -120,12 +126,13 @@ GEMINI_API_KEY="AIzaSy..."
 VITE_API_BASE_URL=""
 ```
 
-> **Catatan Penting:** 
+> **Catatan Penting:**
 > Ganti `postgres:password_anda@localhost:5432/unlupa_db` sesuai username, password, dan nama database PostgreSQL di komputer Anda.
 
 ---
 
 ### 4. Sinkronisasi Skema Database (Prisma)
+
 Jalankan generator dan migrasi skema database Prisma ke PostgreSQL:
 
 ```bash
@@ -136,7 +143,8 @@ npx prisma generate
 npx prisma db push
 ```
 
-*(Opsional)* Anda dapat membuka antarmuka visual tabel database menggunakan Prisma Studio:
+_(Opsional)_ Anda dapat membuka antarmuka visual tabel database menggunakan Prisma Studio:
+
 ```bash
 npx prisma studio
 ```
@@ -144,6 +152,7 @@ npx prisma studio
 ---
 
 ### 5. Jalankan Server Development
+
 Jalankan server aplikasi (Express Backend + Vite Frontend terintegrasi):
 
 ```bash
@@ -151,6 +160,7 @@ npm run dev
 ```
 
 Jika berhasil, terminal akan menampilkan:
+
 ```
 [Server] Express listening on port 3000
 [Vite] dev server running at: http://localhost:3000
@@ -159,6 +169,7 @@ Jika berhasil, terminal akan menampilkan:
 ---
 
 ### 6. Buka di Browser
+
 Buka browser Anda dan akses tautan berikut:
 👉 **[http://localhost:3000](http://localhost:3000)**
 
@@ -172,7 +183,7 @@ Buka browser Anda dan akses tautan berikut:
   - **Jika Sudah Login:** Tombol di Landing Page otomatis berganti menjadi **"Ke Dashboard"** lengkap dengan badge nama pengguna.
 - **Masuk ke Dashboard:**
   - Klik **"Ke Dashboard"** atau lakukan login untuk masuk ke workspace aplikasi.
-  - Sesi kerja di tab browser akan otomatis diingat (*session persistence*).
+  - Sesi kerja di tab browser akan otomatis diingat (_session persistence_).
 - **Kembali ke Landing Page:**
   - Pengguna yang sedang berada di Dashboard dapat membuka Landing Page kapan saja melalui menu Profil pojok kanan atas > **Halaman Depan**.
   - Saat pengguna mengklik **Keluar (Sign Out)**, sistem akan membersihkan sesi dan mengarahkan kembali ke Landing Page dengan tombol "Login".
@@ -181,15 +192,15 @@ Buka browser Anda dan akses tautan berikut:
 
 ## 📜 Daftar Perintah NPM (Scripts)
 
-| Perintah | Keterangan |
-| :--- | :--- |
-| `npm run dev` | Menjalankan server development lokal (Express + Vite HMR) di port 3000 |
-| `npm run build` | Melakukan kompilasi produksi bundle frontend ke direktori `dist/` |
-| `npm run start` | Menjalankan server mode production |
-| `npm run lint` | Menjalankan pengecekan tipe data TypeScript (`tsc --noEmit`) |
-| `npm run test:quran` | Menjalankan skrip validasi persistensi murajaah Al-Qur'an |
-| `npx prisma db push` | Menerapkan perubahan skema Prisma ke database PostgreSQL |
-| `npx prisma studio` | Membuka antarmuka GUI browser untuk melihat data database |
+| Perintah             | Keterangan                                                             |
+| :------------------- | :--------------------------------------------------------------------- |
+| `npm run dev`        | Menjalankan server development lokal (Express + Vite HMR) di port 3000 |
+| `npm run build`      | Melakukan kompilasi produksi bundle frontend ke direktori `dist/`      |
+| `npm run start`      | Menjalankan server mode production                                     |
+| `npm run lint`       | Menjalankan pengecekan tipe data TypeScript (`tsc --noEmit`)           |
+| `npm run test:quran` | Menjalankan skrip validasi persistensi murajaah Al-Qur'an              |
+| `npx prisma db push` | Menerapkan perubahan skema Prisma ke database PostgreSQL               |
+| `npx prisma studio`  | Membuka antarmuka GUI browser untuk melihat data database              |
 
 ---
 
@@ -233,6 +244,7 @@ Buka browser Anda dan akses tautan berikut:
 ## ❓ FAQ & Solusi Masalah Umum
 
 ### 1. Error: `P1001: Can't reach database server at localhost:5432`
+
 - **Penyebab:** Server PostgreSQL di komputer Anda belum aktif atau port berbeda.
 - **Solusi:**
   - Di Mac: Jalankan `brew services start postgresql` atau buka Postgres.app.
@@ -240,6 +252,7 @@ Buka browser Anda dan akses tautan berikut:
   - Di Windows: Buka Services > cari `postgresql-x64` > klik Start.
 
 ### 2. Error: `EADDRINUSE: address already in use :::3000`
+
 - **Penyebab:** Port 3000 sedang digunakan oleh aplikasi lain atau instance server sebelumnya.
 - **Solusi:**
   - Cari proses yang memakai port 3000 dan matikan:
@@ -251,7 +264,8 @@ Buka browser Anda dan akses tautan berikut:
   - Atau ubah `PORT=3001` pada file `.env`.
 
 ### 3. Halaman Terlihat Kosong / Cache Browser Lama
-- Bersihkan cache browser Anda atau tekan tombol `Ctrl + Shift + R` (Windows) / `Cmd + Shift + R` (Mac) untuk melakukan *hard refresh*.
+
+- Bersihkan cache browser Anda atau tekan tombol `Ctrl + Shift + R` (Windows) / `Cmd + Shift + R` (Mac) untuk melakukan _hard refresh_.
 
 ---
 

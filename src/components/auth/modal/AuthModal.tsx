@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  AlertCircle,
   ArrowRight,
   CheckCircle2,
   Eye,
@@ -13,28 +12,49 @@ import {
 } from 'lucide-react';
 import { useApp } from '../../../context/AppContext';
 import { api } from '../../../lib/api';
+import { showToast } from '../../common/toast';
 import './auth-modal.css';
 
 type AuthMode = 'login' | 'register';
 
-const friendlyError = (error: any): string => {
+interface AuthErrorFeedback {
+  title: string;
+  message: string;
+}
+
+/**
+ * Maps an auth failure to a condition-specific title plus a short detail.
+ * The server returns one code for both "email unknown" and "wrong password"
+ * on purpose (account enumeration), so those two stay bundled into one title.
+ */
+const friendlyError = (error: any): AuthErrorFeedback => {
   switch (error?.code) {
     case 'EMAIL_ALREADY_EXISTS':
-      return 'Email ini sudah terdaftar. Silakan masuk ke akun Anda.';
+      return { title: 'Email sudah terdaftar', message: 'Silakan masuk ke akun Anda.' };
     case 'INVALID_CREDENTIALS':
-      return 'Email atau password belum sesuai.';
+      return { title: 'Email atau password salah', message: 'Periksa kembali email dan password yang Anda masukkan.' };
     case 'TOO_MANY_REQUESTS':
-      return 'Terlalu banyak percobaan. Silakan tunggu beberapa saat.';
+      return { title: 'Terlalu banyak percobaan', message: 'Silakan tunggu beberapa saat lalu coba lagi.' };
     case 'WEAK_PASSWORD':
-      return 'Password terlalu lemah. Gunakan minimal 6 karakter.';
+      return { title: 'Password terlalu lemah', message: 'Gunakan minimal 6 karakter.' };
+    case 'PASSWORD_TOO_LONG':
+      return { title: 'Password terlalu panjang', message: 'Gunakan maksimal 128 karakter.' };
+    case 'INVALID_NAME':
+      return { title: 'Nama belum lengkap', message: 'Nama lengkap minimal terdiri dari 2 karakter.' };
+    case 'NAME_TOO_LONG':
+      return { title: 'Nama terlalu panjang', message: 'Gunakan maksimal 100 karakter.' };
     case 'INVALID_EMAIL':
-      return 'Format email belum valid.';
+      return { title: 'Email belum valid', message: 'Periksa kembali format alamat email Anda.' };
+    case 'INVALID_INPUT':
+      return { title: 'Email dan password wajib diisi', message: 'Lengkapi kedua kolom sebelum melanjutkan.' };
+    case 'USER_NOT_FOUND':
+      return { title: 'Akun tidak ditemukan', message: 'Pengguna tidak ditemukan atau telah dinonaktifkan.' };
     case 'NETWORK_ERROR':
-      return 'Tidak dapat terhubung ke server. Periksa koneksi internet Anda.';
+      return { title: 'Tidak dapat terhubung ke server', message: 'Periksa koneksi internet Anda.' };
     case 'TIMEOUT':
-      return 'Server membutuhkan waktu terlalu lama. Silakan coba kembali.';
+      return { title: 'Server terlalu lama merespons', message: 'Silakan coba kembali sebentar lagi.' };
     default:
-      return error?.message || 'Terjadi kendala saat memproses autentikasi.';
+      return { title: 'Gagal memproses', message: error?.message || 'Terjadi kendala saat memproses autentikasi.' };
   }
 };
 
@@ -54,7 +74,6 @@ export const AuthModal: React.FC = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const emailRef = useRef<HTMLInputElement>(null);
 
@@ -65,14 +84,12 @@ export const AuthModal: React.FC = () => {
   const switchMode = (nextMode: AuthMode) => {
     setMode(nextMode);
     setAuthModalMode(nextMode);
-    setError(null);
     setSuccess(null);
   };
 
   useEffect(() => {
     if (!isAuthModalOpen) return;
     setMode(authModalMode);
-    setError(null);
     setSuccess(null);
     const focusTimer = window.setTimeout(() => emailRef.current?.focus(), 120);
 
@@ -93,27 +110,30 @@ export const AuthModal: React.FC = () => {
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setError(null);
     setSuccess(null);
 
     const cleanEmail = email.trim().toLowerCase();
     const cleanPassword = password.trim();
     const cleanName = fullName.trim();
 
+    const reportError = (feedback: AuthErrorFeedback) => {
+      showToast(feedback.message, { variant: 'error', title: feedback.title });
+    };
+
     if (!cleanEmail || !/^\S+@\S+\.\S+$/.test(cleanEmail)) {
-      setError('Masukkan alamat email yang valid.');
+      reportError({ title: 'Email belum valid', message: 'Masukkan alamat email yang valid.' });
       return;
     }
     if (cleanPassword.length < 6) {
-      setError('Password minimal terdiri dari 6 karakter.');
+      reportError({ title: 'Password terlalu pendek', message: 'Gunakan minimal 6 karakter.' });
       return;
     }
     if (mode === 'register' && !cleanName) {
-      setError('Masukkan nama lengkap Anda.');
+      reportError({ title: 'Nama belum diisi', message: 'Masukkan nama lengkap Anda.' });
       return;
     }
     if (mode === 'register' && cleanPassword !== confirmPassword.trim()) {
-      setError('Konfirmasi password belum sama.');
+      reportError({ title: 'Konfirmasi password tidak sama', message: 'Ulangi password dengan benar.' });
       return;
     }
 
@@ -135,7 +155,7 @@ export const AuthModal: React.FC = () => {
         setIsAuthModalOpen(false);
       }, 450);
     } catch (authError) {
-      setError(friendlyError(authError));
+      reportError(friendlyError(authError));
     } finally {
       setIsLoading(false);
     }
@@ -220,7 +240,6 @@ export const AuthModal: React.FC = () => {
                 </label>
               )}
 
-              {error && <div className="auth-feedback auth-feedback--error"><AlertCircle aria-hidden="true" /><span>{error}</span></div>}
               {success && <div className="auth-feedback auth-feedback--success"><CheckCircle2 aria-hidden="true" /><span>{success}</span></div>}
 
               <button className="auth-modal__submit" type="submit" disabled={isLoading}>
