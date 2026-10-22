@@ -22,6 +22,7 @@ import { FloatingXpOverlay } from './components/common/FloatingXpToast';
 import { RotateCcw, AlertCircle } from 'lucide-react';
 import { isUserAdmin } from './services/authRbacService';
 import { AuthModal } from './components/auth';
+import { ToastOverlay } from './components/common/toast';
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -260,6 +261,7 @@ export default function App() {
       <AppProvider>
         <MainContent />
         <AuthModal />
+        <ToastOverlay />
       </AppProvider>
     </AppErrorBoundary>
   );

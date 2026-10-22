@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   X,
   Users,
@@ -8,10 +8,15 @@ import {
   AlertTriangle,
   BookOpen,
   BookMarked,
-  ArrowRight,
+  Loader2,
+  UserPlus,
 } from "lucide-react";
 import { ClassGroup } from "../../types";
 import { useApp } from "../../context/AppContext";
+import { showToast } from "../common/toast";
+
+/** Matches invitation codes such as QRN-89AB or CLS1234. */
+const CLASS_CODE_PATTERN = /^[A-Z0-9][A-Z0-9-]{2,}$/;
 
 interface Props {
   isOpen: boolean;
@@ -28,21 +33,103 @@ export const ConnectedClassesModal: React.FC<Props> = ({
   connectedClasses,
   onLeaveClass,
 }) => {
-  const { setActiveSpace, setSelectedPersonalBookId, books } = useApp();
+  const {
+    setActiveSpace,
+    setSelectedPersonalBookId,
+    books,
+    joinClassByCode,
+    lookupClassByCode,
+  } = useApp();
   const [searchTerm, setSearchTerm] = useState("");
   const [confirmingLeaveId, setConfirmingLeaveId] = useState<string | null>(
     null,
   );
+  const [foundClass, setFoundClass] = useState<ClassGroup | null>(null);
+  const [isLookingUp, setIsLookingUp] = useState(false);
+  const [lookupMissed, setLookupMissed] = useState(false);
+  const [isJoining, setIsJoining] = useState(false);
+
+  // The context value is rebuilt on every render, so keep the callback in a ref
+  // to keep the lookup effect from re-running on unrelated re-renders.
+  const lookupRef = useRef(lookupClassByCode);
+  lookupRef.current = lookupClassByCode;
+
+  const normalizedTerm = searchTerm.trim().toLowerCase();
+
+  const filteredClasses = useMemo(
+    () =>
+      connectedClasses.filter(
+        (c) =>
+          !normalizedTerm ||
+          (c.name || "").toLowerCase().includes(normalizedTerm) ||
+          (c.teacherName || "").toLowerCase().includes(normalizedTerm) ||
+          (c.code || "").toLowerCase().includes(normalizedTerm),
+      ),
+    [connectedClasses, normalizedTerm],
+  );
+
+  // Reset the search state whenever the modal is opened.
+  useEffect(() => {
+    if (!isOpen) return;
+    setSearchTerm("");
+    setFoundClass(null);
+    setLookupMissed(false);
+    setConfirmingLeaveId(null);
+  }, [isOpen]);
+
+  // Live lookup so a class owned by another account can be found by its code
+  // before joining, instead of only listing classes already joined.
+  useEffect(() => {
+    const term = searchTerm.trim().toUpperCase();
+    const alreadyJoined = connectedClasses.some(
+      (c) => (c.code || "").toUpperCase() === term,
+    );
+
+    if (!CLASS_CODE_PATTERN.test(term) || alreadyJoined) {
+      setFoundClass(null);
+      setIsLookingUp(false);
+      setLookupMissed(false);
+      return;
+    }
+
+    let cancelled = false;
+    setIsLookingUp(true);
+    setLookupMissed(false);
+
+    const timer = window.setTimeout(async () => {
+      const res = await lookupRef.current(term);
+      if (cancelled) return;
+      setIsLookingUp(false);
+      if (res.success && res.classGroup) {
+        setFoundClass(res.classGroup);
+        setLookupMissed(false);
+      } else {
+        setFoundClass(null);
+        setLookupMissed(true);
+      }
+    }, 450);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [searchTerm, connectedClasses]);
 
   if (!isOpen) return null;
 
-  const filteredClasses = connectedClasses.filter(
-    (c) =>
-      (c.name || "").toLowerCase().includes((searchTerm || "").toLowerCase()) ||
-      (c.teacherName || "")
-        .toLowerCase()
-        .includes((searchTerm || "").toLowerCase()),
-  );
+  const handleJoinFoundClass = async () => {
+    if (!foundClass?.code) return;
+    setIsJoining(true);
+    const res = await joinClassByCode(foundClass.code);
+    setIsJoining(false);
+    if (res.success) {
+      showToast(res.message, { variant: "success", title: "Berhasil bergabung" });
+      setSearchTerm("");
+      setFoundClass(null);
+    } else {
+      showToast(res.message, { variant: "error", title: "Gagal bergabung" });
+    }
+  };
 
   return (
     <div
@@ -60,9 +147,7 @@ export const ConnectedClassesModal: React.FC<Props> = ({
                 {language === "en" ? "Connected Classes" : "Kelas Terhubung"}
               </h3>
               <p className="text-[11px] text-[#5E6D88] dark:text-[#94A3B8] font-medium">
-                {language === "en"
-                  ? `${connectedClasses.length} class(es) currently tracking your progress`
-                  : `${connectedClasses.length} kelas memantau progres Anda`}
+                {language === "en" ? `${connectedClasses.length} class(es) currently tracking your progress` : `${connectedClasses.length} kelas memantau progres Anda`}
               </p>
             </div>
           </div>
@@ -81,8 +166,8 @@ export const ConnectedClassesModal: React.FC<Props> = ({
               type="text"
               placeholder={
                 language === "en"
-                  ? "Search classes or teachers..."
-                  : "Cari kelas atau pengajar..."
+                  ? "Search classes, teachers, or a class code..."
+                  : "Cari kelas, pengajar, atau kode kelas..."
               }
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -92,22 +177,112 @@ export const ConnectedClassesModal: React.FC<Props> = ({
         </div>
 
         <div className="p-4 overflow-y-auto flex-1 space-y-3">
-          {filteredClasses.length === 0 ? (
-            <div className="text-center py-10 px-4">
-              <div className="w-14 h-14 rounded-2xl neumorph-inset flex items-center justify-center mx-auto mb-3 text-[#FF6F3D]">
-                <Info className="w-6 h-6" />
-              </div>
-              <p className="text-sm font-bold text-[#18234A] dark:text-[#F8FAFC]">
-                {searchTerm
-                  ? language === "en"
-                    ? "No classes match your search."
-                    : "Tidak ada kelas yang cocok."
-                  : language === "en"
-                    ? "You are not connected to any classes."
-                    : "Anda belum terhubung ke kelas manapun."}
+          {isLookingUp && (
+            <div className="neumorph-inset rounded-2xl p-4 flex items-center gap-3">
+              <Loader2 className="w-4 h-4 shrink-0 animate-spin text-[#FF6F3D]" />
+              <p className="text-xs font-bold text-[#5E6D88] dark:text-[#94A3B8]">
+                {language === "en"
+                  ? `Looking for class "${searchTerm.trim().toUpperCase()}"...`
+                  : `Mencari kelas dengan kode "${searchTerm.trim().toUpperCase()}"...`}
               </p>
             </div>
-          ) : (
+          )}
+
+          {foundClass && !isLookingUp && (
+            <div className="rounded-2xl p-4 flex flex-col gap-3 border border-[#FF6F3D]/30 bg-[#FF6F3D]/5 dark:bg-[#FF6F3D]/10">
+              <div className="flex items-start gap-3">
+                <div
+                  className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 text-white ${
+                    foundClass.type === "quran"
+                      ? "bg-gradient-to-br from-emerald-500 to-emerald-700"
+                      : "bg-gradient-to-br from-amber-500 to-amber-700"
+                  }`}
+                >
+                  {foundClass.type === "quran" ? (
+                    <BookOpen className="w-5 h-5" />
+                  ) : (
+                    <BookMarked className="w-5 h-5" />
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-[#FF6F3D]/10 text-[#FF6F3D] border border-[#FF6F3D]/20">
+                      {foundClass.type === "quran" ? "Al-Qur'an" : "Materi Umum"}
+                    </span>
+                    <span className="text-[10px] text-[#5E6D88] dark:text-[#94A3B8] font-mono font-bold">
+                      {foundClass.code}
+                    </span>
+                  </div>
+                  <h4 className="font-extrabold text-[#18234A] dark:text-[#F8FAFC] text-sm truncate">
+                    {foundClass.name}
+                  </h4>
+                  <p className="text-xs text-[#5E6D88] dark:text-[#94A3B8] truncate mt-0.5 font-medium">
+                    {language === "en" ? "Teacher:" : "Pengajar:"}{" "}
+                    <span className="font-bold text-[#18234A] dark:text-[#F8FAFC]">
+                      {foundClass.teacherName}
+                    </span>
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleJoinFoundClass}
+                disabled={isJoining}
+                className="inline-flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-gradient-to-r from-[#FF7E4A] to-[#E65320] text-white text-xs font-extrabold rounded-xl shadow-xs hover:scale-[1.01] active:scale-[0.98] transition-all cursor-pointer disabled:opacity-60 disabled:cursor-wait"
+              >
+                {isJoining ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <UserPlus className="w-3.5 h-3.5" />
+                )}
+                <span>
+                  {isJoining
+                    ? language === "en"
+                      ? "Joining..."
+                      : "Bergabung..."
+                    : language === "en"
+                      ? "Join this class"
+                      : "Gabung Kelas Ini"}
+                </span>
+              </button>
+            </div>
+          )}
+
+          {lookupMissed && !isLookingUp && !foundClass && (
+            <div className="neumorph-inset rounded-2xl p-4 flex items-start gap-3">
+              <AlertTriangle className="w-4 h-4 shrink-0 text-amber-500" />
+              <p className="text-xs font-bold text-[#5E6D88] dark:text-[#94A3B8] leading-relaxed">
+                {language === "en"
+                  ? `No class found for code "${searchTerm.trim().toUpperCase()}". Check the code from your teacher.`
+                  : `Tidak ada kelas dengan kode "${searchTerm.trim().toUpperCase()}". Periksa kembali kode dari pengajar Anda.`}
+              </p>
+            </div>
+          )}
+
+          {filteredClasses.length === 0 && !foundClass && !isLookingUp && (
+              <div className="text-center py-10 px-4">
+                <div className="w-14 h-14 rounded-2xl neumorph-inset flex items-center justify-center mx-auto mb-3 text-[#FF6F3D]">
+                  <Info className="w-6 h-6" />
+                </div>
+                <p className="text-sm font-bold text-[#18234A] dark:text-[#F8FAFC]">
+                  {searchTerm
+                    ? language === "en"
+                      ? "No classes match your search."
+                      : "Tidak ada kelas yang cocok."
+                    : language === "en"
+                      ? "You are not connected to any classes."
+                      : "Anda belum terhubung ke kelas manapun."}
+                </p>
+                <p className="text-xs text-[#5E6D88] dark:text-[#94A3B8] mt-1">
+                  {language === "en"
+                    ? "Paste the class code from your teacher to find and join it."
+                    : "Tempel kode kelas dari pengajar Anda untuk mencari dan bergabung."}
+                </p>
+              </div>
+          )}
+
+          {filteredClasses.length > 0 && (
             <div className="space-y-3">
               {filteredClasses.map((cls) => (
                 <div
@@ -141,7 +316,7 @@ export const ConnectedClassesModal: React.FC<Props> = ({
                               setActiveSpace("quran");
                               onClose();
                             }}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-[#FF7E4A] to-[#E65320] text-white text-xs font-bold shadow-xs hover:scale-[1.02] active:scale-95 transition-all cursor-pointer"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-[#FF7E4A] to-[#E65320] text-white text-xs font-bold shadow-xs hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
                           >
                             <BookOpen className="w-3.5 h-3.5" />
                             <span>Buka Mushaf Al-Qur'an</span>
@@ -162,7 +337,7 @@ export const ConnectedClassesModal: React.FC<Props> = ({
                               setActiveSpace("personal");
                               onClose();
                             }}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-700 text-white text-xs font-bold shadow-xs hover:scale-[1.02] active:scale-95 transition-all cursor-pointer"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-700 text-white text-xs font-bold shadow-xs hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
                           >
                             <BookMarked className="w-3.5 h-3.5" />
                             <span>Buka Materi Kitab Kelas</span>

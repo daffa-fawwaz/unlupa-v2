@@ -5,6 +5,7 @@ import { isDue, getIntervalDays, updateNonQuranFSRS, calculateRetrievability } f
 import { isPageInJuzList } from '../../data/quranData';
 import { MushafPageViewerModal } from '../quran/MushafPageViewerModal';
 import { BilingualCardText } from '../common/BilingualCardText';
+import './teacher-clay.css';
 import { 
   X, 
   Check, 
@@ -503,7 +504,7 @@ export const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
   const totalMasterCount = isQuran ? 604 : (studentBookItems.length > 0 ? studentBookItems.length : (assignedPkg?.items?.length || 4));
 
   return (
-    <div className="fixed inset-0 z-[120] flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in">
+    <div className="fixed inset-0 z-[120] flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in clay-teacher-scope">
       <div 
         className="bg-white dark:bg-slate-900 w-full max-w-3xl max-h-[90vh] rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200"
         onClick={e => e.stopPropagation()}

@@ -40,6 +40,7 @@ import {
 import { getSurahForPage, getJuzForPage } from '../../data/quranData';
 import { createSampleStudentQuranPages } from '../../data/sampleClasses';
 import { isDue, getIntervalDays } from '../../lib/fsrs';
+import './teacher-clay.css';
 
 interface Props {
   isOpen: boolean;
@@ -561,7 +562,7 @@ _Platform Manajemen Retensi & Mutqin Santri_`;
   };
 
   return (
-    <div className="fixed inset-0 z-[110] flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in">
+    <div className="fixed inset-0 z-[110] flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in clay-teacher-scope">
       <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 w-full max-w-2xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden animate-in zoom-in-95">
         
         {/* TOP BAR */}
