@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { BellRing, Construction, X } from 'lucide-react';
+import { BellRing, HandHeart, X } from 'lucide-react';
 
 interface DevelopmentModalProps {
   isOpen: boolean;
@@ -26,16 +26,16 @@ export const DevelopmentModal: React.FC<DevelopmentModalProps> = ({ isOpen, onCl
           <button className="pricing-development__close" type="button" onClick={onClose} aria-label="Tutup">
             <X aria-hidden="true" />
           </button>
-          <span className="pricing-development__icon"><Construction aria-hidden="true" /></span>
-          <span className="pricing-development__eyebrow">Premium Unlupa</span>
-          <h2 id="development-title">Sedang kami persiapkan.</h2>
+          <span className="pricing-development__icon"><HandHeart aria-hidden="true" /></span>
+          <span className="pricing-development__eyebrow">Dukung Unlupa</span>
+          <h2 id="development-title">Terima kasih atas niat baiknya.</h2>
           <p>
-            Paket Premium masih dalam tahap pengembangan agar pengalaman pembayaran
-            dan seluruh fitur lanjutannya siap digunakan dengan aman.
+            Kanal dukungan sukarela masih kami siapkan agar pengalaman berkontribusi
+            nanti aman dan mudah untuk semua orang.
           </p>
           <div className="pricing-development__notice">
             <BellRing aria-hidden="true" />
-            <span>Kami akan mengumumkannya saat Premium tersedia.</span>
+            <span>Kami akan mengumumkannya saat kanal dukungan terbuka.</span>
           </div>
           <button className="pricing-development__action" type="button" onClick={onClose}>Mengerti</button>
         </div>

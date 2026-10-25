@@ -25,7 +25,6 @@ const PREMIUM_FEATURES = [
 ];
 
 export const PricingSection: React.FC<PricingSectionProps> = ({ onGetStarted }) => {
-  const [cycle, setCycle] = useState<'monthly' | 'yearly'>('monthly');
   const [isDevelopmentOpen, setIsDevelopmentOpen] = useState(false);
 
   return (
@@ -36,22 +35,18 @@ export const PricingSection: React.FC<PricingSectionProps> = ({ onGetStarted }) 
         <p>Pilih ruang belajar sesuai kebutuhan pribadi, pengajar, atau lembaga Anda.</p>
       </div>
 
-      <div className="landing-pricing__cycle" aria-label="Siklus pembayaran">
-        <button type="button" className={cycle === 'monthly' ? 'is-active' : ''} onClick={() => setCycle('monthly')}>Bulanan</button>
-        <button type="button" className={cycle === 'yearly' ? 'is-active' : ''} onClick={() => setCycle('yearly')}>Tahunan <span>Hemat 32%</span></button>
-      </div>
-
       <div className="landing-pricing__grid">
         <PricingCard name="Free" description="Untuk memulai kebiasaan murajaah." price="Gratis" features={FREE_FEATURES} actionLabel="Mulai gratis" onAction={onGetStarted} />
         <PricingCard
           name="Premium"
           description="Untuk hafalan dan pembelajaran tanpa batas."
-          price={cycle === 'monthly' ? 'Rp49rb' : 'Rp399rb'}
-          suffix={cycle === 'monthly' ? '/ bulan' : '/ tahun'}
+          price="Sukarela"
+          suffix="seikhlasnya"
           features={PREMIUM_FEATURES}
           highlighted
           badge="Paling diminati"
-          actionLabel="Pilih Premium"
+          footnote="Bantu dukung proyek ini agar Unlupa tetap gratis dan terus berkembang."
+          actionLabel="Dukung Proyek Ini"
           onAction={() => setIsDevelopmentOpen(true)}
         />
       </div>

@@ -14,6 +14,7 @@ interface PricingCardProps {
   features: PricingFeature[];
   highlighted?: boolean;
   badge?: string;
+  footnote?: string;
   actionLabel: string;
   onAction: () => void;
 }
@@ -26,6 +27,7 @@ export const PricingCard: React.FC<PricingCardProps> = ({
   features,
   highlighted = false,
   badge,
+  footnote,
   actionLabel,
   onAction,
 }) => (
@@ -47,6 +49,7 @@ export const PricingCard: React.FC<PricingCardProps> = ({
         </li>
       ))}
     </ul>
+    {footnote && <p className="pricing-card__footnote">{footnote}</p>}
     <button type="button" onClick={onAction}>
       {actionLabel}
       <ArrowRight aria-hidden="true" />
