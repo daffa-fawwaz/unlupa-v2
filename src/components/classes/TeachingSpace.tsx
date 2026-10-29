@@ -2321,11 +2321,11 @@ export const TeachingSpace: React.FC = () => {
                 <div
                   key={student.id}
                   onClick={() => setSelectedModalStudent({ student, initialTab: 'due' })}
-                  className="clay-card-subtle clay-student-row p-3 sm:p-3.5 flex items-center justify-between gap-3 cursor-pointer group hover:-translate-y-0.5 active:scale-[0.99]"
+                  className="clay-card-subtle clay-student-row p-3 sm:p-3.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3 cursor-pointer group hover:-translate-y-0.5 active:scale-[0.99]"
                 >
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <h4 className="font-bold text-sm sm:text-base text-slate-900 dark:text-white truncate group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                      <h4 className="min-w-0 font-bold text-sm sm:text-base text-slate-900 dark:text-white truncate group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
                         {student.name}
                       </h4>
                       {analysis.isReadyToAdvance && (
@@ -2362,7 +2362,7 @@ export const TeachingSpace: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+                  <div className="flex items-center gap-1.5 sm:gap-2 w-full sm:w-auto shrink-0">
                     {dueInfo.isDue ? (
                       <span className="clay-rating-btn clay-rating-gold clay-badge-static">
                         <span>{dueInfo.count} Review</span>
@@ -2425,7 +2425,7 @@ export const TeachingSpace: React.FC = () => {
                       <LogOut className="w-3.5 h-3.5" />
                     </button>
 
-                    <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-indigo-600 group-hover:translate-x-0.5 transition-all" />
+                    <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-indigo-600 group-hover:translate-x-0.5 transition-all ml-auto sm:ml-0" />
                   </div>
                 </div>
               );
