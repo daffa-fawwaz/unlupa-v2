@@ -74,9 +74,6 @@ export const ItemPreviewModal: React.FC<Props> = ({
         onClose();
       }
     },
-    onSwipeDown: () => {
-      onClose();
-    },
     threshold: 40,
   });
 
