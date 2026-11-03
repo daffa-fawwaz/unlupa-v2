@@ -37,6 +37,52 @@ interface Props {
 
 const SPEED_PRESETS = [0.75, 0.85, 1.0, 1.25, 1.5, 2.0];
 
+/** Circumference of the review-front playback progress ring (r=21, viewBox 44). */
+const PLAYBACK_RING_CIRCUMFERENCE = 2 * Math.PI * 21;
+
+/**
+ * Measure the REAL duration of an audio blob. MediaRecorder webm/opus blobs usually
+ * expose `Infinity` metadata (missing duration header), so the player would fall
+ * back to wall-clock seconds and its progress would end before the sound does.
+ * A far seek forces the browser to compute the true length.
+ */
+const measureBlobDuration = (blobUrl: string): Promise<number> =>
+  new Promise((resolve) => {
+    if (typeof window === "undefined") {
+      resolve(0);
+      return;
+    }
+    let settled = false;
+    let timeoutId = 0;
+    const finish = (value: number) => {
+      if (settled) return;
+      settled = true;
+      window.clearTimeout(timeoutId);
+      resolve(
+        typeof value === "number" && isFinite(value) && value > 0 ? value : 0,
+      );
+    };
+    const probe = new Audio();
+    probe.preload = "metadata";
+    probe.onloadedmetadata = () => {
+      if (probe.duration && isFinite(probe.duration) && probe.duration > 0) {
+        finish(probe.duration);
+        return;
+      }
+      // Infinity metadata: force a far seek so the browser recalculates duration.
+      probe.onseeked = () => finish(probe.duration);
+      try {
+        probe.currentTime = 1e7;
+      } catch {
+        finish(0);
+      }
+    };
+    probe.onerror = () => finish(0);
+    timeoutId = window.setTimeout(() => finish(0), 3000);
+    probe.src = blobUrl;
+  });
+
+
 export const AudioRecorderPlayer: React.FC<Props> = ({
   itemId,
   itemType,
@@ -88,7 +134,10 @@ export const AudioRecorderPlayer: React.FC<Props> = ({
           data.audioBlob,
         );
         setAudioUrl(newUrl);
-        setDuration(data.duration);
+        // Trust the real length of the stored audio: wall-clock drift at record
+        // time and Infinity webm metadata both make the player progress lie.
+        const realDuration = await measureBlobDuration(newUrl);
+        setDuration(realDuration > 0 ? realDuration : data.duration);
         setCurrentTime(0);
         setIsPlaying(false);
         onHasRecordingChangeRef.current?.(true);
@@ -755,6 +804,11 @@ export const AudioRecorderPlayer: React.FC<Props> = ({
     }
 
     if (record && audioUrl) {
+      const maxDuration = duration || record.duration || 0;
+      const playbackProgress = Math.min(
+        1,
+        Math.max(0, currentTime / (maxDuration || 1)),
+      );
       return (
         <div className="flex items-center gap-1 sm:gap-1.5 h-11 sm:h-12 px-0.5">
           <audio
@@ -765,31 +819,66 @@ export const AudioRecorderPlayer: React.FC<Props> = ({
             onEnded={handleAudioEnded}
             preload="metadata"
           />
-          {/* Circular Play / Pause Button with familiar audio icon */}
-          <button
-            type="button"
-            onClick={togglePlay}
-            className={`w-10 h-10 sm:w-11 sm:h-11 rounded-full flex items-center justify-center transition-all cursor-pointer shadow-md active:scale-95 shrink-0 ${
-              isPlaying
-                ? "bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-emerald-500/30 ring-2 ring-emerald-400 animate-pulse"
-                : "bg-gradient-to-br from-emerald-600 to-teal-700 text-white shadow-emerald-600/25 hover:scale-105"
-            }`}
-            title={
-              isPlaying
-                ? language === "en"
-                  ? "Pause"
-                  : "Jeda"
-                : language === "en"
-                  ? "Play Recording"
-                  : "Putar Rekaman"
-            }
-          >
-            {isPlaying ? (
-              <Pause className="w-4 h-4 text-white" />
-            ) : (
-              <Play className="w-4 h-4 text-white ml-0.5" />
+          {/* Circular Play / Pause Button with Playback Progress Ring */}
+          <div className="relative shrink-0 flex">
+            <button
+              type="button"
+              onClick={togglePlay}
+              className={`w-10 h-10 sm:w-11 sm:h-11 rounded-full flex items-center justify-center transition-all cursor-pointer shadow-md active:scale-95 shrink-0 ${
+                isPlaying
+                  ? "bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-emerald-500/25"
+                  : "bg-gradient-to-br from-emerald-600 to-teal-700 text-white shadow-emerald-600/25 hover:scale-105"
+              }`}
+              title={
+                isPlaying
+                  ? language === "en"
+                    ? "Pause"
+                    : "Jeda"
+                  : language === "en"
+                    ? "Play Recording"
+                    : "Putar Rekaman"
+              }
+            >
+              {isPlaying ? (
+                <Pause className="w-4 h-4 text-white" />
+              ) : (
+                <Play className="w-4 h-4 text-white ml-0.5" />
+              )}
+            </button>
+            {maxDuration > 0 && (
+              <svg
+                viewBox="0 0 44 44"
+                className="absolute inset-0 w-full h-full pointer-events-none -rotate-90"
+                aria-hidden="true"
+              >
+                <circle
+                  cx="22"
+                  cy="22"
+                  r="21"
+                  fill="none"
+                  strokeWidth="2"
+                  className="stroke-emerald-900/20 dark:stroke-emerald-300/15"
+                />
+                <circle
+                  cx="22"
+                  cy="22"
+                  r="21"
+                  fill="none"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeDasharray={PLAYBACK_RING_CIRCUMFERENCE}
+                  strokeDashoffset={
+                    PLAYBACK_RING_CIRCUMFERENCE * (1 - playbackProgress)
+                  }
+                  className={`transition-[stroke-dashoffset] duration-150 ease-linear ${
+                    isPlaying
+                      ? "stroke-emerald-300"
+                      : "stroke-emerald-400/70"
+                  }`}
+                />
+              </svg>
             )}
-          </button>
+          </div>
 
           {/* Quick Retake Voice Note */}
           <button
