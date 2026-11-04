@@ -99,13 +99,19 @@ export const WIB_TIMEZONE = "Asia/Jakarta";
  * Get formatted calendar date YYYY-MM-DD in Asia/Jakarta (WIB) timezone
  */
 export function getWIBDateString(date: Date = new Date()): string {
-  const formatter = new Intl.DateTimeFormat("en-CA", {
+  const formatter = new Intl.DateTimeFormat("en-US", {
     timeZone: WIB_TIMEZONE,
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
   });
-  return formatter.format(date);
+  // Do not rely on locale-specific formatting order (some ICU builds render
+  // en-CA differently). These parts are explicitly assembled as ISO YYYY-MM-DD
+  // so lexicographic due-date comparisons behave the same in browser and Node.
+  const parts = formatter.formatToParts(date);
+  const part = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((value) => value.type === type)?.value ?? "";
+  return `${part("year")}-${part("month")}-${part("day")}`;
 }
 
 /**

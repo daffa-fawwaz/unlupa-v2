@@ -475,10 +475,11 @@ export const TeachingSpace: React.FC = () => {
   const nonQuranStudentsCount = nonQuranClasses.reduce((acc, c) => acc + c.students.length, 0);
 
   const isPro = userProfile.plan === 'premium' || userProfile.plan === 'institutional' || userProfile.role === 'admin' || userProfile.role === 'superadmin';
+  const allowCreateClass = isPro || (tierConfig.freeTier.allowCreateClass ?? true);
   const maxQuran = tierConfig.freeTier.maxQuranClasses ?? 1;
   const maxNonQuran = tierConfig.freeTier.maxNonQuranClasses ?? 1;
-  const isQuranLimitReached = !isPro && quranClassesCount >= maxQuran;
-  const isNonQuranLimitReached = !isPro && nonQuranClassesCount >= maxNonQuran;
+  const isQuranLimitReached = !isPro && (!allowCreateClass || quranClassesCount >= maxQuran);
+  const isNonQuranLimitReached = !isPro && (!allowCreateClass || nonQuranClassesCount >= maxNonQuran);
 
   const handleCopyCode = (code: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
@@ -503,9 +504,9 @@ export const TeachingSpace: React.FC = () => {
     if (!check.allowed) {
       openUpgradeModal(
         check.reason,
-        language === 'en'
-          ? 'Free accounts can create up to 1 Al-Qur\'an class and 1 Kitab class. Upgrade to Unlupa Pro to manage unlimited classes & students.'
-          : 'Batas akun Free adalah maksimal 1 kelas Al-Qur\'an dan 1 kelas Kitab. Upgrade ke Unlupa Pro untuk membuat kelas & membina santri tanpa batas.'
+        check.reason || (language === 'en'
+          ? 'Free accounts class limit reached. Upgrade to Unlupa Pro to manage unlimited classes & students.'
+          : 'Batas pembuatan kelas akun Free telah tercapai. Upgrade ke Unlupa Pro untuk membuat kelas & membina santri tanpa batas.')
       );
       return;
     }

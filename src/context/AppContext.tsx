@@ -61,6 +61,8 @@ import {
 import { LegacyDataReconciliationModal } from '../components/personal/LegacyDataReconciliationModal';
 import { classApiService } from '../services/classApiService';
 import { wsService } from '../services/websocketService';
+import { systemApiService } from '../services/systemApiService';
+
 
 function isValidUUID(val: string | null | undefined): boolean {
   if (!val) return false;
@@ -131,11 +133,11 @@ interface AppContextType {
 
   // Tier Limits & Dynamic Admin Config
   tierConfig: SystemTierConfig;
-  updateTierConfig: (newConfig: Partial<SystemTierConfig>) => void;
+  updateTierConfig: (newConfig: Partial<SystemTierConfig>) => Promise<SystemTierConfig | void> | void;
   dailyAIUsage: { date: string; count: number };
   recordAIUsage: () => boolean;
   isFeatureAllowed: (
-    feature: 'create_book' | 'ai_builder' | 'ai_extractor' | 'create_class' | 'export_report' | 'quran_juz' | 'audio_recording' | 'join_class',
+    feature: 'create_book' | 'create_card' | 'ai_builder' | 'ai_extractor' | 'create_class' | 'export_report' | 'quran_juz' | 'audio_recording' | 'join_class',
     countOrJuz?: number,
     classType?: 'quran' | 'non-quran'
   ) => { allowed: boolean; reason?: string; limit?: number; current?: number };
@@ -381,6 +383,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       // Priority 2: In-app session flag within active browser tab
       if (sessionStorage.getItem('unlupa_in_app') === 'true') return false;
 
+      // Priority 3: Authenticated session detected via stored JWT token
+      const token = getAuthToken();
+      if (token) return false;
+
       // Clean up legacy permanent suppression
       localStorage.removeItem('unlupa_seen_app');
 
@@ -516,14 +522,71 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return createDefaultTierConfig();
   });
 
-  const updateTierConfig = (newConfig: Partial<SystemTierConfig>) => {
-    setTierConfig(prev => {
-      const updated = { ...prev, ...newConfig, updatedAt: new Date().toISOString() };
-      try {
-        localStorage.setItem('unlupa_system_tier_config_v1', JSON.stringify(updated));
-      } catch (e) { /* ignore */ }
-      return updated;
+  // Fetch initial tier limits from backend on mount & subscribe to real-time WebSocket updates
+  useEffect(() => {
+    let isMounted = true;
+    systemApiService.getTierConfig().then(remoteConfig => {
+      if (remoteConfig && isMounted) {
+        setTierConfig(prev => {
+          const merged = { ...prev, ...remoteConfig };
+          try {
+            localStorage.setItem('unlupa_system_tier_config_v1', JSON.stringify(merged));
+          } catch (e) {}
+          return merged;
+        });
+      }
+    }).catch(err => {
+      console.warn('[AppContext] Failed to load remote tier config, using cached limits:', err);
     });
+
+    const unsubTier = wsService.on('SYSTEM_TIER_CONFIG_UPDATED', (payload: any) => {
+      if (payload?.data) {
+        setTierConfig(prev => {
+          const updated = { ...prev, ...payload.data };
+          try {
+            localStorage.setItem('unlupa_system_tier_config_v1', JSON.stringify(updated));
+          } catch (e) {}
+          return updated;
+        });
+      }
+    });
+
+    return () => {
+      isMounted = false;
+      unsubTier();
+    };
+  }, []);
+
+  const updateTierConfig = async (newConfig: Partial<SystemTierConfig>): Promise<SystemTierConfig | void> => {
+    const updatedLocally: SystemTierConfig = {
+      ...tierConfig,
+      ...newConfig,
+      freeTier: { ...tierConfig.freeTier, ...(newConfig.freeTier || {}) },
+      premiumTier: { ...tierConfig.premiumTier, ...(newConfig.premiumTier || {}) },
+      pricing: { ...tierConfig.pricing, ...(newConfig.pricing || {}) },
+      updatedAt: new Date().toISOString(),
+    };
+
+    setTierConfig(updatedLocally);
+    try {
+      localStorage.setItem('unlupa_system_tier_config_v1', JSON.stringify(updatedLocally));
+    } catch (e) { /* ignore */ }
+
+    // If admin, persist to backend PostgreSQL database
+    const isAdmin = userProfile.role === 'admin' || userProfile.role === 'superadmin';
+    if (isAdmin) {
+      try {
+        const saved = await systemApiService.updateTierConfig(newConfig);
+        setTierConfig(saved);
+        try {
+          localStorage.setItem('unlupa_system_tier_config_v1', JSON.stringify(saved));
+        } catch (e) {}
+        return saved;
+      } catch (err) {
+        console.error('[AppContext] Failed to persist tier config to backend:', err);
+        throw err;
+      }
+    }
   };
 
   // Daily AI Usage Tracking
@@ -571,7 +634,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Helper to check if a specific action is within limits
   const isFeatureAllowed = (
-    feature: 'create_book' | 'ai_builder' | 'ai_extractor' | 'create_class' | 'export_report' | 'quran_juz' | 'audio_recording' | 'join_class',
+    feature: 'create_book' | 'create_card' | 'ai_builder' | 'ai_extractor' | 'create_class' | 'export_report' | 'quran_juz' | 'audio_recording' | 'join_class',
     countOrJuz?: number,
     classType?: 'quran' | 'non-quran'
   ): { allowed: boolean; reason?: string; limit?: number; current?: number } => {
@@ -589,6 +652,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           reason: allowed ? undefined : (language === 'en' 
             ? `Free plan limit is ${limits.maxBooks} books.` 
             : `Batas pembuatan buku akun Free adalah ${limits.maxBooks} buku.`)
+        };
+      }
+      case 'create_card': {
+        const currentCount = countOrJuz ?? 0;
+        const allowed = isPro || currentCount < limits.maxCardsPerBook;
+        return {
+          allowed,
+          limit: limits.maxCardsPerBook,
+          current: currentCount,
+          reason: allowed ? undefined : (language === 'en'
+            ? `Free plan limit is ${limits.maxCardsPerBook} cards per book.`
+            : `Batas kartu materi per buku akun Free adalah ${limits.maxCardsPerBook} kartu.`)
         };
       }
       case 'ai_builder': {
@@ -616,6 +691,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       case 'create_class': {
         if (isPro) {
           return { allowed: true };
+        }
+
+        if (!limits.allowCreateClass) {
+          return {
+            allowed: false,
+            reason: language === 'en'
+              ? 'Opening classes (Teacher Mode) is reserved for Unlupa Pro.'
+              : 'Fitur Buka Kelas (Mode Pengajar) saat ini dikhususkan untuk pengguna Unlupa Pro.'
+          };
         }
 
         const quranClasses = teachingClasses.filter(c => c.type === 'quran');
@@ -650,8 +734,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return {
           allowed: canCreateAny,
           reason: canCreateAny ? undefined : (language === 'en'
-            ? 'Free accounts can create up to 1 Al-Qur\'an class and 1 Kitab class. Upgrade to Unlupa Pro for unlimited classes.'
-            : 'Akun Free dibatasi maksimal 1 kelas Al-Qur\'an dan 1 kelas Kitab. Upgrade ke Unlupa Pro untuk membuat kelas tanpa batas.')
+            ? 'Free accounts limit reached for creating classes. Upgrade to Unlupa Pro for unlimited classes.'
+            : 'Batas pembuatan kelas akun Free telah tercapai. Upgrade ke Unlupa Pro untuk membuat kelas tanpa batas.')
         };
       }
       case 'export_report': {
@@ -778,7 +862,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
   const [authModalMode, setAuthModalMode] = useState<'login' | 'register'>('login');
-  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(() => {
+    const token = getAuthToken();
+    if (!token) return null;
+    try {
+      const savedUser = localStorage.getItem('unlupa_user_profile_v1');
+      if (savedUser) {
+        const parsed = JSON.parse(savedUser);
+        if (parsed.id && parsed.id !== 'guest') {
+          return {
+            id: parsed.id,
+            uid: parsed.id,
+            email: parsed.email || '',
+            displayName: parsed.fullName || 'Penghafal',
+            role: (parsed.role || 'user').toLowerCase(),
+            avatarUrl: parsed.avatarUrl || DEFAULT_ISLAMIC_AVATAR,
+          };
+        }
+      }
+    } catch {}
+    return null;
+  });
 
   // Scoped user storage helpers
   const getUserKey = (userId: string, keyName: string) => `unlupa_user_${userId}_${keyName}`;
@@ -1152,13 +1256,41 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
         setItems(prev => {
           const mappedItemIds = new Set(allItems.map(i => i.id));
+          const mappedMasterIds = new Set(allItems.map(i => i.masterItemId).filter(Boolean));
+
+          // Merge allItems with prev: if prevItem was reviewed more recently, preserve its FSRS progress
+          const mergedAllItems = allItems.map(item => {
+            const prevItem = prev.find(p => 
+              p.id === item.id || 
+              (p.masterItemId && p.masterItemId === item.id) || 
+              (item.masterItemId && p.id === item.masterItemId) || 
+              (item.masterItemId && p.masterItemId === item.masterItemId)
+            );
+            if (prevItem && prevItem.fsrsData) {
+              const prevLastRev = prevItem.fsrsData.lastReview ? new Date(prevItem.fsrsData.lastReview).getTime() : 0;
+              const itemLastRev = item.fsrsData.lastReview ? new Date(item.fsrsData.lastReview).getTime() : 0;
+              if (prevLastRev > itemLastRev) {
+                return {
+                  ...item,
+                  isActive: prevItem.isActive || item.isActive,
+                  status: prevItem.status,
+                  fsrsData: prevItem.fsrsData,
+                  reviewLogs: prevItem.reviewLogs && prevItem.reviewLogs.length > 0 ? prevItem.reviewLogs : item.reviewLogs,
+                };
+              }
+            }
+            return item;
+          });
+
           const extraItems = prev.filter(i => 
             !mappedItemIds.has(i.id) && (
               i.id.startsWith('class-item-') || 
-              library.some(l => l.items.some(li => li.id === i.id))
+              library.some(l => l.items.some(li => li.id === i.id || li.id === i.masterItemId)) ||
+              (i.masterItemId && !mappedMasterIds.has(i.masterItemId)) ||
+              Boolean(i.isImported)
             )
           );
-          finalSavedItems = [...allItems, ...extraItems];
+          finalSavedItems = [...mergedAllItems, ...extraItems];
           return finalSavedItems;
         });
 
@@ -1552,23 +1684,33 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       })
       .catch((err: any) => {
         if (controller.signal.aborted || err?.isAborted) return;
-        console.warn('[Auth] Stored JWT session invalid or expired:', err?.message || err);
-        clearAuthToken();
-        setBackendAuthStatus('unauthenticated');
-        setCurrentUser(null);
-        const guestId = 'guest';
-        loadedUserIdRef.current = guestId;
-        setUserProfile({
-          id: guestId,
-          backendId: undefined,
-          quranSpaceCode: 'UNL-QRN-GUEST',
-          fullName: 'Tamu / Murid',
-          email: '',
-          avatarUrl: DEFAULT_ISLAMIC_AVATAR,
-          role: 'user',
-          plan: 'free',
-          onboardingPreferences: defaultOnboardingPreferences,
-        });
+        console.warn('[Auth] Stored JWT session verification notice:', err?.message || err);
+
+        // ONLY wipe the token if the backend explicitly returned a 401 Unauthorized
+        const isExplicitUnauthorized = err?.status === 401 || err?.statusCode === 401;
+        if (isExplicitUnauthorized) {
+          clearAuthToken();
+          setBackendAuthStatus('unauthenticated');
+          setCurrentUser(null);
+          const guestId = 'guest';
+          loadedUserIdRef.current = guestId;
+          setUserProfile({
+            id: guestId,
+            backendId: undefined,
+            quranSpaceCode: 'UNL-QRN-GUEST',
+            fullName: 'Tamu / Murid',
+            email: '',
+            avatarUrl: DEFAULT_ISLAMIC_AVATAR,
+            role: 'user',
+            plan: 'free',
+            onboardingPreferences: defaultOnboardingPreferences,
+          });
+        } else {
+          // Network errors, timeouts, or 500/502/503 server glitches must NOT wipe the token!
+          // Retain stored token and cached profile so the user stays authenticated offline / reconnecting.
+          setBackendAuthStatus('error');
+          setBackendAuthError(err?.message || 'Gagal terhubung ke server autentikasi.');
+        }
       })
       .finally(() => {
         if (activeMeAbortControllerRef.current === controller) {
@@ -2858,8 +3000,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Helper to resolve backend item UUID for both master items and joined class items
   const resolveBackendItemId = (targetId: string): string | null => {
+    const it = items.find(i => i.id === targetId || (i.masterItemId && i.masterItemId === targetId));
+    if (it?.masterItemId && isValidUUID(it.masterItemId)) {
+      return it.id && isValidUUID(it.id) ? it.id : it.masterItemId;
+    }
     if (isValidUUID(targetId)) return targetId;
-    const it = items.find(i => i.id === targetId);
     if (it?.masterItemId && isValidUUID(it.masterItemId)) return it.masterItemId;
     if (targetId.startsWith('class-item-')) {
       const parts = targetId.split('-');
@@ -2878,7 +3023,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setItems(prev => {
       previousSnapshot = prev;
       return prev.map(item => {
-        if (item.id !== itemId) return item;
+        const isMatch = item.id === itemId || (item.masterItemId && item.masterItemId === itemId);
+        if (!isMatch) return item;
         const today = new Date();
         const hasHistory = (item.fsrsData.reps || 0) > 0 || Boolean(item.fsrsData.lastReview) || Boolean(item.fsrsData.nextReview);
         const nextReviewDate = hasHistory && item.fsrsData.nextReview ? item.fsrsData.nextReview : today.toISOString();
@@ -2904,7 +3050,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         .then(progress => {
           if (loadedUserIdRef.current !== currentUid) return;
           setItems(prev => prev.map(item => {
-            if (item.id !== itemId) return item;
+            const isMatch = item.id === itemId || (item.masterItemId && item.masterItemId === itemId) || (backendItemId && (item.id === backendItemId || item.masterItemId === backendItemId));
+            if (!isMatch) return item;
             return {
               ...item,
               isActive: progress.isActive,
@@ -2924,10 +3071,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         .catch(err => {
           if (loadedUserIdRef.current !== currentUid) return;
           console.warn('[BookAPI] activateItem sync notice, kept locally:', err?.message || err);
-          if (err?.status === 401 || err?.statusCode === 401 || err?.message?.includes('Token')) {
-            clearAuthToken();
-            setBackendAuthStatus('unauthenticated');
-          }
         });
     }
   };
@@ -2937,7 +3080,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setItems(prev => {
       previousSnapshot = prev;
       return prev.map(item => {
-        if (item.id !== itemId) return item;
+        const isMatch = item.id === itemId || (item.masterItemId && item.masterItemId === itemId);
+        if (!isMatch) return item;
         return {
           ...item,
           isActive: false,
@@ -2953,7 +3097,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         .then(res => {
           if (loadedUserIdRef.current !== currentUid) return;
           setItems(prev => prev.map(item => {
-            if (item.id !== itemId) return item;
+            const isMatch = item.id === itemId || (item.masterItemId && item.masterItemId === itemId) || (backendItemId && (item.id === backendItemId || item.masterItemId === backendItemId));
+            if (!isMatch) return item;
             return {
               ...item,
               isActive: res ? res.isActive : false,
@@ -2963,20 +3108,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         .catch(err => {
           if (loadedUserIdRef.current !== currentUid) return;
           console.warn('[BookAPI] deactivateItem sync notice, kept locally:', err?.message || err);
-          if (err?.status === 401 || err?.statusCode === 401 || err?.message?.includes('Token')) {
-            clearAuthToken();
-            setBackendAuthStatus('unauthenticated');
-          }
         });
     }
   };
 
   const reviewItem = (itemId: string, rating: 1 | 2 | 3 | 4) => {
     let previousSnapshot: BookItem[] = [];
+    const token = getAuthToken();
+    const backendItemId = resolveBackendItemId(itemId);
+
     setItems(prev => {
       previousSnapshot = prev;
-      return prev.map(item => {
-        if (item.id !== itemId) return item;
+      let matched = false;
+      const updated = prev.map(item => {
+        const itemBackend = resolveBackendItemId(item.id);
+        const isMatch = item.id === itemId || 
+          (item.masterItemId && item.masterItemId === itemId) || 
+          (backendItemId && (item.id === backendItemId || item.masterItemId === backendItemId || itemBackend === backendItemId));
+
+        if (!isMatch) return item;
+        matched = true;
+
         const isDueBeforeReview = isDue(item.fsrsData?.nextReview, item.isActive, item.fsrsData?.lastReview);
         const { newState, nextIntervalDays } = updateNonQuranFSRS(item.fsrsData, rating);
         const newLog = {
@@ -2992,10 +3144,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           reviewLogs: [...(item.reviewLogs || []), newLog].slice(-100),
         };
       });
+
+      if (matched) {
+        try {
+          localStorage.setItem(getUserKey(userProfile.id, 'items'), JSON.stringify(updated));
+        } catch (e) {}
+      }
+
+      return matched ? updated : prev;
     });
 
-    const token = getAuthToken();
-    const backendItemId = resolveBackendItemId(itemId);
     if (userProfile.id !== 'guest' && userProfile.backendId && token && backendAuthStatus === 'authenticated' && backendItemId) {
       const currentUid = userProfile.id;
       bookApiService.reviewItem(backendItemId, rating)
@@ -3003,38 +3161,50 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           if (loadedUserIdRef.current !== currentUid) return;
           const p = res.progress;
           const log = res.reviewLog;
-          setItems(prev => prev.map(item => {
-            if (item.id !== itemId) return item;
-            const backendFSRS: FSRSState = {
-              stability: p.stability,
-              difficulty: p.difficulty,
-              reps: p.reps,
-              lapses: p.lapses,
-              lastReview: p.lastReview ? new Date(p.lastReview).toISOString() : null,
-              nextReview: p.nextReview ? new Date(p.nextReview).toISOString() : null,
-              state: (p.state ? p.state.toLowerCase() : 'review') as any,
-            };
-            const mappedLog = {
-              id: log.id,
-              date: new Date(log.date).toISOString(),
-              rating: log.rating,
-              wasDue: log.wasDue,
-            };
-            return {
-              ...item,
-              status: (p.status as any) || item.status,
-              fsrsData: backendFSRS,
-              reviewLogs: [...(item.reviewLogs || []).filter(l => l.id !== mappedLog.id), mappedLog].slice(-100),
-            };
-          }));
+          setItems(prev => {
+            let matched = false;
+            const updated = prev.map(item => {
+              const itemBackend = resolveBackendItemId(item.id);
+              const isMatch = item.id === itemId || 
+                (item.masterItemId && item.masterItemId === itemId) || 
+                (backendItemId && (item.id === backendItemId || item.masterItemId === backendItemId || itemBackend === backendItemId));
+
+              if (!isMatch) return item;
+              matched = true;
+              const backendFSRS: FSRSState = {
+                stability: p.stability,
+                difficulty: p.difficulty,
+                reps: p.reps,
+                lapses: p.lapses,
+                lastReview: p.lastReview ? new Date(p.lastReview).toISOString() : null,
+                nextReview: p.nextReview ? new Date(p.nextReview).toISOString() : null,
+                state: (p.state ? p.state.toLowerCase() : 'review') as any,
+              };
+              const mappedLog = {
+                id: log.id,
+                date: new Date(log.date).toISOString(),
+                rating: log.rating,
+                wasDue: log.wasDue,
+              };
+              return {
+                ...item,
+                status: (p.status as any) || item.status,
+                fsrsData: backendFSRS,
+                reviewLogs: [...(item.reviewLogs || []).filter(l => l.id !== mappedLog.id), mappedLog].slice(-100),
+              };
+            });
+
+            if (matched) {
+              try {
+                localStorage.setItem(getUserKey(userProfile.id, 'items'), JSON.stringify(updated));
+              } catch (e) {}
+            }
+            return matched ? updated : prev;
+          });
         })
         .catch(err => {
           if (loadedUserIdRef.current !== currentUid) return;
           console.warn('[BookAPI] reviewItem sync notice, kept locally:', err?.message || err);
-          if (err?.status === 401 || err?.statusCode === 401 || err?.message?.includes('Token')) {
-            clearAuthToken();
-            setBackendAuthStatus('unauthenticated');
-          }
         });
     }
   };
@@ -3106,10 +3276,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       .catch(err => {
         if (loadedUserIdRef.current !== currentUid) return;
         console.warn('[BookAPI] createBook backend sync notice, book safely kept locally:', err?.message || err);
-        if (err?.status === 401 || err?.statusCode === 401 || err?.message?.includes('Token')) {
-          clearAuthToken();
-          setBackendAuthStatus('unauthenticated');
-        }
       });
     }
 
@@ -3313,10 +3479,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         .catch(err => {
           if (loadedUserIdRef.current !== currentUid) return;
           console.warn('[BookAPI] Bulk import background sync notice, book kept safely locally:', err?.message || err);
-          if (err?.status === 401 || err?.statusCode === 401 || err?.message?.includes('Token')) {
-            clearAuthToken();
-            setBackendAuthStatus('unauthenticated');
-          }
         });
     }
 
@@ -3365,10 +3527,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }).catch(err => {
         if (loadedUserIdRef.current !== currentUid) return;
         console.warn('[BookAPI] updateBook sync notice, kept locally:', err?.message || err);
-        if (err?.status === 401 || err?.statusCode === 401 || err?.message?.includes('Token')) {
-          clearAuthToken();
-          setBackendAuthStatus('unauthenticated');
-        }
       });
     }
   };
@@ -3388,10 +3546,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       bookApiService.deleteBook(id).catch(err => {
         if (loadedUserIdRef.current !== currentUid) return;
         console.warn('[BookAPI] deleteBook sync notice:', err?.message || err);
-        if (err?.status === 401 || err?.statusCode === 401 || err?.message?.includes('Token')) {
-          clearAuthToken();
-          setBackendAuthStatus('unauthenticated');
-        }
       });
     }
   };
@@ -3536,10 +3690,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       .catch(err => {
         if (loadedUserIdRef.current !== currentUid) return;
         console.warn('[BookAPI] createChapter backend sync notice, chapter safely kept locally:', err?.message || err);
-        if (err?.status === 401 || err?.statusCode === 401 || err?.message?.includes('Token')) {
-          clearAuthToken();
-          setBackendAuthStatus('unauthenticated');
-        }
       });
     }
 
@@ -3581,10 +3731,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }).catch(err => {
         if (loadedUserIdRef.current !== currentUid) return;
         console.warn('[BookAPI] updateChapter sync notice, kept locally:', err?.message || err);
-        if (err?.status === 401 || err?.statusCode === 401 || err?.message?.includes('Token')) {
-          clearAuthToken();
-          setBackendAuthStatus('unauthenticated');
-        }
       });
     }
   };
@@ -3618,10 +3764,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       bookApiService.deleteChapter(chapterId).catch(err => {
         if (loadedUserIdRef.current !== currentUid) return;
         console.warn('[BookAPI] deleteChapter sync notice:', err?.message || err);
-        if (err?.status === 401 || err?.statusCode === 401 || err?.message?.includes('Token')) {
-          clearAuthToken();
-          setBackendAuthStatus('unauthenticated');
-        }
       });
     }
   };
@@ -3737,10 +3879,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       .catch(err => {
         if (loadedUserIdRef.current !== currentUid) return;
         console.warn('[BookAPI] createItem backend sync notice, card safely kept locally:', err?.message || err);
-        if (err?.status === 401 || err?.statusCode === 401 || err?.message?.includes('Token')) {
-          clearAuthToken();
-          setBackendAuthStatus('unauthenticated');
-        }
       });
     }
 
@@ -3800,10 +3938,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }).catch(err => {
         if (loadedUserIdRef.current !== currentUid) return;
         console.warn('[BookAPI] updateItem sync notice, kept locally:', err?.message || err);
-        if (err?.status === 401 || err?.statusCode === 401 || err?.message?.includes('Token')) {
-          clearAuthToken();
-          setBackendAuthStatus('unauthenticated');
-        }
       });
     }
   };
@@ -3826,10 +3960,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       bookApiService.deleteItem(itemId).catch(err => {
         if (loadedUserIdRef.current !== currentUid) return;
         console.warn('[BookAPI] deleteItem sync notice:', err?.message || err);
-        if (err?.status === 401 || err?.statusCode === 401 || err?.message?.includes('Token')) {
-          clearAuthToken();
-          setBackendAuthStatus('unauthenticated');
-        }
       });
     }
   };

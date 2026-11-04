@@ -84,7 +84,23 @@ export const learningService = {
     };
 
     if (bookId) {
-      where.bookItem = { bookId };
+      const relatedBooks = await prisma.book.findMany({
+        where: {
+          OR: [
+            { id: bookId },
+            { masterBookId: bookId },
+          ],
+        },
+        select: { id: true, masterBookId: true },
+      });
+      const allRelatedBookIds = Array.from(
+        new Set([
+          bookId,
+          ...relatedBooks.map((b) => b.id),
+          ...relatedBooks.map((b) => b.masterBookId).filter((id): id is string => Boolean(id)),
+        ])
+      );
+      where.bookItem = { bookId: { in: allRelatedBookIds } };
     }
 
     // Retrieve active progresses with card material details
@@ -147,10 +163,23 @@ export const learningService = {
    * Activate a book item card for FSRS review
    */
   async activateItem(itemId: string, userId: string) {
-    const item = await prisma.bookItem.findUnique({
+    let item = await prisma.bookItem.findUnique({
       where: { id: itemId },
       include: { book: true },
     });
+
+    if (!item) {
+      item = await prisma.bookItem.findFirst({
+        where: { masterItemId: itemId, book: { userId } },
+        include: { book: true },
+      });
+      if (!item) {
+        item = await prisma.bookItem.findFirst({
+          where: { masterItemId: itemId },
+          include: { book: true },
+        });
+      }
+    }
 
     if (!item) {
       throw createError('Kartu materi tidak ditemukan.', 404, 'ITEM_NOT_FOUND');
@@ -159,11 +188,12 @@ export const learningService = {
     // Enforce book access and reject paid public books for non-owners (AUDIT-4-07)
     await checkBookAccess(item.book, userId);
 
+    const targetItemId = item.id;
     const existingProgress = await prisma.userBookItemProgress.findUnique({
       where: {
         userId_bookItemId: {
           userId,
-          bookItemId: itemId,
+          bookItemId: targetItemId,
         },
       },
     });
@@ -172,10 +202,10 @@ export const learningService = {
 
     if (!existingProgress) {
       // First activation: create new progress record
-      return prisma.userBookItemProgress.create({
+      const created = await prisma.userBookItemProgress.create({
         data: {
           userId,
-          bookItemId: itemId,
+          bookItemId: targetItemId,
           isActive: true,
           status: 'active',
           stability: 0,
@@ -186,6 +216,18 @@ export const learningService = {
           state: FSRSStateEnum.NEW,
         },
       });
+
+      // Synchronize counterpart if exists
+      if (item.masterItemId) {
+        await prisma.$executeRaw`
+          INSERT INTO "user_book_item_progresses" 
+          ("id", "userId", "bookItemId", "isActive", "status", "stability", "difficulty", "reps", "lapses", "state", "nextReview", "createdAt", "updatedAt")
+          VALUES (gen_random_uuid(), ${userId}::uuid, ${item.masterItemId}::uuid, true, 'active', 0, 5.0, 0, 0, 'NEW', ${today}, NOW(), NOW())
+          ON CONFLICT ("userId", "bookItemId") DO UPDATE SET "isActive" = true, "status" = 'active', "updatedAt" = NOW()
+        `;
+      }
+
+      return created;
     }
 
     // Re-activation: preserve past stability and history
@@ -194,7 +236,7 @@ export const learningService = {
       ? existingProgress.nextReview
       : today;
 
-    return prisma.userBookItemProgress.update({
+    const updated = await prisma.userBookItemProgress.update({
       where: { id: existingProgress.id },
       data: {
         isActive: true,
@@ -203,20 +245,58 @@ export const learningService = {
         state: hasHistory ? FSRSStateEnum.REVIEW : FSRSStateEnum.NEW,
       },
     });
+
+    if (item.masterItemId) {
+      await prisma.$executeRaw`
+        INSERT INTO "user_book_item_progresses" 
+        ("id", "userId", "bookItemId", "isActive", "status", "stability", "difficulty", "reps", "lapses", "state", "nextReview", "createdAt", "updatedAt")
+        VALUES (gen_random_uuid(), ${userId}::uuid, ${item.masterItemId}::uuid, true, ${updated.status}, ${updated.stability}, ${updated.difficulty}, ${updated.reps}, ${updated.lapses}, ${updated.state}::"FSRSStateEnum", ${nextReviewDate}, NOW(), NOW())
+        ON CONFLICT ("userId", "bookItemId") DO UPDATE SET "isActive" = true, "status" = ${updated.status}, "updatedAt" = NOW()
+      `;
+    }
+
+    return updated;
   },
 
   /**
    * Deactivate a book item card from FSRS review (preserves history)
    */
   async deactivateItem(itemId: string, userId: string) {
-    const existingProgress = await prisma.userBookItemProgress.findUnique({
+    let targetItemId = itemId;
+    let existingProgress = await prisma.userBookItemProgress.findUnique({
       where: {
         userId_bookItemId: {
           userId,
-          bookItemId: itemId,
+          bookItemId: targetItemId,
         },
       },
     });
+
+    if (!existingProgress) {
+      const item = await prisma.bookItem.findFirst({
+        where: {
+          OR: [
+            { id: itemId },
+            { masterItemId: itemId, book: { userId } },
+          ],
+        },
+        select: { id: true, masterItemId: true },
+      });
+      if (item) {
+        if (item.masterItemId) {
+          existingProgress = await prisma.userBookItemProgress.findUnique({
+            where: { userId_bookItemId: { userId, bookItemId: item.masterItemId } },
+          });
+          if (existingProgress) targetItemId = item.masterItemId;
+        }
+        if (!existingProgress && item.id !== itemId) {
+          existingProgress = await prisma.userBookItemProgress.findUnique({
+            where: { userId_bookItemId: { userId, bookItemId: item.id } },
+          });
+          if (existingProgress) targetItemId = item.id;
+        }
+      }
+    }
 
     if (!existingProgress) {
       // Not activated yet, nothing to deactivate
@@ -230,18 +310,46 @@ export const learningService = {
       },
     });
 
+    // Also deactivate counterpart if exists
+    const counterpartItem = await prisma.bookItem.findUnique({
+      where: { id: targetItemId },
+      select: { masterItemId: true },
+    });
+    if (counterpartItem?.masterItemId) {
+      await prisma.userBookItemProgress.updateMany({
+        where: { userId, bookItemId: counterpartItem.masterItemId },
+        data: { isActive: false },
+      });
+    }
+
     return updated;
   },
 
   /**
    * Submit an FSRS review for a book item card
    * Executes atomic updates on UserBookItemProgress and logs BookItemReviewLog with PostgreSQL row-level lock (AUDIT-4-09)
+   * Robustly supports cards in books imported from library
    */
   async submitReview(itemId: string, userId: string, rating: 1 | 2 | 3 | 4) {
-    const item = await prisma.bookItem.findUnique({
+    let item = await prisma.bookItem.findUnique({
       where: { id: itemId },
       include: { book: true },
     });
+
+    if (!item) {
+      // Check if itemId is a masterItemId in user's cloned book
+      item = await prisma.bookItem.findFirst({
+        where: { masterItemId: itemId, book: { userId } },
+        include: { book: true },
+      });
+      if (!item) {
+        // Or check if itemId is a masterItemId in ANY book
+        item = await prisma.bookItem.findFirst({
+          where: { masterItemId: itemId },
+          include: { book: true },
+        });
+      }
+    }
 
     if (!item) {
       throw createError('Kartu materi tidak ditemukan.', 404, 'ITEM_NOT_FOUND');
@@ -250,6 +358,7 @@ export const learningService = {
     // Enforce book access and reject paid public books for non-owners (AUDIT-4-07)
     await checkBookAccess(item.book, userId);
 
+    const targetItemId = item.id;
     const maxRetries = 3;
     let attempt = 0;
 
@@ -261,14 +370,14 @@ export const learningService = {
           await tx.$executeRaw`
             INSERT INTO "user_book_item_progresses" 
             ("id", "userId", "bookItemId", "isActive", "status", "stability", "difficulty", "reps", "lapses", "state", "createdAt", "updatedAt")
-            VALUES (gen_random_uuid(), ${userId}::uuid, ${itemId}::uuid, true, 'active', 0, 5.0, 0, 0, 'NEW', NOW(), NOW())
+            VALUES (gen_random_uuid(), ${userId}::uuid, ${targetItemId}::uuid, true, 'active', 0, 5.0, 0, 0, 'NEW', NOW(), NOW())
             ON CONFLICT ("userId", "bookItemId") DO NOTHING
           `;
 
           // 2. Lock the progress row exclusively FOR UPDATE inside this transaction (AUDIT-4-09)
           const lockedRows = await tx.$queryRaw<any[]>`
             SELECT * FROM "user_book_item_progresses" 
-            WHERE "userId" = ${userId}::uuid AND "bookItemId" = ${itemId}::uuid
+            WHERE "userId" = ${userId}::uuid AND "bookItemId" = ${targetItemId}::uuid
             FOR UPDATE
           `;
 
@@ -343,6 +452,43 @@ export const learningService = {
               wasDue,
             },
           });
+
+          // 7. Synchronize progress to counterpart item IDs (masterItemId or cloned items for this user)
+          const counterpartItemIds: string[] = [];
+          if (item.masterItemId) {
+            counterpartItemIds.push(item.masterItemId);
+          }
+          if (itemId !== targetItemId) {
+            counterpartItemIds.push(itemId);
+          }
+          const userClones = await tx.bookItem.findMany({
+            where: { masterItemId: item.id, book: { userId } },
+            select: { id: true },
+          });
+          userClones.forEach((c) => {
+            if (!counterpartItemIds.includes(c.id) && c.id !== targetItemId) {
+              counterpartItemIds.push(c.id);
+            }
+          });
+
+          for (const cpId of counterpartItemIds) {
+            await tx.$executeRaw`
+              INSERT INTO "user_book_item_progresses" 
+              ("id", "userId", "bookItemId", "isActive", "status", "stability", "difficulty", "reps", "lapses", "state", "lastReview", "nextReview", "createdAt", "updatedAt")
+              VALUES (gen_random_uuid(), ${userId}::uuid, ${cpId}::uuid, true, ${newStatus}, ${newState.stability}, ${newState.difficulty}, ${newState.reps}, ${newState.lapses}, ${nextStateEnum}::"FSRSStateEnum", ${new Date(newState.lastReview!)}, ${new Date(newState.nextReview!)}, NOW(), NOW())
+              ON CONFLICT ("userId", "bookItemId") DO UPDATE SET
+                "isActive" = true,
+                "status" = ${newStatus},
+                "stability" = ${newState.stability},
+                "difficulty" = ${newState.difficulty},
+                "reps" = ${newState.reps},
+                "lapses" = ${newState.lapses},
+                "state" = ${nextStateEnum}::"FSRSStateEnum",
+                "lastReview" = ${new Date(newState.lastReview!)},
+                "nextReview" = ${new Date(newState.nextReview!)},
+                "updatedAt" = NOW()
+            `;
+          }
 
           return {
             progress: updatedProgress,

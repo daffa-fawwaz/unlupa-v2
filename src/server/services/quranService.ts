@@ -1,8 +1,11 @@
 import { prisma } from '../db';
-import { QuranPageStatus, FSRSStateEnum, MapanScheduleMode, Prisma } from '@prisma/client';
+import { QuranPageStatus, FSRSStateEnum, MapanScheduleMode, Prisma, Role, Plan } from '@prisma/client';
 import { createError } from '../middleware/errorHandler';
 import { updateQuranFSRS, isDue } from '../../lib/fsrs';
 import { FSRSState } from '../../types';
+import { getJuzForPage } from '../../data/quranData';
+import { systemConfigService } from './systemConfigService';
+
 
 export interface ReviewQuranPageInput {
   rating: 1 | 2 | 3;
@@ -73,6 +76,32 @@ export const quranService = {
         userId_pageNumber: { userId, pageNumber },
       },
     });
+
+    // If activating an inactive or new page, verify tier limits for free accounts
+    if (!existing || !existing.isActive) {
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { role: true, plan: true },
+      });
+      const isPro = user?.role === Role.ADMIN || user?.role === Role.SUPERADMIN || user?.plan === Plan.PREMIUM || user?.plan === Plan.INSTITUTIONAL;
+      if (!isPro) {
+        const tierConfig = await systemConfigService.getTierConfig();
+        const activePages = await prisma.userQuranPage.findMany({
+          where: { userId, isActive: true },
+          select: { pageNumber: true },
+        });
+        const activeJuzSet = new Set(activePages.map(p => getJuzForPage(p.pageNumber)));
+        const targetJuz = getJuzForPage(pageNumber);
+
+        if (!activeJuzSet.has(targetJuz) && activeJuzSet.size >= tierConfig.freeTier.maxActiveQuranJuz) {
+          throw createError(
+            `Batas kuota Juz Al-Qur'an aktif untuk akun Free (${tierConfig.freeTier.maxActiveQuranJuz} Juz) telah tercapai. Upgrade ke Unlupa Pro untuk mengaktifkan seluruh 30 Juz.`,
+            403,
+            'TIER_LIMIT_REACHED'
+          );
+        }
+      }
+    }
 
     if (existing) {
       const nextStatus = existing.status === QuranPageStatus.INACTIVE

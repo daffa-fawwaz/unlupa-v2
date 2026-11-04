@@ -5,6 +5,8 @@ import { quranService, ReviewQuranPageInput } from './quranService';
 import { getSurahForPage, getJuzForPage } from '../../data/quranData';
 import { isDue } from '../../lib/fsrs';
 import { learningService } from './learningService';
+import { systemConfigService } from './systemConfigService';
+
 
 function isValidUuid(id: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id);
@@ -331,13 +333,24 @@ export class ClassService {
     // Enforce limits for FREE plan users
     const isPro = teacher.plan === Plan.PREMIUM || teacher.plan === Plan.INSTITUTIONAL || teacher.role === Role.ADMIN || teacher.role === Role.SUPERADMIN;
     if (!isPro) {
+      const tierConfig = await systemConfigService.getTierConfig();
+
+      if (!tierConfig.freeTier.allowCreateClass) {
+        throw createError(
+          'Akun Free saat ini belum diizinkan membuka kelas (Mode Pengajar). Upgrade ke Unlupa Pro untuk membuka kelas.',
+          403,
+          'TIER_LIMIT_REACHED'
+        );
+      }
+
       if (classTypeEnum === ClassType.QURAN) {
         const quranCount = await prisma.class.count({
           where: { teacherId, type: ClassType.QURAN },
         });
-        if (quranCount >= 1) {
+        const maxQuran = tierConfig.freeTier.maxQuranClasses ?? 1;
+        if (quranCount >= maxQuran) {
           throw createError(
-            'Batas akun Free adalah maksimal 1 kelas Al-Qur\'an. Upgrade ke Pro untuk membuat lebih banyak kelas.',
+            `Batas akun Free adalah maksimal ${maxQuran} kelas Al-Qur'an. Upgrade ke Pro untuk membuat lebih banyak kelas.`,
             403,
             'QUOTA_EXCEEDED'
           );
@@ -346,9 +359,10 @@ export class ClassService {
         const nonQuranCount = await prisma.class.count({
           where: { teacherId, type: ClassType.NON_QURAN },
         });
-        if (nonQuranCount >= 1) {
+        const maxNonQuran = tierConfig.freeTier.maxNonQuranClasses ?? 1;
+        if (nonQuranCount >= maxNonQuran) {
           throw createError(
-            'Batas akun Free adalah maksimal 1 kelas Non-Qur\'an (Kitab). Upgrade ke Pro untuk membuat lebih banyak kelas.',
+            `Batas akun Free adalah maksimal ${maxNonQuran} kelas Non-Qur'an (Kitab). Upgrade ke Pro untuk membuat lebih banyak kelas.`,
             403,
             'QUOTA_EXCEEDED'
           );

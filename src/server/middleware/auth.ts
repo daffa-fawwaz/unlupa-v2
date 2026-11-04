@@ -60,7 +60,8 @@ export async function authenticate(req: Request, res: Response, next: NextFuncti
     }
   }
 
-  if (!token) {
+  // Filter out invalid/empty token placeholders
+  if (!token || token === 'null' || token === 'undefined') {
     res.status(401).json({
       success: false,
       error: {
@@ -71,46 +72,14 @@ export async function authenticate(req: Request, res: Response, next: NextFuncti
     return;
   }
 
+  // 1. Verify cryptographic token signature, algorithm, and expiration
+  let payload: JwtTokenPayload;
   try {
-    // 1. Verify cryptographic token signature, algorithm, and expiration
-    const payload = verifyJwtToken(token);
-
-    if (!payload.sub) {
-      res.status(401).json({
-        success: false,
-        error: {
-          code: 'INVALID_TOKEN',
-          message: 'Token autentikasi tidak memiliki klaim subjek (sub) yang valid.',
-        },
-      });
-      return;
-    }
-
-    // 2. Fetch authoritative user record from PostgreSQL
-    const user = await prisma.user.findUnique({
-      where: { id: payload.sub },
-    });
-
-    if (!user) {
-      res.status(401).json({
-        success: false,
-        error: {
-          code: 'USER_NOT_FOUND',
-          message: 'Akun pengguna tidak ditemukan atau telah dinonaktifkan.',
-        },
-      });
-      return;
-    }
-
-    // 3. Attach authenticated identity to request context
-    req.user = user;
-    req.jwtPayload = payload;
-
-    next();
-  } catch (error: any) {
-    const statusCode = error?.statusCode || 401;
-    const errorCode = error?.code || 'INVALID_TOKEN';
-    const message = error?.message || 'Gagal memverifikasi token autentikasi.';
+    payload = verifyJwtToken(token);
+  } catch (jwtError: any) {
+    const statusCode = jwtError?.statusCode || 401;
+    const errorCode = jwtError?.code || 'INVALID_TOKEN';
+    const message = jwtError?.message || 'Token autentikasi tidak valid atau telah kedaluwarsa.';
 
     res.status(statusCode).json({
       success: false,
@@ -119,7 +88,49 @@ export async function authenticate(req: Request, res: Response, next: NextFuncti
         message,
       },
     });
+    return;
   }
+
+  if (!payload.sub) {
+    res.status(401).json({
+      success: false,
+      error: {
+        code: 'INVALID_TOKEN',
+        message: 'Token autentikasi tidak memiliki klaim subjek (sub) yang valid.',
+      },
+    });
+    return;
+  }
+
+  // 2. Fetch authoritative user record from PostgreSQL in isolated try/catch
+  let user: User | null = null;
+  try {
+    user = await prisma.user.findUnique({
+      where: { id: payload.sub },
+    });
+  } catch (dbError) {
+    console.error('[Auth Middleware] Database error looking up user by token sub:', dbError);
+    // Transient database failure must NEVER be returned as 401 Unauthorized!
+    // Passing to next(dbError) produces HTTP 500/503 so client does NOT wipe valid user tokens.
+    return next(dbError);
+  }
+
+  if (!user) {
+    res.status(401).json({
+      success: false,
+      error: {
+        code: 'USER_NOT_FOUND',
+        message: 'Akun pengguna tidak ditemukan atau telah dinonaktifkan.',
+      },
+    });
+    return;
+  }
+
+  // 3. Attach authenticated identity to request context
+  req.user = user;
+  req.jwtPayload = payload;
+
+  next();
 }
 
 /**

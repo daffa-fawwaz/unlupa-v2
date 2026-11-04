@@ -1,7 +1,23 @@
 import crypto from 'crypto';
 import { prisma } from '../db';
-import { Book, Chapter, BookItem, Prisma, Role } from '@prisma/client';
+import { Book, Chapter, BookItem, Prisma, Role, Plan } from '@prisma/client';
 import { createError } from '../middleware/errorHandler';
+import { systemConfigService } from './systemConfigService';
+
+export async function checkIsProUser(userId: string): Promise<boolean> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { role: true, plan: true },
+  });
+  if (!user) return false;
+  return (
+    user.role === Role.ADMIN ||
+    user.role === Role.SUPERADMIN ||
+    user.plan === Plan.PREMIUM ||
+    user.plan === Plan.INSTITUTIONAL
+  );
+}
+
 
 export const UNLUPA_LEGACY_IMPORT_NAMESPACE = '7b9c3e41-6a2d-4f80-9e15-8c7a2d4e6f90';
 
@@ -544,6 +560,18 @@ export async function checkBookAccess(
 ): Promise<void> {
   if (book.userId === currentUserId) return;
 
+  // Check if user has an imported copy of this book
+  if (book.id) {
+    const hasImported = await prisma.book.findFirst({
+      where: {
+        userId: currentUserId,
+        masterBookId: book.id,
+      },
+      select: { id: true },
+    });
+    if (hasImported) return;
+  }
+
   if (!book.isPublic) {
     // Check if current user is an enrolled student in an active class where this book is assigned
     if (book.id) {
@@ -689,6 +717,25 @@ export const bookService = {
    * Create a new book
    */
   async createBook(currentUserId: string, authorName: string, input: CreateBookInput) {
+    const isPro = await checkIsProUser(currentUserId);
+    if (!isPro) {
+      const tierConfig = await systemConfigService.getTierConfig();
+      const currentBooksCount = await prisma.book.count({
+        where: {
+          userId: currentUserId,
+          masterBookId: null,
+          classId: null,
+        },
+      });
+      if (currentBooksCount >= tierConfig.freeTier.maxBooks) {
+        throw createError(
+          `Batas maksimal pembuatan buku pribadi akun Free (${tierConfig.freeTier.maxBooks} buku) telah tercapai. Upgrade ke Unlupa Pro untuk membuat buku tanpa batas.`,
+          403,
+          'TIER_LIMIT_REACHED'
+        );
+      }
+    }
+
     return prisma.book.create({
       data: {
         userId: currentUserId,
@@ -1049,9 +1096,81 @@ export const bookService = {
       prisma.bookItem.count({ where }),
     ]);
 
-    // Format items with merged progress for convenience
+    // Format items with merged progress across direct, master, and cloned items
+    const itemIds = rawItems.map((i) => i.id);
+    const masterIds = rawItems
+      .map((i) => i.masterItemId)
+      .filter((id): id is string => Boolean(id));
+
+    // Also find any cloned items owned by this user where masterItemId is in itemIds
+    const clonedItems = await prisma.bookItem.findMany({
+      where: {
+        masterItemId: { in: itemIds },
+        book: { userId: currentUserId },
+      },
+      select: { id: true, masterItemId: true },
+    });
+    const clonedItemIds = clonedItems.map((c) => c.id);
+
+    const allCandidateIds = Array.from(new Set([...itemIds, ...masterIds, ...clonedItemIds]));
+    const candidateProgresses = await prisma.userBookItemProgress.findMany({
+      where: {
+        userId: currentUserId,
+        bookItemId: { in: allCandidateIds },
+      },
+    });
+
+    const progressByItemId = new Map<string, any>();
+    for (const p of candidateProgresses) {
+      const existing = progressByItemId.get(p.bookItemId);
+      if (!existing) {
+        progressByItemId.set(p.bookItemId, p);
+      } else {
+        const pTime = p.lastReview ? new Date(p.lastReview).getTime() : (p.reps > 0 ? 1 : 0);
+        const exTime = existing.lastReview ? new Date(existing.lastReview).getTime() : (existing.reps > 0 ? 1 : 0);
+        if (pTime >= exTime) {
+          progressByItemId.set(p.bookItemId, p);
+        }
+      }
+    }
+
     const items = rawItems.map((item) => {
-      const progress = item.userProgresses[0] || null;
+      // 1. Direct progress
+      let bestProgress = progressByItemId.get(item.id) || (item.userProgresses && item.userProgresses[0]) || null;
+
+      // 2. Fallback or newer progress from masterItemId
+      if (item.masterItemId) {
+        const masterProg = progressByItemId.get(item.masterItemId);
+        if (masterProg) {
+          if (!bestProgress) {
+            bestProgress = masterProg;
+          } else {
+            const mTime = masterProg.lastReview ? new Date(masterProg.lastReview).getTime() : (masterProg.reps > 0 ? 1 : 0);
+            const bTime = bestProgress.lastReview ? new Date(bestProgress.lastReview).getTime() : (bestProgress.reps > 0 ? 1 : 0);
+            if (mTime > bTime) {
+              bestProgress = masterProg;
+            }
+          }
+        }
+      }
+
+      // 3. Fallback or newer progress from user's cloned item
+      const relatedClones = clonedItems.filter((c) => c.masterItemId === item.id);
+      for (const cl of relatedClones) {
+        const clProg = progressByItemId.get(cl.id);
+        if (clProg) {
+          if (!bestProgress) {
+            bestProgress = clProg;
+          } else {
+            const cTime = clProg.lastReview ? new Date(clProg.lastReview).getTime() : (clProg.reps > 0 ? 1 : 0);
+            const bTime = bestProgress.lastReview ? new Date(bestProgress.lastReview).getTime() : (bestProgress.reps > 0 ? 1 : 0);
+            if (cTime > bTime) {
+              bestProgress = clProg;
+            }
+          }
+        }
+      }
+
       return {
         id: item.id,
         bookId: item.bookId,
@@ -1066,17 +1185,17 @@ export const bookService = {
         order: item.order,
         createdAt: item.createdAt,
         updatedAt: item.updatedAt,
-        progress: progress ? {
-          id: progress.id,
-          isActive: progress.isActive,
-          status: progress.status,
-          stability: progress.stability,
-          difficulty: progress.difficulty,
-          reps: progress.reps,
-          lapses: progress.lapses,
-          lastReview: progress.lastReview,
-          nextReview: progress.nextReview,
-          state: progress.state,
+        progress: bestProgress ? {
+          id: bestProgress.id,
+          isActive: bestProgress.isActive,
+          status: bestProgress.status,
+          stability: bestProgress.stability,
+          difficulty: bestProgress.difficulty,
+          reps: bestProgress.reps,
+          lapses: bestProgress.lapses,
+          lastReview: bestProgress.lastReview,
+          nextReview: bestProgress.nextReview,
+          state: bestProgress.state,
         } : null,
       };
     });
@@ -1154,6 +1273,21 @@ export const bookService = {
 
     if (book.userId !== currentUserId) {
       throw createError('Hanya pemilik buku yang dapat menambah kartu materi.', 403, 'FORBIDDEN');
+    }
+
+    const isPro = await checkIsProUser(currentUserId);
+    if (!isPro) {
+      const tierConfig = await systemConfigService.getTierConfig();
+      const currentItemsCount = await prisma.bookItem.count({
+        where: { bookId },
+      });
+      if (currentItemsCount >= tierConfig.freeTier.maxCardsPerBook) {
+        throw createError(
+          `Batas maksimal kartu per buku akun Free (${tierConfig.freeTier.maxCardsPerBook} kartu) telah tercapai. Upgrade ke Unlupa Pro untuk menambah kartu tanpa batas.`,
+          403,
+          'TIER_LIMIT_REACHED'
+        );
+      }
     }
 
     if (input.chapterId) {

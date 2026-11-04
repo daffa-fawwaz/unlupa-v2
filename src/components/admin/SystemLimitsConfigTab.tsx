@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   ShieldCheck,
   Sliders,
@@ -16,6 +16,7 @@ import {
   CheckCircle2,
   Users,
   AlertCircle,
+  Loader2,
 } from "lucide-react";
 import { useApp } from "../../context/AppContext";
 import {
@@ -33,7 +34,14 @@ export const SystemLimitsConfigTab: React.FC = () => {
     language,
   } = useApp();
   const [tempConfig, setTempConfig] = useState<SystemTierConfig>(tierConfig);
+  const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  // Sync with live tierConfig from backend
+  useEffect(() => {
+    setTempConfig(tierConfig);
+  }, [tierConfig]);
 
   const handleFreeChange = (key: keyof TierLimitConfig, value: any) => {
     setTempConfig((prev) => ({
@@ -68,21 +76,39 @@ export const SystemLimitsConfigTab: React.FC = () => {
     }));
   };
 
-  const handleSave = () => {
-    updateTierConfig(tempConfig);
-    setSaveSuccess(true);
-    setTimeout(() => setSaveSuccess(false), 3000);
+  const handleSave = async () => {
+    setIsSaving(true);
+    setSaveError(null);
+    try {
+      await updateTierConfig(tempConfig);
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3000);
+    } catch (err: any) {
+      console.error('[SystemLimitsConfigTab] Save error:', err);
+      setSaveError(err?.message || (language === "en" ? "Failed to save settings to server." : "Gagal menyimpan pengaturan ke server."));
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  const handleResetDefaults = () => {
+  const handleResetDefaults = async () => {
     const defaults = createDefaultTierConfig();
     setTempConfig(defaults);
-    updateTierConfig(defaults);
-    setSaveSuccess(true);
-    setTimeout(() => setSaveSuccess(false), 3000);
+    setIsSaving(true);
+    setSaveError(null);
+    try {
+      await updateTierConfig(defaults);
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3000);
+    } catch (err: any) {
+      console.error('[SystemLimitsConfigTab] Reset error:', err);
+      setSaveError(err?.message || (language === "en" ? "Failed to reset settings." : "Gagal mereset ke standar."));
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  const applyPreset = (preset: "default" | "strict" | "generous") => {
+  const applyPreset = async (preset: "default" | "strict" | "generous") => {
     let updated = createDefaultTierConfig();
     if (preset === "strict") {
       updated.freeTier = {
@@ -110,10 +136,20 @@ export const SystemLimitsConfigTab: React.FC = () => {
       };
     }
     setTempConfig(updated);
-    updateTierConfig(updated);
-    setSaveSuccess(true);
-    setTimeout(() => setSaveSuccess(false), 3000);
+    setIsSaving(true);
+    setSaveError(null);
+    try {
+      await updateTierConfig(updated);
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3000);
+    } catch (err: any) {
+      console.error('[SystemLimitsConfigTab] Preset error:', err);
+      setSaveError(err?.message || (language === "en" ? "Failed to apply preset." : "Gagal menerapkan preset."));
+    } finally {
+      setIsSaving(false);
+    }
   };
+
 
   return (
     <div className="space-y-8 animate-in fade-in duration-300">
@@ -143,7 +179,8 @@ export const SystemLimitsConfigTab: React.FC = () => {
         <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={handleResetDefaults}
-            className="px-3.5 py-2 rounded-xl text-xs font-bold border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex items-center gap-1.5"
+            disabled={isSaving}
+            className="px-3.5 py-2 rounded-xl text-xs font-bold border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex items-center gap-1.5 disabled:opacity-50"
           >
             <RotateCcw className="w-3.5 h-3.5" />
             <span>
@@ -152,18 +189,25 @@ export const SystemLimitsConfigTab: React.FC = () => {
           </button>
           <button
             onClick={handleSave}
-            className="px-5 py-2.5 rounded-xl text-xs font-extrabold bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-600/20 transition-all flex items-center gap-2 active:scale-95"
+            disabled={isSaving}
+            className="px-5 py-2.5 rounded-xl text-xs font-extrabold bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-600/20 transition-all flex items-center gap-2 active:scale-95 disabled:opacity-50"
           >
-            {saveSuccess ? (
-              <CheckCircle2 className="w-4 h-4" />
+            {isSaving ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : saveSuccess ? (
+              <CheckCircle2 className="w-4 h-4 text-emerald-300" />
             ) : (
               <Save className="w-4 h-4" />
             )}
             <span>
-              {saveSuccess
+              {isSaving
+                ? language === "en"
+                  ? "Saving to Database..."
+                  : "Menyimpan ke Server..."
+                : saveSuccess
                 ? language === "en"
                   ? "Saved Successfully!"
-                  : "Tersimpan!"
+                  : "Tersimpan ke Server!"
                 : language === "en"
                   ? "Save Changes"
                   : "Simpan Perubahan"}
@@ -171,6 +215,15 @@ export const SystemLimitsConfigTab: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/* Save Error Alert Banner */}
+      {saveError && (
+        <div className="p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/50 flex items-center gap-3 text-rose-700 dark:text-rose-300 text-xs font-semibold">
+          <AlertCircle className="w-5 h-5 shrink-0 text-rose-500" />
+          <span>{saveError}</span>
+        </div>
+      )}
+
 
       {/* Preset Strategy Buttons */}
       <div className="flex items-center gap-3 overflow-x-auto pb-1 text-xs">

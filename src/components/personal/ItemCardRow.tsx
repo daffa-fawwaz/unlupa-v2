@@ -104,8 +104,12 @@ export const ItemCardRow: React.FC<ItemRowProps & { onEdit?: () => void }> = ({
     };
   }, [item.id]);
 
+  useEffect(() => {
+    setJustReviewedRating(null);
+  }, [item.id, item.fsrsData?.lastReview]);
+
   const isDueToday = isDue(item.fsrsData?.nextReview, item.isActive, item.fsrsData?.lastReview);
-  const reviewedToday = isReviewedToday(item.fsrsData.lastReview);
+  const reviewedToday = isReviewedToday(item.fsrsData.lastReview) || justReviewedRating !== null;
   const showDimmed = reviewedToday && !isDueToday;
   const intervalDays = getNonQuranIntervalDays(item.fsrsData);
   const isMapan = item.isActive && (intervalDays >= 336 || item.status === 'mastered');
@@ -628,6 +632,7 @@ export const ItemCardRow: React.FC<ItemRowProps & { onEdit?: () => void }> = ({
                     soundEffects.playRatingFeedback(1);
                     if (!skipXpReward) triggerXpReward(2, language === 'en' ? 'Card Review (+2 XP)' : 'Review Kartu (+2 XP)');
                     setAllowEarlyReview(false);
+                    setJustReviewedRating(1);
                     onReview?.(1);
                   }}
                   className="py-1.5 px-1 rounded-xl clay-rating-btn clay-rating-rose text-center transition-all flex flex-col items-center justify-center cursor-pointer active:scale-95"
@@ -643,6 +648,7 @@ export const ItemCardRow: React.FC<ItemRowProps & { onEdit?: () => void }> = ({
                     soundEffects.playRatingFeedback(2);
                     if (!skipXpReward) triggerXpReward(2, language === 'en' ? 'Card Review (+2 XP)' : 'Review Kartu (+2 XP)');
                     setAllowEarlyReview(false);
+                    setJustReviewedRating(2);
                     onReview?.(2);
                   }}
                   className="py-1.5 px-1 rounded-xl clay-rating-btn clay-rating-gold text-center transition-all flex flex-col items-center justify-center cursor-pointer active:scale-95"
@@ -658,6 +664,7 @@ export const ItemCardRow: React.FC<ItemRowProps & { onEdit?: () => void }> = ({
                     soundEffects.playRatingFeedback(3);
                     if (!skipXpReward) triggerXpReward(4, language === 'en' ? 'Mastered Bonus (+4 XP)' : 'Mantap (+4 XP)');
                     setAllowEarlyReview(false);
+                    setJustReviewedRating(3);
                     onReview?.(3);
                   }}
                   className="py-1.5 px-1 rounded-xl clay-rating-btn clay-rating-emerald text-center transition-all flex flex-col items-center justify-center cursor-pointer active:scale-95"
@@ -673,6 +680,7 @@ export const ItemCardRow: React.FC<ItemRowProps & { onEdit?: () => void }> = ({
                     soundEffects.playRatingFeedback(4);
                     if (!skipXpReward) triggerXpReward(4, language === 'en' ? 'Easy Bonus (+4 XP)' : 'Sangat Lancar (+4 XP)');
                     setAllowEarlyReview(false);
+                    setJustReviewedRating(4);
                     onReview?.(4);
                   }}
                   className="py-1.5 px-1 rounded-xl clay-rating-btn clay-rating-orange text-center transition-all flex flex-col items-center justify-center cursor-pointer active:scale-95"

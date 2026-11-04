@@ -57,23 +57,29 @@ export function setAuthToken(token: string | null, rememberMe: boolean = true) {
   }
 }
 
+function isValidTokenString(val: unknown): val is string {
+  return typeof val === "string" && val.trim().length > 15 && val !== "null" && val !== "undefined";
+}
+
 export function getAuthToken(): string | null {
-  if (inMemoryJwtToken) return inMemoryJwtToken;
+  if (isValidTokenString(inMemoryJwtToken)) return inMemoryJwtToken;
 
   // 1. Check cookie first (ensures cross-tab / 30-day persistence)
   const cookieToken = getCookie(TOKEN_COOKIE_NAME);
-  if (cookieToken) {
+  if (isValidTokenString(cookieToken)) {
     inMemoryJwtToken = cookieToken;
     try {
       localStorage.setItem(TOKEN_STORAGE_KEY, cookieToken);
     } catch {}
     return cookieToken;
+  } else if (cookieToken) {
+    deleteCookie(TOKEN_COOKIE_NAME);
   }
 
   // 2. Fallback to localStorage
   try {
     const stored = localStorage.getItem(TOKEN_STORAGE_KEY);
-    if (stored) {
+    if (isValidTokenString(stored)) {
       inMemoryJwtToken = stored;
       // Resynchronize cookie with 30-day expiration if remember-me was active
       const rememberMe = localStorage.getItem(REMEMBER_COOKIE_NAME) !== "false";
@@ -83,9 +89,12 @@ export function getAuthToken(): string | null {
         setCookie(TOKEN_COOKIE_NAME, stored);
       }
       return stored;
+    } else if (stored) {
+      localStorage.removeItem(TOKEN_STORAGE_KEY);
     }
   } catch {}
 
+  inMemoryJwtToken = null;
   return null;
 }
 
@@ -306,8 +315,15 @@ export class ApiClient {
           responseData?.code ||
           `HTTP_${response.status}`;
 
-        // If unauthorized due to expired/invalid token, clear token to avoid infinite loop
-        if (response.status === 401 && !skipAuth) {
+        // Only clear token if the backend explicitly returned a 401 indicating expired/invalid token or removed account.
+        // Never clear on generic rate limits or ambiguous non-auth errors.
+        const isExplicitTokenError =
+          errorCode === "TOKEN_EXPIRED" ||
+          errorCode === "INVALID_TOKEN" ||
+          errorCode === "USER_NOT_FOUND" ||
+          errorCode === "UNAUTHORIZED";
+
+        if (response.status === 401 && !skipAuth && isExplicitTokenError) {
           clearAuthToken();
         }
 

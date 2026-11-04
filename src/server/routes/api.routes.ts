@@ -10,6 +10,7 @@ import { adminUserRouter } from './adminUser.routes';
 import { adminBookRouter } from './adminBook.routes';
 import { classRouter } from './class.routes';
 import { leaderboardRouter } from './leaderboard.routes';
+import { systemRouter } from './system.routes';
 
 export const apiRouter = Router();
 
@@ -54,3 +55,5 @@ apiRouter.use(quranRouter);
 apiRouter.use(adminUserRouter);
 apiRouter.use(adminBookRouter);
 apiRouter.use(classRouter);
+apiRouter.use(systemRouter);
+

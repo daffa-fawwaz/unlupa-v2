@@ -8,6 +8,8 @@ export interface LandingNavItem {
 interface LandingNavbarProps {
   onLogin: () => void;
   onRegister: () => void;
+  onOpenApp?: () => void;
+  isLoggedIn?: boolean;
   items?: LandingNavItem[];
 }
 
@@ -23,6 +25,8 @@ const DEFAULT_ITEMS: LandingNavItem[] = [
 export const LandingNavbar: React.FC<LandingNavbarProps> = ({
   onLogin,
   onRegister,
+  onOpenApp,
+  isLoggedIn = false,
   items = DEFAULT_ITEMS,
 }) => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -62,13 +66,22 @@ export const LandingNavbar: React.FC<LandingNavbarProps> = ({
       </nav>
 
       <div className="landing-navbar__actions">
-        <button className="landing-button landing-button--ghost" type="button" onClick={onLogin}>
-          Login
-        </button>
-        <button className="landing-button landing-button--primary" type="button" onClick={onRegister}>
-          <span className="landing-register-label--full">Daftar sekarang</span>
-          <span className="landing-register-label--short">Daftar</span>
-        </button>
+        {isLoggedIn && onOpenApp ? (
+          <button className="landing-button landing-button--primary" type="button" onClick={onOpenApp}>
+            <span className="landing-register-label--full">Buka Aplikasi</span>
+            <span className="landing-register-label--short">Aplikasi</span>
+          </button>
+        ) : (
+          <>
+            <button className="landing-button landing-button--ghost" type="button" onClick={onLogin}>
+              Login
+            </button>
+            <button className="landing-button landing-button--primary" type="button" onClick={onRegister}>
+              <span className="landing-register-label--full">Daftar sekarang</span>
+              <span className="landing-register-label--short">Daftar</span>
+            </button>
+          </>
+        )}
       </div>
     </header>
   );

@@ -54,6 +54,9 @@ async function startServer() {
   const app = express();
   const PORT = env.PORT || (process.env.PORT ? parseInt(process.env.PORT, 10) : 3000);
 
+  // Trust upstream reverse proxy (e.g. Nginx, Cloudflare, Traefik, Docker gateway)
+  app.set('trust proxy', 1);
+
   app.use(cors());
   app.use(express.json({ limit: '10mb' }));
   const upload = multer({ dest: os.tmpdir() });

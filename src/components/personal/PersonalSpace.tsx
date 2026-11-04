@@ -157,6 +157,24 @@ export const PersonalSpace: React.FC<PersonalSpaceProps> = ({
     setIsNewBookOpen(true);
   };
 
+  const handleTriggerNewCard = (chapterId?: string) => {
+    if (!selectedBook) return;
+    const currentBookItemsCount = items.filter(i => i.bookId === selectedBook.id).length;
+    const check = isFeatureAllowed('create_card', currentBookItemsCount);
+    if (!check.allowed) {
+      openUpgradeModal(
+        check.reason,
+        language === 'en'
+          ? `Free tier allows up to ${check.limit} cards per book. Upgrade to Unlupa Pro for unlimited flashcards.`
+          : `Batas akun Free adalah maksimal ${check.limit} kartu materi per buku. Upgrade ke Unlupa Pro untuk menambah kartu tanpa batas.`
+      );
+      return;
+    }
+    setSelectedChapterIdForItem(chapterId || '');
+    setEditingItem(null);
+    setIsNewItemOpen(true);
+  };
+
   const handleTriggerAIBuilder = () => {
     setIsAIBookBuilderOpen(true);
   };
@@ -787,6 +805,19 @@ export const PersonalSpace: React.FC<PersonalSpaceProps> = ({
   const handleCreateItem = (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedBook || !itemForm.question.trim() || !itemForm.answer.trim()) return;
+
+    const currentBookItemsCount = items.filter(i => i.bookId === selectedBook.id).length;
+    const check = isFeatureAllowed('create_card', currentBookItemsCount);
+    if (!check.allowed) {
+      openUpgradeModal(
+        check.reason,
+        language === 'en'
+          ? `Free tier allows up to ${check.limit} cards per book. Upgrade to Unlupa Pro for unlimited flashcards.`
+          : `Batas akun Free adalah maksimal ${check.limit} kartu materi per buku. Upgrade ke Unlupa Pro untuk menambah kartu tanpa batas.`
+      );
+      return;
+    }
+
     const tagsArray = itemForm.tags
       .split(',')
       .map(t => t.trim())
@@ -1847,11 +1878,7 @@ export const PersonalSpace: React.FC<PersonalSpaceProps> = ({
                     {/* 3. Tambah Kartu Langsung */}
                     <button
                       type="button"
-                      onClick={() => {
-                        setSelectedChapterIdForItem('');
-                        setEditingItem(null);
-                        setIsNewItemOpen(true);
-                      }}
+                      onClick={() => handleTriggerNewCard('')}
                       className="px-2.5 sm:px-3.5 py-1.5 rounded-full clay-btn-primary text-white text-xs font-black flex items-center gap-1 cursor-pointer shrink-0 shadow-xs hover:scale-105 active:scale-95 transition-all whitespace-nowrap"
                       title={language === 'en' ? 'Add flashcard directly under this book' : 'Tambah kartu langsung di buku ini'}
                     >
@@ -1898,11 +1925,7 @@ export const PersonalSpace: React.FC<PersonalSpaceProps> = ({
                       {language === 'en' ? 'Quick Import' : 'Format Cepat'}
                     </button>
                     <button
-                      onClick={() => {
-                        setSelectedChapterIdForItem('');
-                        setEditingItem(null);
-                        setIsNewItemOpen(true);
-                      }}
+                      onClick={() => handleTriggerNewCard('')}
                       className="px-3.5 py-1.5 rounded-full clay-btn-primary text-white text-xs font-black cursor-pointer shadow-xs hover:scale-105 active:scale-95 flex items-center gap-1.5"
                     >
                       <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
@@ -2259,9 +2282,7 @@ export const PersonalSpace: React.FC<PersonalSpaceProps> = ({
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
-                            setSelectedChapterIdForItem('');
-                            setEditingItem(null);
-                            setIsNewItemOpen(true);
+                            handleTriggerNewCard('');
                           }}
                           className="p-1.5 rounded-lg clay-pill text-[#B45309] hover:text-[#FF6F3D] hover:scale-105 active:scale-95 transition-all"
                           title={language === 'en' ? 'Add card directly' : 'Tambah kartu langsung'}
@@ -2287,9 +2308,7 @@ export const PersonalSpace: React.FC<PersonalSpaceProps> = ({
                                 type="button"
                                 onClick={() => {
                                   setActiveMenuId(null);
-                                  setSelectedChapterIdForItem('');
-                                  setEditingItem(null);
-                                  setIsNewItemOpen(true);
+                                  handleTriggerNewCard('');
                                 }}
                                 className="w-full text-left px-3 py-2 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2 cursor-pointer"
                               >
@@ -2618,10 +2637,7 @@ export const PersonalSpace: React.FC<PersonalSpaceProps> = ({
                     {!isCurrentBookReadonly ? (
                       <>
                         <button
-                          onClick={() => {
-                            setSelectedChapterIdForItem(currentChapter.id === '__unassigned__' ? '' : currentChapter.id);
-                            setIsNewItemOpen(true);
-                          }}
+                          onClick={() => handleTriggerNewCard(currentChapter.id === '__unassigned__' ? '' : currentChapter.id)}
                           className="h-8 px-2.5 rounded-xl clay-pill font-bold text-xs flex items-center gap-1 text-[#18234A] dark:text-[#F8FAFC] hover:text-[#FF6E65] transition-all cursor-pointer shrink-0 active:scale-95"
                           title={language === 'en' ? 'Add Flashcard' : 'Tambah Kartu Hafalan'}
                         >
@@ -3116,10 +3132,7 @@ export const PersonalSpace: React.FC<PersonalSpaceProps> = ({
                         </button>
                         <button
                           type="button"
-                          onClick={() => {
-                            setSelectedChapterIdForItem(currentChapter.id === '__unassigned__' ? '' : currentChapter.id);
-                            setIsNewItemOpen(true);
-                          }}
+                          onClick={() => handleTriggerNewCard(currentChapter.id === '__unassigned__' ? '' : currentChapter.id)}
                           className="h-8 px-3 rounded-xl clay-btn-primary text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-xs"
                         >
                           <Plus className="w-3.5 h-3.5" />
