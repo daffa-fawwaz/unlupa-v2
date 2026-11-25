@@ -84,38 +84,6 @@ async function startServer() {
   app.use("/api/v1", apiRouter);
   app.use("/api", apiRouter);
 
-  // Neutralize and self-unregister any lingering Service Worker from previous builds
-  app.get(["/sw.js", "/service-worker.js"], (req, res) => {
-    res.setHeader("Content-Type", "application/javascript");
-    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0");
-    res.send(`
-      self.addEventListener('install', function(e) { self.skipWaiting(); });
-      self.addEventListener('activate', function(e) {
-        self.registration.unregister().then(function() {
-          return self.clients.matchAll();
-        }).then(function(clients) {
-          clients.forEach(function(client) {
-            if (client.url && 'navigate' in client) {
-              client.navigate(client.url);
-            }
-          });
-        });
-      });
-    `);
-  });
-
-  app.get("/registerSW.js", (req, res) => {
-    res.setHeader("Content-Type", "application/javascript");
-    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0");
-    res.send(`
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.getRegistrations().then(function(regs) {
-          for (var r of regs) r.unregister();
-        });
-      }
-    `);
-  });
-
   // 2. Migration endpoint for future FSRS and books migration
   app.post("/api/migration/sync-local-data", async (req, res) => {
     try {

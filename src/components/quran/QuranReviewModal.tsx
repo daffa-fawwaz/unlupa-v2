@@ -524,13 +524,13 @@ export const QuranReviewModal: React.FC<Props> = ({
   return (
     <div className="fixed inset-0 z-[110] flex items-center justify-center p-2 sm:p-4 bg-black/60 dark:bg-black/80 backdrop-blur-md animate-in fade-in">
       <div className="neumorph-card bg-[#EEF2F7] dark:bg-[#141C2B] text-slate-900 dark:text-slate-100 w-full max-w-4xl h-[95vh] rounded-3xl shadow-2xl border border-white/60 dark:border-white/5 overflow-hidden flex flex-col">
-        {/* Unified Sleek Single-Tier Top Header (Row 2 removed, progress integrated, direct 1-touch record) */}
+        {/* Responsive review header: metadata stays readable above the actions on mobile */}
         {!isFinished && currentItem && !masteredCelebration ? (
           <div className="border-b border-black/[0.04] dark:border-white/[0.04] bg-white/95 dark:bg-[#182236]/95 backdrop-blur-md shrink-0 shadow-xs z-20">
-            {/* Single Row: Page metadata + Review progress on left, Action buttons on right */}
-            <div className="px-3 sm:px-4 py-2 flex items-center justify-between gap-2">
-              {/* Left: Page Badge, Surah, Ayat Range & Session Progress all parallel in one single level */}
-              <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+            {/* Metadata and actions stack on mobile, then share one row on larger screens */}
+            <div className="px-3 sm:px-4 py-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-2">
+              {/* Left: page metadata gets a full row on mobile so long multi-surah labels stay readable */}
+              <div className="flex items-start sm:items-center gap-2 min-w-0 w-full sm:w-auto">
                 {/* Badge Nomor Halaman (hanya angka nomor halaman tanpa kata 'Hal') */}
                 <div
                   className="h-7 sm:h-8 min-w-[28px] sm:min-w-[32px] px-2 rounded-xl bg-gradient-to-br from-[#FF7E4A] to-[#E65320] text-white flex items-center justify-center font-black text-xs sm:text-sm shrink-0 shadow-xs"
@@ -539,44 +539,44 @@ export const QuranReviewModal: React.FC<Props> = ({
                   <span>{currentItem.pageNumber}</span>
                 </div>
 
-                {/* Info Sejajar: Surat, Rentang Ayat (tanpa teks 'Ayat'), Progres, & Juz */}
-                <div className="flex items-center gap-1 sm:gap-1.5 min-w-0">
-                  <h3 className="font-black text-xs sm:text-sm text-[#18234A] dark:text-[#F8FAFC] truncate">
-                    {currentItem.surahNameEn}
-                  </h3>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-start gap-1.5 min-w-0">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-black text-xs sm:text-sm text-[#18234A] dark:text-[#F8FAFC] leading-tight whitespace-normal break-words">
+                        {currentItem.surahNameEn}
+                      </h3>
+                      <p className="mt-0.5 text-[10.5px] sm:text-[11.5px] font-semibold text-[#64748B] dark:text-[#94A3B8] leading-tight whitespace-normal break-words">
+                        {language === "en" ? "Ayah" : "Ayat"}{" "}
+                        {currentItem.ayahRange}
+                      </p>
+                    </div>
 
-                  {/* Rentang Angka Ayat Sejajar di Samping Nama Surat (tanpa awalan kata 'Ayat') */}
-                  <span className="text-[10.5px] sm:text-[11.5px] font-semibold text-[#64748B] dark:text-[#94A3B8] whitespace-nowrap shrink-0">
-                    {currentItem.ayahRange}
-                  </span>
+                    {/* Session progress remains visible without taking space from the title */}
+                    <div
+                      className="flex items-center px-1.5 py-0.5 rounded-lg bg-orange-500/10 dark:bg-orange-500/20 text-[#FF6F3D] font-black text-[10px] sm:text-[11px] shrink-0 border border-orange-500/20"
+                      title={`Progres sesi: ${currentIndex + 1} dari ${queue.length} (${Math.round(((currentIndex + 1) / queue.length) * 100)}%)`}
+                    >
+                      <span>
+                        {currentIndex + 1}/{queue.length}
+                      </span>
+                    </div>
 
-                  {/* Progres Review (1 / 4) Berdampingan di Samping Nama Surat & Ayat */}
-                  <div
-                    className="flex items-center px-1.5 py-0.5 rounded-lg bg-orange-500/10 dark:bg-orange-500/20 text-[#FF6F3D] font-black text-[10px] sm:text-[11px] shrink-0 border border-orange-500/20"
-                    title={`Progres sesi: ${currentIndex + 1} dari ${queue.length} (${Math.round(((currentIndex + 1) / queue.length) * 100)}%)`}
-                  >
-                    <span>
-                      {currentIndex + 1}/{queue.length}
+                    <span className="hidden sm:inline-flex text-[9px] sm:text-[10px] px-1.5 py-0.5 rounded-md neumorph-inset font-bold text-[#64748B] dark:text-[#94A3B8] shrink-0">
+                      Juz {currentItem.juzNumber}
+                    </span>
+
+                    <span
+                      className="font-serif text-xs font-bold text-[#FF6F3D] hidden xl:inline ml-0.5 truncate"
+                      dir="rtl"
+                    >
+                      سُورَةُ {currentItem.surahNameAr}
                     </span>
                   </div>
-
-                  {/* Juz Badge */}
-                  <span className="hidden xs:inline-flex text-[9px] sm:text-[10px] px-1.5 py-0.5 rounded-md neumorph-inset font-bold text-[#64748B] dark:text-[#94A3B8] shrink-0">
-                    Juz {currentItem.juzNumber}
-                  </span>
-
-                  {/* Surah Arabic Name (Desktop Besar) */}
-                  <span
-                    className="font-serif text-xs font-bold text-[#FF6F3D] hidden xl:inline ml-0.5 truncate"
-                    dir="rtl"
-                  >
-                    سُورَةُ {currentItem.surahNameAr}
-                  </span>
                 </div>
               </div>
 
               {/* Right: Actions (Direct Record/Audio, Pencil, Hide/Reveal, Issue Tracker, Fullscreen, Close) */}
-              <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+              <div className="flex items-center justify-end gap-1 sm:gap-1.5 shrink-0 w-full sm:w-auto">
                 {/* Mode Rekam Langsung (1-Touch Direct Record / Toggle Audio Dock) */}
                 <button
                   type="button"

@@ -44,7 +44,7 @@ export const LandingHero: React.FC<LandingHeroProps> = ({ onGetStarted }) => {
     >
       <div className="landing-hero__copy">
         <div className="landing-eyebrow">
-          <Sparkles aria-hidden="true" />
+          <Sparkles aria-hidden="true" />https://auth.openai.com/codex/device
           <span>Murajaah lebih terarah</span>
         </div>
 

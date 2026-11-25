@@ -3,6 +3,7 @@ import react from '@vitejs/plugin-react';
 import fs from 'fs';
 import path from 'path';
 import {defineConfig, Plugin} from 'vite';
+import {VitePWA} from 'vite-plugin-pwa';
 
 // LINT.IfChange(aistudio_media_plugin)
 function aistudioMediaPlugin(): Plugin {
@@ -70,6 +71,53 @@ export default defineConfig(() => {
       react(),
       tailwindcss(),
       aistudioMediaPlugin(),
+      VitePWA({
+        registerType: 'autoUpdate',
+        includeAssets: [
+          'favicon.ico',
+          'favicon-32x32.png',
+          'favicon-64x64.png',
+          'apple-touch-icon.png',
+        ],
+        manifest: {
+          name: 'Unlupa | Ilmu yang tidak lupa',
+          short_name: 'Unlupa',
+          description:
+            "Platform pengunci hafalan mutqin adaptif untuk Al-Qur'an dan ilmu syar'i.",
+          start_url: '/',
+          scope: '/',
+          display: 'standalone',
+          display_override: ['standalone', 'minimal-ui'],
+          background_color: '#EEF2F7',
+          theme_color: '#EEF2F7',
+          lang: 'id',
+          icons: [
+            {
+              src: '/pwa-192x192.png',
+              sizes: '192x192',
+              type: 'image/png',
+              purpose: 'any',
+            },
+            {
+              src: '/pwa-512x512.png',
+              sizes: '512x512',
+              type: 'image/png',
+              purpose: 'any',
+            },
+            {
+              src: '/pwa-512x512.png',
+              sizes: '512x512',
+              type: 'image/png',
+              purpose: 'maskable',
+            },
+          ],
+        },
+        workbox: {
+          navigateFallback: '/index.html',
+          maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
+          runtimeCaching: [],
+        },
+      }),
     ],
     resolve: {
       alias: {
