@@ -1,11 +1,11 @@
 {
     "schema_version": 2,
-    "commit": "5baea54f05543482e88d3757372a7b3dd9afc695",
-    "indexed_at": "2026-11-25T04:45:20Z",
+    "commit": "eac9154530b9ebb3df23f259e3d4085197aa41fd",
+    "indexed_at": "2026-11-26T02:49:36Z",
     "project": "home-alonami-Documents-projects-unlupa-v2",
-    "nodes": 2779,
-    "edges": 7683,
+    "nodes": 2780,
+    "edges": 7701,
     "original_size": 12976128,
-    "compressed_size": 2624264,
+    "compressed_size": 2628488,
     "compression_level": 3
 }

@@ -8,6 +8,8 @@ import {
   Eye,
   BookOpen,
   Layers,
+  CloudDownload,
+  Loader2,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { QuranPageItem, Language } from "../../types";
@@ -88,6 +90,10 @@ export const QuranJuzSpectrumMap: React.FC<Props> = ({
   onReviewDuePage,
   activeFilterTab = "all",
   onFilterTabChange,
+  isDownloadingJuz = false,
+  downloadProgress,
+  juzOfflineStatus,
+  onDownloadJuz,
 }) => {
   // View mode state: 'micro8' (8 pages/row = 3 rows), 'compact4' (4 pages/row compact), 'expanded4' (4 pages/row full), 'spread2' (2 pages/row = 1 spread), 'hidden'
   const [viewMode, setViewMode] = useState<SpectrumViewMode>(() => {
@@ -611,7 +617,7 @@ export const QuranJuzSpectrumMap: React.FC<Props> = ({
       {/* ========================================================
           2. BARIS 2: JUDUL PETA SATU JUZ (KIRI) + MULTI-MODE SWITCHER (KANAN)
       ======================================================== */}
-      <div className="flex items-center justify-between gap-2 px-1 pt-0.5">
+      <div className="flex flex-wrap items-center justify-between gap-2 px-1 pt-0.5">
         {/* Left: Clean Single-line Title */}
         <div className="flex items-center gap-1.5 shrink-0 whitespace-nowrap">
           <BookOpen className="w-4 h-4 text-[#FF6F3D] shrink-0" />
@@ -623,25 +629,78 @@ export const QuranJuzSpectrumMap: React.FC<Props> = ({
           </span>
         </div>
 
-        {/* Right: Multi-Density Switcher Capsule (8 Hlm / 3 Baris · 4 Hlm Padat · 4 Hlm Besar · 2 Hlm Fokus · Tutup) */}
-        <div className="flex items-center gap-0.5 sm:gap-1 p-0.5 clay-inset rounded-xl shrink-0 overflow-x-auto">
-          {/* 1. Mode 8 Halaman / 3 Baris Penuh (Ultra-Padat) */}
-          <button
-            type="button"
-            onClick={() => handleSetViewMode("micro8")}
-            className={`px-1.5 sm:px-2 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer select-none ${
-              viewMode === "micro8"
-                ? "clay-pill text-[#FF6F3D] shadow-2xs font-extrabold"
-                : "text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white"
-            }`}
-            title="Mode Mikro: 8 Halaman/Baris (Hanya 3 Baris - Paling Padat)"
-          >
-            <Layers className="w-3.5 h-3.5" />
-            <span className="text-[10px] font-black">8</span>
-          </button>
+        <div className="flex items-center gap-1 ml-auto min-w-0">
+          {/* Download current Juz for offline use. Opening it also selects the requested 4-page layout. */}
+          {onDownloadJuz && (
+            <button
+              type="button"
+              disabled={isDownloadingJuz || juzOfflineStatus?.isFullyCached}
+              onClick={() => {
+                if (viewMode === "hidden" || viewMode === "micro8") {
+                  handleSetViewMode("compact4");
+                }
+                onDownloadJuz();
+              }}
+              className={`btn btn-xs h-7 min-h-7 rounded-xl border-0 px-2 shadow-2xs ${
+                juzOfflineStatus?.isFullyCached
+                  ? "bg-success/15 text-success"
+                  : "bg-info/15 text-info hover:bg-info/25"
+              }`}
+              title={
+                juzOfflineStatus?.isFullyCached
+                  ? language === "en"
+                    ? "This Juz is available offline"
+                    : "Juz ini sudah tersedia offline"
+                  : language === "en"
+                    ? "Download this Juz for offline use"
+                    : "Unduh Juz ini untuk digunakan secara offline"
+              }
+              aria-label={
+                language === "en"
+                  ? `Download Juz ${juzNumber}`
+                  : `Unduh Juz ${juzNumber}`
+              }
+            >
+              {isDownloadingJuz ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : juzOfflineStatus?.isFullyCached ? (
+                <CheckCircle2 className="w-3.5 h-3.5" />
+              ) : (
+                <CloudDownload className="w-3.5 h-3.5" />
+              )}
+              <span className="hidden sm:inline text-[10px] font-black">
+                {isDownloadingJuz
+                  ? `${downloadProgress?.current || 0}/${downloadProgress?.total || totalPages}`
+                  : juzOfflineStatus?.isFullyCached
+                    ? language === "en"
+                      ? "Offline"
+                      : "Tersimpan"
+                    : language === "en"
+                      ? "Download"
+                      : "Unduh"}
+              </span>
+            </button>
+          )}
 
-          {/* 2. Mode 4 Halaman Kompak (Padat) */}
-          <button
+          {/* Right: Multi-Density Switcher Capsule (8 Hlm / 3 Baris · 4 Hlm Padat · 4 Hlm Besar · 2 Hlm Fokus · Tutup) */}
+          <div className="flex items-center gap-0.5 sm:gap-1 p-0.5 clay-inset rounded-xl shrink-0 overflow-x-auto">
+            {/* 1. Mode 8 Halaman / 3 Baris Penuh (Ultra-Padat) */}
+            <button
+              type="button"
+              onClick={() => handleSetViewMode("micro8")}
+              className={`px-1.5 sm:px-2 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer select-none ${
+                viewMode === "micro8"
+                  ? "clay-pill text-[#FF6F3D] shadow-2xs font-extrabold"
+                  : "text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white"
+              }`}
+              title="Mode Mikro: 8 Halaman/Baris (Hanya 3 Baris - Paling Padat)"
+            >
+              <Layers className="w-3.5 h-3.5" />
+              <span className="text-[10px] font-black">8</span>
+            </button>
+
+            {/* 2. Mode 4 Halaman Kompak (Padat) */}
+            <button
             type="button"
             onClick={() => handleSetViewMode("compact4")}
             className={`px-1.5 sm:px-2 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer select-none ${
@@ -653,10 +712,10 @@ export const QuranJuzSpectrumMap: React.FC<Props> = ({
           >
             <LayoutGrid className="w-3.5 h-3.5" />
             <span className="text-[10px] font-black">4</span>
-          </button>
+            </button>
 
-          {/* 3. Mode 4 Halaman Besar (Lega) */}
-          <button
+            {/* 3. Mode 4 Halaman Besar (Lega) */}
+            <button
             type="button"
             onClick={() => handleSetViewMode("expanded4")}
             className={`px-1.5 sm:px-2 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer select-none ${
@@ -668,10 +727,10 @@ export const QuranJuzSpectrumMap: React.FC<Props> = ({
           >
             <Maximize2 className="w-3.5 h-3.5" />
             <span className="text-[10px] font-black">4+</span>
-          </button>
+            </button>
 
-          {/* 4. Mode 2 Halaman Fokus (1 Spread Besar per Baris) */}
-          <button
+            {/* 4. Mode 2 Halaman Fokus (1 Spread Besar per Baris) */}
+            <button
             type="button"
             onClick={() => handleSetViewMode("spread2")}
             className={`px-1.5 sm:px-2 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer select-none ${
@@ -683,10 +742,10 @@ export const QuranJuzSpectrumMap: React.FC<Props> = ({
           >
             <BookOpen className="w-3.5 h-3.5" />
             <span className="text-[10px] font-black">2</span>
-          </button>
+            </button>
 
-          {/* 5. Mode Sembunyi / Tutup */}
-          <button
+            {/* 5. Mode Sembunyi / Tutup */}
+            <button
             type="button"
             onClick={() =>
               handleSetViewMode(viewMode === "hidden" ? "micro8" : "hidden")
@@ -707,7 +766,8 @@ export const QuranJuzSpectrumMap: React.FC<Props> = ({
             ) : (
               <EyeOff className="w-3.5 h-3.5" />
             )}
-          </button>
+            </button>
+          </div>
         </div>
       </div>
 

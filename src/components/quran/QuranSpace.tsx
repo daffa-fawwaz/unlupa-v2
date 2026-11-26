@@ -79,6 +79,12 @@ const InfoTooltip: React.FC<{
   </div>
 );
 
+type JuzOfflineStatus = {
+  total: number;
+  cached: number;
+  isFullyCached: boolean;
+};
+
 export const QuranSpace: React.FC = () => {
   const {
     quranPages,
@@ -209,11 +215,11 @@ export const QuranSpace: React.FC = () => {
   }, [selectedJuzNumber]);
 
   // Offline caching status for current Juz
-  const [juzOfflineStatus, setJuzOfflineStatus] = useState<{
-    total: number;
-    cached: number;
-    isFullyCached: boolean;
-  } | null>(null);
+  const [juzOfflineStatus, setJuzOfflineStatus] =
+    useState<JuzOfflineStatus | null>(null);
+  const [juzOfflineStatuses, setJuzOfflineStatuses] = useState<
+    Record<number, JuzOfflineStatus>
+  >({});
   const [isDownloadingJuz, setIsDownloadingJuz] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState<{
     current: number;
@@ -224,6 +230,13 @@ export const QuranSpace: React.FC = () => {
   const [isJoinClassOpen, setIsJoinClassOpen] = useState(false);
   const [isDownloadModalOpen, setIsDownloadModalOpen] = useState(false);
   const [isDownloadingAll, setIsDownloadingAll] = useState(false);
+  const [downloadingJuzNumber, setDownloadingJuzNumber] = useState<
+    number | null
+  >(null);
+  const [listDownloadProgress, setListDownloadProgress] = useState<{
+    current: number;
+    total: number;
+  } | null>(null);
   const [downloadAllProgress, setDownloadAllProgress] = useState<{
     current: number;
     total: number;
@@ -250,42 +263,108 @@ export const QuranSpace: React.FC = () => {
   }, [isMoreMenuOpen]);
 
   const handleDownloadAllJuz = async () => {
-    if (isDownloadingAll) return;
+    if (
+      isDownloadingAll ||
+      isDownloadingJuz ||
+      downloadingJuzNumber !== null
+    )
+      return;
     setIsDownloadingAll(true);
     setDownloadAllProgress({ current: 0, total: 30 });
+    let failedPages = 0;
     for (let j = 1; j <= 30; j++) {
-      await cacheJuzOffline(j, () => {});
+      const result = await cacheJuzOffline(j, () => {});
+      failedPages += result.failed;
+      const status = await getJuzOfflineStatus(j);
+      setJuzOfflineStatuses((prev) => ({ ...prev, [j]: status }));
+      if (selectedJuzNumber === j) setJuzOfflineStatus(status);
       setDownloadAllProgress({ current: j, total: 30 });
     }
     setIsDownloadingAll(false);
     setDownloadAllProgress(null);
     alert(
-      language === "en"
-        ? "All 30 Juz downloaded successfully for offline reading!"
-        : "Semua 30 Juz berhasil diunduh untuk dibaca secara offline!",
+      failedPages === 0
+        ? language === "en"
+          ? "All 30 Juz downloaded successfully for offline reading!"
+          : "Semua 30 Juz berhasil diunduh untuk dibaca secara offline!"
+        : language === "en"
+          ? `Download finished, but ${failedPages} pages could not be saved. Please try again while connected to the internet.`
+          : `Unduhan selesai, tetapi ${failedPages} halaman belum berhasil disimpan. Silakan coba lagi saat terhubung ke internet.`,
     );
-    setIsDownloadModalOpen(false);
+    if (failedPages === 0) setIsDownloadModalOpen(false);
   };
 
   useEffect(() => {
     if (selectedJuzNumber) {
-      getJuzOfflineStatus(selectedJuzNumber).then(setJuzOfflineStatus);
+      getJuzOfflineStatus(selectedJuzNumber).then((status) => {
+        setJuzOfflineStatus(status);
+        setJuzOfflineStatuses((prev) => ({
+          ...prev,
+          [selectedJuzNumber]: status,
+        }));
+      });
     } else {
       setJuzOfflineStatus(null);
     }
   }, [selectedJuzNumber]);
 
+  useEffect(() => {
+    if (selectedJuzNumber !== null) return;
+    let cancelled = false;
+
+    Promise.all(
+      JUZ_LIST.map(async (juz) => ({
+        juzNumber: juz.juzNumber,
+        status: await getJuzOfflineStatus(juz.juzNumber),
+      })),
+    ).then((statuses) => {
+      if (cancelled) return;
+      setJuzOfflineStatuses(
+        Object.fromEntries(
+          statuses.map(({ juzNumber, status }) => [juzNumber, status]),
+        ),
+      );
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedJuzNumber]);
+
   const handleDownloadJuz = async () => {
-    if (!selectedJuzNumber || isDownloadingJuz) return;
+    if (!selectedJuzNumber || isDownloadingJuz || isDownloadingAll) return;
     setIsDownloadingJuz(true);
     setDownloadProgress({ current: 0, total: 20 });
-    await cacheJuzOffline(selectedJuzNumber, (current, total) => {
-      setDownloadProgress({ current, total });
-    });
-    const updated = await getJuzOfflineStatus(selectedJuzNumber);
-    setJuzOfflineStatus(updated);
-    setIsDownloadingJuz(false);
-    setDownloadProgress(null);
+    try {
+      await cacheJuzOffline(selectedJuzNumber, (current, total) => {
+        setDownloadProgress({ current, total });
+      });
+      const updated = await getJuzOfflineStatus(selectedJuzNumber);
+      setJuzOfflineStatus(updated);
+      setJuzOfflineStatuses((prev) => ({
+        ...prev,
+        [selectedJuzNumber]: updated,
+      }));
+    } finally {
+      setIsDownloadingJuz(false);
+      setDownloadProgress(null);
+    }
+  };
+
+  const handleDownloadJuzFromList = async (juzNumber: number) => {
+    if (downloadingJuzNumber !== null || isDownloadingAll) return;
+    setDownloadingJuzNumber(juzNumber);
+    setListDownloadProgress({ current: 0, total: 20 });
+    try {
+      await cacheJuzOffline(juzNumber, (current, total) => {
+        setListDownloadProgress({ current, total });
+      });
+      const status = await getJuzOfflineStatus(juzNumber);
+      setJuzOfflineStatuses((prev) => ({ ...prev, [juzNumber]: status }));
+    } finally {
+      setDownloadingJuzNumber(null);
+      setListDownloadProgress(null);
+    }
   };
 
   // Modals state
@@ -594,6 +673,9 @@ export const QuranSpace: React.FC = () => {
   const currentJuzMapanCount = currentJuzPages.filter((p) =>
     pageHasMapan(p),
   ).length;
+  const fullyCachedJuzCount = Object.values(juzOfflineStatuses).filter(
+    (status) => status.isFullyCached,
+  ).length;
 
   return (
     <div className="space-y-4 pb-20 md:pb-10 max-w-5xl mx-auto">
@@ -769,6 +851,40 @@ export const QuranSpace: React.FC = () => {
             }
           />
 
+          <div className="card card-sm card-border border-base-300/60 bg-base-100/70 shadow-sm">
+            <div className="card-body flex-row items-center justify-between gap-3 p-3 sm:p-4">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-9 h-9 rounded-xl bg-info/15 text-info flex items-center justify-center shrink-0">
+                  <HardDrive className="w-4.5 h-4.5" />
+                </div>
+                <div className="min-w-0">
+                  <h2 className="card-title text-sm text-base-content">
+                    {language === "en"
+                      ? "Offline Quran"
+                      : "Al-Qur'an Offline"}
+                  </h2>
+                  <p className="text-[10.5px] text-base-content/60 truncate">
+                    {fullyCachedJuzCount}/30{" "}
+                    {language === "en"
+                      ? "Juz available offline"
+                      : "Juz tersedia offline"}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsDownloadModalOpen(true)}
+                className="btn btn-sm btn-info rounded-xl shrink-0"
+              >
+                <CloudDownload className="w-4 h-4" />
+                <span className="hidden sm:inline">
+                  {language === "en" ? "Download 30 Juz" : "Unduh 30 Juz"}
+                </span>
+                <span className="sm:hidden">30 Juz</span>
+              </button>
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
             {JUZ_LIST.map((juz) => {
               const activeCount = quranPages.filter(
@@ -786,6 +902,9 @@ export const QuranSpace: React.FC = () => {
               const masteredCount = quranPages.filter(
                 (p) => p.juzNumber === juz.juzNumber && pageHasMapan(p),
               ).length;
+              const offlineStatus = juzOfflineStatuses[juz.juzNumber];
+              const isThisJuzDownloading =
+                downloadingJuzNumber === juz.juzNumber;
 
               return (
                 <div
@@ -815,9 +934,58 @@ export const QuranSpace: React.FC = () => {
                   </div>
 
                   <div className="flex flex-col items-end gap-1.5 shrink-0">
-                    <span className="neumorph-inset px-2.5 py-0.5 rounded-full text-[10px] text-[#18234A] dark:text-[#F8FAFC] font-extrabold">
-                      {activeCount} / {juz.totalPages}
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="neumorph-inset px-2.5 py-0.5 rounded-full text-[10px] text-[#18234A] dark:text-[#F8FAFC] font-extrabold">
+                        {activeCount} / {juz.totalPages}
+                      </span>
+                      <button
+                        type="button"
+                        disabled={
+                          isDownloadingAll ||
+                          (downloadingJuzNumber !== null &&
+                            !isThisJuzDownloading)
+                        }
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          if (!offlineStatus?.isFullyCached) {
+                            handleDownloadJuzFromList(juz.juzNumber);
+                          }
+                        }}
+                        className={`btn btn-xs btn-circle border-0 ${
+                          offlineStatus?.isFullyCached
+                            ? "bg-success/15 text-success"
+                            : "bg-info/15 text-info hover:bg-info/25"
+                        }`}
+                        title={
+                          offlineStatus?.isFullyCached
+                            ? language === "en"
+                              ? `Juz ${juz.juzNumber} is available offline`
+                              : `Juz ${juz.juzNumber} sudah tersedia offline`
+                            : language === "en"
+                              ? `Download Juz ${juz.juzNumber}`
+                              : `Unduh Juz ${juz.juzNumber}`
+                        }
+                        aria-label={
+                          language === "en"
+                            ? `Download Juz ${juz.juzNumber}`
+                            : `Unduh Juz ${juz.juzNumber}`
+                        }
+                      >
+                        {isThisJuzDownloading ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : offlineStatus?.isFullyCached ? (
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                        ) : (
+                          <CloudDownload className="w-3.5 h-3.5" />
+                        )}
+                      </button>
+                    </div>
+                    {isThisJuzDownloading && listDownloadProgress && (
+                      <span className="text-[9px] font-bold text-info">
+                        {listDownloadProgress.current}/
+                        {listDownloadProgress.total}
+                      </span>
+                    )}
                     <div className="flex items-center gap-1">
                       {dueCount > 0 && (
                         <span className="px-2 py-0.5 rounded-full bg-gradient-to-r from-[#FF7E4A] to-[#E65320] text-white font-black text-[9px] shadow-2xs">
@@ -1235,8 +1403,10 @@ export const QuranSpace: React.FC = () => {
                 </span>
               </h3>
               <button
+                disabled={isDownloadingAll}
                 onClick={() => setIsDownloadModalOpen(false)}
-                className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                className="btn btn-sm btn-circle btn-ghost text-slate-400"
+                aria-label={language === "en" ? "Close" : "Tutup"}
               >
                 ✕
               </button>
@@ -1253,7 +1423,7 @@ export const QuranSpace: React.FC = () => {
                 type="button"
                 disabled={isDownloadingAll}
                 onClick={handleDownloadAllJuz}
-                className="w-full py-3 rounded-2xl bg-gradient-to-r from-[#0EA5E9] to-[#0284C7] text-white font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                className="btn btn-info btn-block rounded-2xl text-xs"
               >
                 {isDownloadingAll ? (
                   <>
@@ -1276,6 +1446,25 @@ export const QuranSpace: React.FC = () => {
                 )}
               </button>
 
+              {isDownloadingAll && downloadAllProgress && (
+                <div className="space-y-1.5 px-1">
+                  <progress
+                    className="progress progress-info w-full"
+                    value={downloadAllProgress.current}
+                    max={downloadAllProgress.total}
+                  />
+                  <p className="text-[10px] text-center font-semibold text-base-content/60">
+                    {Math.round(
+                      (downloadAllProgress.current /
+                        downloadAllProgress.total) *
+                        100,
+                    )}
+                    % • Juz {downloadAllProgress.current}/
+                    {downloadAllProgress.total}
+                  </p>
+                </div>
+              )}
+
               <button
                 type="button"
                 onClick={() => {
@@ -1286,7 +1475,7 @@ export const QuranSpace: React.FC = () => {
                       : "Klik pada kartu Juz manapun di daftar utama untuk mengunduh atau melihat status offline Juz tersebut.",
                   );
                 }}
-                className="w-full py-2.5 rounded-2xl neumorph-card text-xs font-semibold text-slate-700 dark:text-slate-300 hover:text-[#FF6F3D] transition-colors cursor-pointer text-center"
+                className="btn btn-ghost btn-block rounded-2xl text-xs"
               >
                 {language === "en"
                   ? "Select Specific Juz from List"
